@@ -1,0 +1,7 @@
+"name": "MCP3x6x",
+"version": "0.0.1",
+"repository":
+{
+    "type": "git",
+    "url": "https://github.com/nerdyscout/Arduino_MCP3x6x_Library.git"
+}
