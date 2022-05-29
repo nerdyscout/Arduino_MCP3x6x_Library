@@ -75,36 +75,12 @@ static const uint8_t MCP3x6x_DEFAULT_OFFSETCAL[] = {0x00, 0x00, 0x00};
 static const uint8_t MCP3x6x_DEFAULT_GAINCAL[]   = {0x80, 0x00, 0x00};
 static const uint8_t MCP3x6x_DEFAULT_RESERVED1[] = {0x90, 0x00, 0x00};
 static const uint8_t MCP3x6x_DEFAULT_RESERVED2   = 0x50;
-static const uint16_t MCP3x6x_DEFAULT_LOCK       = 0x0000;
+static const uint8_t MCP3x6x_DEFAULT_LOCK        = 0xA5;
+static const uint16_t MCP3x6x_DEFAULT_CRCCFG     = 0x0000;
 
 template <uint16_t MCP3x6x_DEVICE_TYPE>
 class MCP3x6x {
  public:
-  /*
-   enum  crc_format_e : uint8_t {
-    crc32 = 1,
-    crc16 = 0  // default
-  };
-
-  enum  channelID_e : uint8_t {
-    ch_OFFSET = 15,
-    ch_VCM    = 14,
-    ch_AVDD   = 13,
-    ch_TEMP   = 12,
-    ch_DIFF_D = 11,
-    ch_DIFF_C = 10,
-    ch_DIFF_B = 9,
-    ch_DIFF_A = 9,
-    ch_SE_7   = 7,
-    ch_SE_6   = 6,
-    ch_SE_5   = 5,
-    ch_SE_4   = 4,
-    ch_SE_3   = 3,
-    ch_SE_2   = 2,
-    ch_SE_1   = 1,
-    ch_SE_0   = 0
-  };
-*/
   typedef union {
     struct {
       struct {
@@ -119,8 +95,6 @@ class MCP3x6x {
    private:
     uint8_t _data;
   } status_t;
-
-  //__attribute__((packed))
 
   typedef union {
     enum mode_e {
@@ -147,13 +121,13 @@ class MCP3x6x {
       bias_e bias     : 2;
       clk_e clk       : 2;
       uint8_t config0 : 2;
-    } config0 = MCP3x6x_DEFAULT_CONFIG0;
+    };
 
     inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0); };
     inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0); };
 
    private:
-    uint8_t _data;
+    uint8_t _data = MCP3x6x_DEFAULT_CONFIG0;
   } config0_t;
 
   typedef union {
@@ -184,15 +158,16 @@ class MCP3x6x {
     };
 
     struct {
-      uint8_t   : 2;
+      uint8_t   : 2;  // reserved
       osr_e osr : 4;
       pre_e pre : 2;
-    } config1 = MCP3x6x_DEFAULT_CONFIG1;
+    };
+
     inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG1); };
     inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG1); };
 
    private:
-    uint8_t _data;
+    uint8_t _data = MCP3x6x_DEFAULT_CONFIG1;
   } config1_t;
 
   typedef union {
@@ -215,46 +190,52 @@ class MCP3x6x {
     };
 
     struct {
-      uint8_t       : 2;
+      uint8_t       : 2;  // reserved
       bool az_mu    : 1;
       gain_e gain   : 3;
       boost_e boost : 2;
-    } config2 = MCP3x6x_DEFAULT_CONFIG2;
+    };
+
     inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2); };
     inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG2); };
 
    private:
-    uint8_t _data;
+    uint8_t _data = MCP3x6x_DEFAULT_CONFIG2;
   } config2_t;
 
   typedef union {
-    enum conv_e {
+    enum conv_mode_e {
       continuous       = 3,
       oneshot_standby  = 2,
       oneshot_shutdown = 0  // default
     };
 
-    enum format_e {
-      // todo MCP346x vs MCP356x
-      id_sgn_24bit   = 3,
-      sgn8_24bit     = 2,
-      sgn_23bit_zero = 1,
-      sgn_23bit      = 0  // default
+    enum data_format_e {
+      id_sgnext_data = 3,
+      sgnext_data    = 2,
+      sgn_data_zero  = 1,
+      sgn_data       = 0  // default
+    };
+
+    enum crc_format_e {
+      crc32 = 1,
+      crc16 = 0  // default
     };
 
     struct {
-      bool en_gaincal      : 1;
-      bool en_offcal       : 1;
-      bool en_crccom       : 1;
-      bool crc_format      : 1;
-      format_e data_format : 2;
-      conv_e conv_mode     : 2;
-    } config3 = MCP3x6x_DEFAULT_CONFIG3;
+      bool en_gaincal           : 1;
+      bool en_offcal            : 1;
+      bool en_crccom            : 1;
+      bool crc_format           : 1;
+      data_format_e data_format : 2;
+      conv_mode_e conv_mode     : 2;
+    };
+
     inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3); };
     inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG3); };
 
    private:
-    uint8_t _data;
+    uint8_t _data = MCP3x6x_DEFAULT_CONFIG3;
   } config3_t;
 
   typedef union {
@@ -265,13 +246,14 @@ class MCP3x6x {
       bool POR_STATUS    : 1;
       bool CRCCFG_STATUS : 1;
       bool DR_STATUS     : 1;
-      bool               : 1;
-    } irq = MCP3x6x_DEFAULT_IRQ;
+      bool               : 1;  // unimplemented
+    };
+
     inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ); };
     inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_IRQ); };
 
    private:
-    uint8_t _data;
+    uint8_t _data = MCP3x6x_DEFAULT_IRQ;
   } irq_t;
 
   typedef union {
@@ -296,12 +278,13 @@ class MCP3x6x {
     struct {
       mux_e vin_plus  : 4;
       mux_e vin_minus : 4;
-    } mux = MCP3x6x_DEFAULT_MUX;
+    };
+
     inline status_t write() { return _write(_data, (MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX)); };
     inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_MUX); };
 
    private:
-    uint8_t _data;
+    uint8_t _data = MCP3x6x_DEFAULT_MUX;
   } mux_t;
 
   typedef union {
@@ -316,25 +299,47 @@ class MCP3x6x {
       dly_0   = 0  // default
     };
 
+    /*
+    enum channelID_e : uint8_t {
+      ch_OFFSET = 15,
+      ch_VCM    = 14,
+      ch_AVDD   = 13,
+      ch_TEMP   = 12,
+      ch_DIFF_D = 11,
+      ch_DIFF_C = 10,
+      ch_DIFF_B = 9,
+      ch_DIFF_A = 8,
+      ch_SE_7   = 7,
+      ch_SE_6   = 6,
+      ch_SE_5   = 5,
+      ch_SE_4   = 4,
+      ch_SE_3   = 3,
+      ch_SE_2   = 2,
+      ch_SE_1   = 1,
+      ch_SE_0   = 0
+    };
+*/
     struct {
-      delay_e dly : 3;
-      bool        : 1;
-      uint8_t     : 4;
-      uint8_t scan[2];
-    } scan = MCP3x6x_DEFAULT_SCAN;
-    inline status_t write() {
-      return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_SCAN, sizeof(_data));
+      delay_e dly          : 3;
+      bool                 : 1;  // reserved
+      uint8_t              : 4;  // unimplemented
+      bool offset          : 1;
+      bool vcm             : 1;
+      bool avdd            : 1;
+      bool temp            : 1;
+      uint8_t scan_diff_ch : 4;
+      uint8_t scan_se_ch   : 8;
     };
-    inline status_t read() {
-      return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_SCAN, sizeof(_data));
-    };
+
+    inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_SCAN, 3); };
+    inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_SCAN, 3); };
 
    private:
-    uint8_t _data[3];
+    uint8_t _data = *MCP3x6x_DEFAULT_SCAN;
   } scan_t;
 
-  union lock {
-    uint16_t lock = MCP3x6x_DEFAULT_LOCK;
+  typedef union {
+    uint8_t lock = MCP3x6x_DEFAULT_LOCK;
 
     inline status_t write() {
       return _write(lock, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, sizeof(lock));
@@ -342,7 +347,15 @@ class MCP3x6x {
     inline status_t read() {
       return _read(lock, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_LOCK, sizeof(lock));
     };
-  };
+  } lock_t;
+
+  typedef union {
+    uint16_t crc = MCP3x6x_DEFAULT_CRCCFG;
+
+    inline status_t read() {
+      return _read(crc, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CRCCFG, sizeof(crc));
+    };
+  } crc_t;
 
   union registers {
     struct {
@@ -356,32 +369,30 @@ class MCP3x6x {
       uint8_t timer[3];
       uint8_t offsetcal[3];
       uint8_t gaincal[3];
-      uint8_t reserverd1[3];
-      uint8_t reserverd2;
-      uint16_t lock;
+      uint8_t reserved1[3];
+      uint8_t reserved2;
+      lock_t lock;
       uint16_t id;
-      uint16_t crccfg;
+      crc_t crccfg;
     };
 
     inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 28); };
     inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 28); };
 
    private:
-    uint8_t _data[28];
+    uint8_t _data[28] = {
+        MCP3x6x_DEFAULT_CONFIG0,  MCP3x6x_DEFAULT_CONFIG1,    MCP3x6x_DEFAULT_CONFIG2,
+        MCP3x6x_DEFAULT_CONFIG3,  MCP3x6x_DEFAULT_IRQ,        MCP3x6x_DEFAULT_MUX,
+        *MCP3x6x_DEFAULT_SCAN,    *MCP3x6x_DEFAULT_TIMER,     *MCP3x6x_DEFAULT_OFFSETCAL,
+        *MCP3x6x_DEFAULT_GAINCAL, *MCP3x6x_DEFAULT_RESERVED1, MCP3x6x_DEFAULT_RESERVED2,
+        MCP3x6x_DEFAULT_LOCK,     MCP3x6x_DEVICE_TYPE,        MCP3x6x_DEFAULT_CRCCFG};
   };
 
-  static constexpr union registers defaults = {
-      MCP3x6x_DEFAULT_CONFIG0, MCP3x6x_DEFAULT_CONFIG1,   MCP3x6x_DEFAULT_CONFIG2,
-      MCP3x6x_DEFAULT_CONFIG3, MCP3x6x_DEFAULT_IRQ,       MCP3x6x_DEFAULT_MUX,
-      MCP3x6x_DEFAULT_SCAN,    MCP3x6x_DEFAULT_TIMER,     MCP3x6x_DEFAULT_OFFSETCAL,
-      MCP3x6x_DEFAULT_GAINCAL, MCP3x6x_DEFAULT_RESERVED1, MCP3x6x_DEFAULT_RESERVED2,
-      MCP3x6x_DEFAULT_LOCK,    MCP3x6x_DEVICE_TYPE,       0x0000};
-  union registers settings = defaults;
-
   MCP3x6x(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI) {
-    _hwSPI = true;
+    settings = _defaults;
 
-    _pinCS = pinCS;
+    _hwSPI   = true;
+    _pinCS   = pinCS;
 
     pinMode(_pinCS, OUTPUT);
     digitalWrite(_pinCS, HIGH);
@@ -392,6 +403,8 @@ class MCP3x6x {
 
   MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI) {
+    settings = _defaults;
+
     _hwSPI   = true;
 
     _pinCS   = pinCS;
@@ -400,7 +413,7 @@ class MCP3x6x {
 
     pinMode(_pinCS, OUTPUT);
     pinMode(_pinIRQ, INPUT);
-    pinMode(_pinMCLK, OUTPUT);  // TODDO: this pin changes depending on CLK_SEK
+    pinMode(_pinMCLK, OUTPUT);  // TODO: this pin changes depending on CLK_SEK
 
     digitalWrite(_pinCS, HIGH);
 
@@ -410,6 +423,8 @@ class MCP3x6x {
 
   MCP3x6x(const uint8_t pinCS, const uint8_t pinSCK = SCK, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO) {
+    settings = _defaults;
+
     _hwSPI   = false;
 
     _pinSCK  = pinSCK;
@@ -429,6 +444,8 @@ class MCP3x6x {
 
   MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           const uint8_t pinSCK = SCK, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO) {
+    settings = _defaults;
+
     _hwSPI   = false;
 
     _pinSCK  = pinSCK;
@@ -456,6 +473,8 @@ class MCP3x6x {
   ~MCP3x6x() {
     if (_hwSPI) _spi->end();
   }
+
+  registers settings;
 
   inline status_t conversion() { return _write(MCP3x6x_CMD_CONVERSION); };
   inline status_t standby() { return _write(MCP3x6x_CMD_STANDBY); };
@@ -491,31 +510,33 @@ class MCP3x6x {
     //    _selectMultiplexer(ch);
     this->conversion();
 
-    switch (this->settings.config3) {
-      // todo MCP346x vs MCP356x
-      case MCP3x6x::config3_t::sgn_23bit:
+    switch (this->settings.config3.data_format) {
+      case (MCP3x6x::config3_t::data_format_e::sgn_data):
         _status = _read(buffer, (MCP3x6x_CMD_IREAD | MCP3x6x_ADR_ADCDATA), 3);
         break;
       default:
         _status = _read(buffer, (MCP3x6x_CMD_IREAD | MCP3x6x_ADR_ADCDATA), 4);
     }
+    // todo ensure signedness is correct
 
     memcpy(&buffer, &adcdata, 3);
     return adcdata;
   };
+
   //  int32_t analogReadDifferential(uint8_t inPositiveChannel) const
   //  void analogWriteResolution(uint8_t bits);
   //  void analogReadResolution(uint8_t bits);
   //  bool available()
   /*
-  class analogread : Stream() {
+  class analogRead : Stream() {
     analogRead();
     ~analogRead() { reset(); }
   }
 */
+
  private:
-  //  MCP3x6x(const MCP3x6x &);
-  //  MCP3x6x &operator=(const MCP3x6x &);
+  //    MCP3x6x(const MCP3x6x &);
+  //    MCP3x6x &operator=(const MCP3x6x &);
 
   // SPI
   SPIClass *_spi;
@@ -528,10 +549,14 @@ class MCP3x6x {
   uint8_t _pinIRQ;
   uint8_t _pinMCLK;
 
+  // DMA
+  bool _useDMA = false;
+
   // device properties
   status_t _status;
   uint8_t _resolutionBits;
   uint16_t _channelMask;
+  const registers _defaults;
 
   // SPI communication
   status_t _write(uint8_t *data, uint8_t addr = MCP3x6x_SPI_ADR, size_t size = 1) {
@@ -568,8 +593,8 @@ class MCP3x6x {
       digitalWrite(_pinCS, HIGH);
     }
 
-    this->_status._data = s;
-    return _status;
+    this->_status->_data = s;
+    return this->_status;
   }
 
   status_t _read(uint8_t *data, uint8_t addr, size_t size = 1) {
@@ -606,8 +631,8 @@ class MCP3x6x {
       digitalWrite(_pinCS, HIGH);
     }
 
-    _status->_data = s;
-    return _status;
+    this->_status._data = s;
+    return this->_status;
   }
 
   //  status_t _selectMultiplexer(uint8_t mux);
