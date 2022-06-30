@@ -64,11 +64,11 @@
 
 /* Register Default Values */
 static const uint8_t MCP3x6x_DEFAULT_CONFIG0     = 0x00;
-static const uint8_t MCP3x6x_DEFAULT_CONFIG1     = 0x00;
-static const uint8_t MCP3x6x_DEFAULT_CONFIG2     = 0x00;
+static const uint8_t MCP3x6x_DEFAULT_CONFIG1     = 0x0C;
+static const uint8_t MCP3x6x_DEFAULT_CONFIG2     = 0x8B;
 static const uint8_t MCP3x6x_DEFAULT_CONFIG3     = 0x00;
-static const uint8_t MCP3x6x_DEFAULT_IRQ         = 0x00;
-static const uint8_t MCP3x6x_DEFAULT_MUX         = 0x00;
+static const uint8_t MCP3x6x_DEFAULT_IRQ         = 0x73;
+static const uint8_t MCP3x6x_DEFAULT_MUX         = 0x01;
 static const uint8_t MCP3x6x_DEFAULT_SCAN[]      = {0x00, 0x00, 0x03};
 static const uint8_t MCP3x6x_DEFAULT_TIMER[]     = {0x00, 0x00, 0x00};
 static const uint8_t MCP3x6x_DEFAULT_OFFSETCAL[] = {0x00, 0x00, 0x00};
@@ -80,7 +80,10 @@ static const uint16_t MCP3x6x_DEFAULT_CRCCFG     = 0x0000;
 
 template <uint16_t MCP3x6x_DEVICE_TYPE>
 class MCP3x6x {
- public:
+ private:
+  //  MCP3x6x(const MCP3x6x &);
+  //  MCP3x6x &operator=(const MCP3x6x &);
+
   typedef union {
     struct {
       struct {
@@ -91,137 +94,294 @@ class MCP3x6x {
       uint8_t ADDR  : 3;
       uint8_t EMTPY : 2;
     };
-
-   private:
-    uint8_t _data;
+    uint8_t raw;
   } status_t;
 
-  typedef union {
-    enum mode_e {
-      conversion = 3,
-      standby    = 2,
-      shutdown   = 0  // default
-    };
+  // device properties
+  static status_t _status;
+  enum class _hwMode { BitBang = 0, SPI = 1 } _hwMode;
 
-    enum bias_e {
-      bias15uA = 3,
-      bias37uA = 2,
-      bias09uA = 1,
-      bias0uA  = 0  //default
-    };
+#if MCP3x6x_DEVICE_TYPE == MCP3461_DEVICE_TYPE
+  static const uint8_t _resolutionBits = 16;
+  static const uint8_t _channelCount   = 2;
+#elif MCP3x6x_DEVICE_TYPE == MCP3462_DEVICE_TYPE
+  static const uint8_t _resolutionBits = 16;
+  static const uint8_t _channelCount   = 4;
+#elif MCP3x6x_DEVICE_TYPE == MCP3464_DEVICE_TYPE
+  static const uint8_t _resolutionBits = 16;
+  static const uint8_t _channelCount   = 8;
+#elif MCP3x6x_DEVICE_TYPE == MCP3561_DEVICE_TYPE
+  static const uint8_t _resolutionBits = 24;
+  static const uint8_t _channelCount   = 2;
+#elif MCP3x6x_DEVICE_TYPE == MCP3562_DEVICE_TYPE
+  static const uint8_t _resolutionBits = 24;
+  static const uint8_t _channelCount   = 4;
+#elif MCP3x6x_DEVICE_TYPE == MCP3564_DEVICE_TYPE
+  static const uint8_t _resolutionBits = 24;
+  static const uint8_t _channelCount   = 8;
+#endif
 
-    enum clk_e {
-      internal_output = 3,
-      internal        = 2,
-      external        = 0  // default
-    };
+  // SPI
+  SPIClass *_spi;
+  uint8_t _pinCS;
+  uint8_t _pinMOSI;
+  uint8_t _pinMISO;
+  uint8_t _pinSCK;
+  uint8_t _pinIRQ;
+  uint8_t _pinMCLK;
 
+  // SPI communication
+  status_t _write(uint8_t *data, uint8_t addr = MCP3x6x_SPI_ADR, size_t size = 1) {
+    uint8_t s = 0;
+
+    switch (_hwMode) {
+      case _hwMode::SPI:
+        _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
+        digitalWrite(_pinCS, LOW);
+        s = _spi->transfer(addr);
+        for (uint8_t i = 0; i < size - 1; i++) {
+          _spi->transfer(data[i]);
+        }
+        digitalWrite(_pinCS, HIGH);
+        _spi->endTransaction();
+        break;
+
+      default:
+      case _hwMode::BitBang:
+        digitalWrite(_pinCS, LOW);
+        // addr
+        for (uint8_t c = 0; c < 8; c++) {
+          digitalWrite(_pinMOSI, (addr >> (7 - c)) & 0x01);
+          digitalWrite(_pinSCK, HIGH);
+          digitalWrite(_pinSCK, LOW);
+          s <<= 1;
+          if (digitalRead(_pinMISO)) s |= 0x01;
+        }
+        // data
+        for (uint8_t i = 0; i < size - 1; i++) {
+          for (int c = 0; c < 8; c++) {
+            digitalWrite(_pinMOSI, (data[i] >> (7 - c)) & 0x01);
+            digitalWrite(_pinSCK, HIGH);
+            digitalWrite(_pinSCK, LOW);
+          }
+        }
+        digitalWrite(_pinCS, HIGH);
+        break;
+    }
+
+    this->_status.raw = s;
+    return this->_status;
+  }
+
+  status_t _read(uint8_t *data, uint8_t addr = MCP3x6x_SPI_ADR, size_t size = 1) {
+    uint8_t s = 0;
+
+    switch (_hwMode) {
+      case _hwMode::SPI:
+        _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
+        digitalWrite(_pinCS, LOW);
+        s = _spi->transfer(addr);
+        for (uint8_t i = 0; i < size; i++) {
+          data[i] = _spi->transfer(0x00);
+        }
+        digitalWrite(_pinCS, HIGH);
+        _spi->endTransaction();
+        break;
+
+      default:
+      case _hwMode::BitBang:
+        digitalWrite(_pinCS, LOW);
+        // addr
+        for (uint8_t c = 0; c < 8; c++) {
+          digitalWrite(_pinMOSI, (addr >> (7 - c)) & 0x01);
+          digitalWrite(_pinSCK, HIGH);
+          digitalWrite(_pinSCK, LOW);
+          s <<= 1;
+          if (digitalRead(_pinMISO)) s |= 0x01;
+        }
+        // data
+        for (uint8_t i = 0; i < size; i++) {
+          for (int c = 0; c < 8; c++) {
+            digitalWrite(_pinMOSI, (data[i] >> (7 - c)) & 0x01);
+            digitalWrite(_pinSCK, HIGH);
+            digitalWrite(_pinSCK, LOW);
+          }
+        }
+        digitalWrite(_pinCS, HIGH);
+        break;
+    }
+
+    this->_status.raw = s;
+    return this->_status;
+  }
+
+ public:
+  enum class mode_e {
+    conversion = 3,
+    standby    = 2,
+    shutdown   = 0  // default
+  };
+
+  enum class bias_e {
+    bias15uA = 3,
+    bias37uA = 2,  // todo check datasheet
+    bias09uA = 1,
+    bias0uA  = 0  //default
+  };
+
+  enum class clk_e {
+    internal_output = 3,
+    internal        = 2,
+    external        = 0  // default
+  };
+
+  enum class osr_e {
+    OSR98304 = 15,
+    OSR81920 = 14,
+    OSR49152 = 13,
+    OSR40960 = 12,
+    OSR24576 = 11,
+    OSR20480 = 10,
+    OSR16384 = 9,
+    OSR8192  = 8,
+    OSR4096  = 7,
+    OSR2048  = 6,
+    OSR1024  = 5,
+    OSR512   = 4,
+    OSR256   = 3,  // default
+    OSR128   = 2,
+    OSR64    = 1,
+    OSR32    = 0
+  };
+
+  enum class pre_e {
+    MCLK8 = 3,
+    MCLK4 = 2,
+    MCLK2 = 1,
+    MCLK0 = 0  // default
+  };
+
+  enum class boost_e {
+    boost3   = 3,
+    boost2   = 2,  // default
+    boost066 = 1,
+    boost05  = 0
+  };
+
+  enum class gain_e {
+    gain64 = 7,
+    gain32 = 6,
+    gain16 = 5,
+    gain8  = 4,
+    gain4  = 3,
+    gain2  = 2,
+    gain1  = 1,  // default
+    gain13 = 0
+  };
+
+  enum class conv_mode_e {
+    continuous       = 3,
+    oneshot_standby  = 2,
+    oneshot_shutdown = 0  // default
+  };
+
+  enum class data_format_e {
+    id_sgnext_data = 3,
+    sgnext_data    = 2,
+    sgn_data_zero  = 1,
+    sgn_data       = 0  // default
+  };
+
+  enum class crc_format_e {
+    crc32 = 1,
+    crc16 = 0  // default
+  };
+
+  enum class mux_e {
+    mux_VCM          = 15,
+    mux_TemperatureM = 14,
+    mux_TemperatureP = 13,
+    mux_REFINM       = 12,
+    mux_REFINP       = 11,
+    mux_AVDD         = 9,
+    mux_AGND         = 8,
+    mux_CH7          = 7,
+    mux_CH6          = 6,
+    mux_CH5          = 5,
+    mux_CH4          = 4,
+    mux_CH3          = 3,
+    mux_CH2          = 2,
+    mux_CH1          = 1,  // default vin-
+    mux_CH0          = 0   // default vin+
+  };
+
+  enum class delay_e {
+    dly_512 = 7,
+    dly_256 = 6,
+    dly_128 = 5,
+    dly_64  = 4,
+    dly_32  = 3,
+    dly_16  = 2,
+    dly_8   = 1,
+    dly_0   = 0  // default
+  };
+
+  enum class channelID_e {
+    ch_OFFSET = 15,
+    ch_VCM    = 14,
+    ch_AVDD   = 13,
+    ch_TEMP   = 12,
+    ch_DIFF_D = 11,
+    ch_DIFF_C = 10,
+    ch_DIFF_B = 9,
+    ch_DIFF_A = 8,
+    ch_SE_7   = 7,
+    ch_SE_6   = 6,
+    ch_SE_5   = 5,
+    ch_SE_4   = 4,
+    ch_SE_3   = 3,
+    ch_SE_2   = 2,
+    ch_SE_1   = 1,
+    ch_SE_0   = 0
+  };
+
+  // registers
+  union config0_u {
     struct {
-      mode_e adc      : 2;
-      bias_e bias     : 2;
-      clk_e clk       : 2;
-      uint8_t config0 : 2;
+      mode_e adc   : 2;
+      bias_e bias  : 2;
+      clk_e clk    : 2;
+      uint8_t cfg0 : 2;
     };
+    uint8_t raw = MCP3x6x_DEFAULT_CONFIG0;
+    // inline status_t write() { return _write(_raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0); };
+    // inline status_t read() { return _read(_raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0); };
+  };
 
-    inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0); };
-    inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0); };
-
-   private:
-    uint8_t _data = MCP3x6x_DEFAULT_CONFIG0;
-  } config0_t;
-
-  typedef union {
-    enum osr_e {
-      OSR98304 = 15,
-      OSR81920 = 14,
-      OSR49152 = 13,
-      OSR40960 = 12,
-      OSR24576 = 11,
-      OSR20480 = 10,
-      OSR16384 = 9,
-      OSR8192  = 8,
-      OSR4096  = 7,
-      OSR2048  = 6,
-      OSR1024  = 5,
-      OSR512   = 4,
-      OSR256   = 3,  // default
-      OSR128   = 2,
-      OSR64    = 1,
-      OSR32    = 0
-    };
-
-    enum pre_e {
-      MCLK8 = 3,
-      MCLK4 = 2,
-      MCLK2 = 1,
-      MCLK0 = 0  // default
-    };
-
+  union config1_u {
     struct {
       uint8_t   : 2;  // reserved
       osr_e osr : 4;
       pre_e pre : 2;
     };
+    uint8_t raw = MCP3x6x_DEFAULT_CONFIG1;
+    // inline status_t write() { return _write(data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG1); };
+    // inline status_t read() { return _read(data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG1); };
+  };
 
-    inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG1); };
-    inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG1); };
-
-   private:
-    uint8_t _data = MCP3x6x_DEFAULT_CONFIG1;
-  } config1_t;
-
-  typedef union {
-    enum boost_e {
-      boost3   = 3,
-      boost2   = 2,  // default
-      boost066 = 1,
-      boost05  = 0
-    };
-
-    enum gain_e {
-      gain64 = 7,
-      gain32 = 6,
-      gain16 = 5,
-      gain8  = 4,
-      gain4  = 3,
-      gain2  = 2,
-      gain1  = 1,  // default
-      gain13 = 0
-    };
-
+  union config2_u {
     struct {
       uint8_t       : 2;  // reserved
       bool az_mu    : 1;
       gain_e gain   : 3;
       boost_e boost : 2;
     };
+    uint8_t raw = MCP3x6x_DEFAULT_CONFIG2;
+    // inline status_t write() { return _write(data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2); };
+    // inline status_t read() { return _read(data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG2); };
+  };
 
-    inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2); };
-    inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG2); };
-
-   private:
-    uint8_t _data = MCP3x6x_DEFAULT_CONFIG2;
-  } config2_t;
-
-  typedef union {
-    enum conv_mode_e {
-      continuous       = 3,
-      oneshot_standby  = 2,
-      oneshot_shutdown = 0  // default
-    };
-
-    enum data_format_e {
-      id_sgnext_data = 3,
-      sgnext_data    = 2,
-      sgn_data_zero  = 1,
-      sgn_data       = 0  // default
-    };
-
-    enum crc_format_e {
-      crc32 = 1,
-      crc16 = 0  // default
-    };
-
+  union config3_u {
     struct {
       bool en_gaincal           : 1;
       bool en_offcal            : 1;
@@ -230,15 +390,12 @@ class MCP3x6x {
       data_format_e data_format : 2;
       conv_mode_e conv_mode     : 2;
     };
+    uint8_t raw = MCP3x6x_DEFAULT_CONFIG3;
+    // inline status_t write() { return _write(data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3); };
+    // inline status_t read() { return _read(data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG3); };
+  };
 
-    inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3); };
-    inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG3); };
-
-   private:
-    uint8_t _data = MCP3x6x_DEFAULT_CONFIG3;
-  } config3_t;
-
-  typedef union {
+  union irq_u {
     struct {
       bool EN_STP        : 1;
       bool EN_FASTCMD    : 1;
@@ -248,77 +405,22 @@ class MCP3x6x {
       bool DR_STATUS     : 1;
       bool               : 1;  // unimplemented
     };
+    uint8_t raw = MCP3x6x_DEFAULT_IRQ;
+    // inline status_t write() { return _write(data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ); };
+    // inline status_t read() { return _read(data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_IRQ); };
+  };
 
-    inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ); };
-    inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_IRQ); };
-
-   private:
-    uint8_t _data = MCP3x6x_DEFAULT_IRQ;
-  } irq_t;
-
-  typedef union {
-    enum mux_e {
-      mux_VCM          = 15,
-      mux_TemperatureM = 14,
-      mux_TemperatureP = 13,
-      mux_REFINM       = 12,
-      mux_REFINP       = 11,
-      mux_AVDD         = 9,
-      mux_AGND         = 8,
-      mux_CH7          = 7,
-      mux_CH6          = 6,
-      mux_CH5          = 5,
-      mux_CH4          = 4,
-      mux_CH3          = 3,
-      mux_CH2          = 2,
-      mux_CH1          = 1,  // default vin-
-      mux_CH0          = 0   // default vin+
-    };
-
+  union mux_u {
     struct {
       mux_e vin_plus  : 4;
       mux_e vin_minus : 4;
     };
+    uint8_t raw = MCP3x6x_DEFAULT_MUX;
+    // inline status_t write() { return _write(data, (MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX)); };
+    // inline status_t read() { return _read(data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_MUX); };
+  };
 
-    inline status_t write() { return _write(_data, (MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX)); };
-    inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_MUX); };
-
-   private:
-    uint8_t _data = MCP3x6x_DEFAULT_MUX;
-  } mux_t;
-
-  typedef union {
-    enum delay_e {
-      dly_512 = 7,
-      dly_256 = 6,
-      dly_128 = 5,
-      dly_64  = 4,
-      dly_32  = 3,
-      dly_16  = 2,
-      dly_8   = 1,
-      dly_0   = 0  // default
-    };
-
-    /*
-    enum channelID_e : uint8_t {
-      ch_OFFSET = 15,
-      ch_VCM    = 14,
-      ch_AVDD   = 13,
-      ch_TEMP   = 12,
-      ch_DIFF_D = 11,
-      ch_DIFF_C = 10,
-      ch_DIFF_B = 9,
-      ch_DIFF_A = 8,
-      ch_SE_7   = 7,
-      ch_SE_6   = 6,
-      ch_SE_5   = 5,
-      ch_SE_4   = 4,
-      ch_SE_3   = 3,
-      ch_SE_2   = 2,
-      ch_SE_1   = 1,
-      ch_SE_0   = 0
-    };
-*/
+  union scan_u {
     struct {
       delay_e dly          : 3;
       bool                 : 1;  // reserved
@@ -330,69 +432,77 @@ class MCP3x6x {
       uint8_t scan_diff_ch : 4;
       uint8_t scan_se_ch   : 8;
     };
+    uint8_t raw = *MCP3x6x_DEFAULT_SCAN;
+    // inline status_t write() { return _write(data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_SCAN, 3); };
+    // inline status_t read() { return _read(data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_SCAN, 3); };
+  };
 
-    inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_SCAN, 3); };
-    inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_SCAN, 3); };
+  // inline status_t write() { return _write(lock, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, sizeof(lock));};
+  // inline status_t read() {return _read(lock, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_LOCK, sizeof(lock));};
 
-   private:
-    uint8_t _data = *MCP3x6x_DEFAULT_SCAN;
-  } scan_t;
+  // inline status_t read() {return _read(crc, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CRCCFG, sizeof(crc));};
 
-  typedef union {
-    uint8_t lock = MCP3x6x_DEFAULT_LOCK;
-
-    inline status_t write() {
-      return _write(lock, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, sizeof(lock));
-    };
-    inline status_t read() {
-      return _read(lock, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_LOCK, sizeof(lock));
-    };
-  } lock_t;
-
-  typedef union {
-    uint16_t crc = MCP3x6x_DEFAULT_CRCCFG;
-
-    inline status_t read() {
-      return _read(crc, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CRCCFG, sizeof(crc));
-    };
-  } crc_t;
-
-  union registers {
+  union settings {
     struct {
-      config0_t config0;
-      config1_t config1;
-      config2_t config2;
-      config3_t config3;
-      irq_t irq;
-      mux_t mux;
-      scan_t scan;
+      union config0_u config0;
+      union config1_u config1;
+      union config2_u config2;
+      union config3_u config3;
+      union irq_u irq;
+      union mux_u mux;
+      union scan_u scan;
       uint8_t timer[3];
       uint8_t offsetcal[3];
       uint8_t gaincal[3];
-      uint8_t reserved1[3];
-      uint8_t reserved2;
-      lock_t lock;
+      uint32_t : 24;
+      uint8_t  : 8;
+      uint8_t lock;
       uint16_t id;
-      crc_t crccfg;
+      uint16_t crc;
     };
-
-    inline status_t write() { return _write(_data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 28); };
-    inline status_t read() { return _read(_data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 28); };
-
-   private:
-    uint8_t _data[28] = {
+    uint8_t raw[28] = {
         MCP3x6x_DEFAULT_CONFIG0,  MCP3x6x_DEFAULT_CONFIG1,    MCP3x6x_DEFAULT_CONFIG2,
         MCP3x6x_DEFAULT_CONFIG3,  MCP3x6x_DEFAULT_IRQ,        MCP3x6x_DEFAULT_MUX,
         *MCP3x6x_DEFAULT_SCAN,    *MCP3x6x_DEFAULT_TIMER,     *MCP3x6x_DEFAULT_OFFSETCAL,
         *MCP3x6x_DEFAULT_GAINCAL, *MCP3x6x_DEFAULT_RESERVED1, MCP3x6x_DEFAULT_RESERVED2,
         MCP3x6x_DEFAULT_LOCK,     MCP3x6x_DEVICE_TYPE,        MCP3x6x_DEFAULT_CRCCFG};
-  };
+
+    // getter
+    inline union settings get() {
+      _status = _read(raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, sizeof(raw));
+      return *this;
+    };
+
+    mode_e get_adc() {
+      _status = _read(config0, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0);
+      return config0.adc;
+    }
+
+    bias_e get_bias() {
+      _status = _read(config0, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0);
+      return config0.bias;
+    }
+
+    clk_e get_clk() {
+      _status = _read(config0, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0);
+      return config0.clk;
+    }
+
+    uint8_t get_cfg0() {
+      _status = _read(config0, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0);
+      return config0.cfg0;
+    }
+
+    // setter
+    inline void set() {
+      _status = _write(raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, sizeof(raw));
+    };
+
+  } settings;
 
   MCP3x6x(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI) {
-    settings = _defaults;
-
-    _hwSPI   = true;
-    _pinCS   = pinCS;
+    _hwMode = _hwMode::SPI;
+    _pinCS  = pinCS;
 
     pinMode(_pinCS, OUTPUT);
     digitalWrite(_pinCS, HIGH);
@@ -403,9 +513,7 @@ class MCP3x6x {
 
   MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI) {
-    settings = _defaults;
-
-    _hwSPI   = true;
+    _hwMode  = _hwMode::SPI;
 
     _pinCS   = pinCS;
     _pinIRQ  = pinIRQ;
@@ -423,9 +531,7 @@ class MCP3x6x {
 
   MCP3x6x(const uint8_t pinCS, const uint8_t pinSCK = SCK, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO) {
-    settings = _defaults;
-
-    _hwSPI   = false;
+    _hwMode  = _hwMode::BitBang;
 
     _pinSCK  = pinSCK;
     _pinMOSI = pinMOSI;
@@ -444,9 +550,7 @@ class MCP3x6x {
 
   MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           const uint8_t pinSCK = SCK, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO) {
-    settings = _defaults;
-
-    _hwSPI   = false;
+    _hwMode  = _hwMode::BitBang;
 
     _pinSCK  = pinSCK;
     _pinMOSI = pinMOSI;
@@ -471,10 +575,8 @@ class MCP3x6x {
   }
 
   ~MCP3x6x() {
-    if (_hwSPI) _spi->end();
+    if (_hwMode == _hwMode::SPI) _spi->end();
   }
-
-  registers settings;
 
   inline status_t conversion() { return _write(MCP3x6x_CMD_CONVERSION); };
   inline status_t standby() { return _write(MCP3x6x_CMD_STANDBY); };
@@ -487,20 +589,17 @@ class MCP3x6x {
   inline bool status_por() { return _status.por; };
 
   bool begin() {
-    this->reset();
+    reset();
 
-    this->settings.read();
-
-    //    this->settings.read();
-    /*
-    if (_pinMCLK == NULL) {
-      this->settings.config0.clk_sel = clk_sel::internal;
-      this->settings.config0.write();
+    settings.get();
+    if (settings.id == MCP3x6x_DEVICE_TYPE) {
+      return true;
     }
-*/
+    return false;
+  }
 
-    // _resolutionBits =
-    return true;
+  bool available(){
+    return _spi->initialized ;
   }
 
   int32_t analogRead(uint8_t ch) {
@@ -508,10 +607,10 @@ class MCP3x6x {
     int32_t adcdata = 0;
 
     //    _selectMultiplexer(ch);
-    this->conversion();
+    conversion();
 
-    switch (this->settings.config3.data_format) {
-      case (MCP3x6x::config3_t::data_format_e::sgn_data):
+    switch (settings.config3.data_format) {
+      case (MCP3x6x::data_format_e::sgn_data):
         _status = _read(buffer, (MCP3x6x_CMD_IREAD | MCP3x6x_ADR_ADCDATA), 3);
         break;
       default:
@@ -524,9 +623,6 @@ class MCP3x6x {
   };
 
   //  int32_t analogReadDifferential(uint8_t inPositiveChannel) const
-  //  void analogWriteResolution(uint8_t bits);
-  //  void analogReadResolution(uint8_t bits);
-  //  bool available()
   /*
   class analogRead : Stream() {
     analogRead();
@@ -534,108 +630,7 @@ class MCP3x6x {
   }
 */
 
- private:
-  //    MCP3x6x(const MCP3x6x &);
-  //    MCP3x6x &operator=(const MCP3x6x &);
-
-  // SPI
-  SPIClass *_spi;
-  bool _hwSPI;
-  //    bool _CSkeepAlive=false; // TODO
-  uint8_t _pinCS;
-  uint8_t _pinMOSI;
-  uint8_t _pinMISO;
-  uint8_t _pinSCK;
-  uint8_t _pinIRQ;
-  uint8_t _pinMCLK;
-
-  // DMA
-  bool _useDMA = false;
-
-  // device properties
-  status_t _status;
-  uint8_t _resolutionBits;
-  uint16_t _channelMask;
-  const registers _defaults;
-
-  // SPI communication
-  status_t _write(uint8_t *data, uint8_t addr = MCP3x6x_SPI_ADR, size_t size = 1) {
-    uint8_t s = 0;
-
-    if (_hwSPI) {
-      _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
-      digitalWrite(_pinCS, LOW);
-      s = _spi->transfer(addr);
-      for (uint8_t i = 0; i < size - 1; i++) {
-        _spi->transfer(data[i]);
-      }
-      digitalWrite(_pinCS, HIGH);
-      _spi->endTransaction();
-
-    } else {
-      digitalWrite(_pinCS, LOW);
-      // addr
-      for (uint8_t c = 0; c < 8; c++) {
-        digitalWrite(_pinMOSI, (addr >> (7 - c)) & 0x01);
-        digitalWrite(_pinSCK, HIGH);
-        digitalWrite(_pinSCK, LOW);
-        s <<= 1;
-        if (digitalRead(_pinMISO)) s |= 0x01;
-      }
-      // data
-      for (uint8_t i = 0; i < size - 1; i++) {
-        for (int c = 0; c < 8; c++) {
-          digitalWrite(_pinMOSI, (data[i] >> (7 - c)) & 0x01);
-          digitalWrite(_pinSCK, HIGH);
-          digitalWrite(_pinSCK, LOW);
-        }
-      }
-      digitalWrite(_pinCS, HIGH);
-    }
-
-    this->_status->_data = s;
-    return this->_status;
-  }
-
-  status_t _read(uint8_t *data, uint8_t addr, size_t size = 1) {
-    uint8_t s = 0;
-
-    if (_hwSPI) {
-      _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
-      digitalWrite(_pinCS, LOW);
-      s = _spi->transfer(addr);
-      for (uint8_t i = 0; i < size; i++) {
-        data[i] = _spi->transfer(0x00);
-      }
-      digitalWrite(_pinCS, HIGH);
-      _spi->endTransaction();
-
-    } else {
-      digitalWrite(_pinCS, LOW);
-      // addr
-      for (uint8_t c = 0; c < 8; c++) {
-        digitalWrite(_pinMOSI, (addr >> (7 - c)) & 0x01);
-        digitalWrite(_pinSCK, HIGH);
-        digitalWrite(_pinSCK, LOW);
-        s <<= 1;
-        if (digitalRead(_pinMISO)) s |= 0x01;
-      }
-      // data
-      for (uint8_t i = 0; i < size; i++) {
-        for (int c = 0; c < 8; c++) {
-          digitalWrite(_pinMOSI, (data[i] >> (7 - c)) & 0x01);
-          digitalWrite(_pinSCK, HIGH);
-          digitalWrite(_pinSCK, LOW);
-        }
-      }
-      digitalWrite(_pinCS, HIGH);
-    }
-
-    this->_status._data = s;
-    return this->_status;
-  }
-
-  //  status_t _selectMultiplexer(uint8_t mux);
+  //  status_t selectMultiplexer(uint8_t mux);
 };
 
 typedef MCP3x6x<MCP3461_DEVICE_TYPE> MCP3461;
