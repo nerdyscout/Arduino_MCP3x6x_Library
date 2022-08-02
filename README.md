@@ -24,5 +24,5 @@
 
 <!--------------------------------[ Badges ]----------------------------------->
 
-[Badge License]: https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge
-[Badge Status]: https://img.shields.io/badge/Status-Unstable-C70D2C?style=for-the-badge
+[Badge License]: https://img.shields.io/badge/License-MIT-ac8b11.svg?style=for-the-badge&labelColor=yellow
+[Badge Status]: https://img.shields.io/badge/Status-Unstable-870a1f?style=for-the-badge&labelColor=C70D2C
