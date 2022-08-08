@@ -10,7 +10,7 @@
 
 #include "MCP3x6x.h"
 
-MCP3564 mcp;
+MCP3564 mcp=MCP3564();
 
 void setup() {
   Serial.begin(9600);
@@ -23,7 +23,6 @@ void setup() {
     while (1)
       ;
   }
-
 }
 
 // the loop routine runs over and over again forever:
