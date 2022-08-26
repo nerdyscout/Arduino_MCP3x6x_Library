@@ -14,21 +14,33 @@ MCP3564 mcp;
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial) {
-    ;  // wait for serial port to connect. Needed for native USB port only
-  }
+  while (!Serial)
+    ;
 
-  if (!mcp.begin()) {
+#if defined ARDUINO_GRAND_CENTRAL_M4
+//  SPIClass mySPI = SPIClass(&sercom5, 125, 126, 99, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
+  SPIClass mySPI = SPIClass(&sercom5, 12, 13, 11, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
+  if (!mcp.begin(2,7,OUTPUT,10, &mySPI))
+//#elif
+// todo: might need further cases, didn't check for all boards
+#else
+  if (!mcp.begin())
+#endif
+  {
     // failed to initialize
     while (1)
       ;
   }
-// todo: enable scan mode
+
+//  mcp.settings.mux.vin_minus =
 }
 
 // the loop routine runs over and over again forever:
 void loop() {
-  Stream adcdata;
-//  mcp.analogRead(&adcdata);
-  Serial.println(adcdata);
+  // read the input on default analog channel:
+  int32_t adcdata = mcp.analogRead();
+  // Convert the analog reading (which goes from 0 - 2^24) to a voltage (0 - 3V3):
+  double voltage = adcdata * (3.3 / (pow(2, 24) - 1));
+  // print out the value you read:
+  Serial.println(voltage, 20);
 }
