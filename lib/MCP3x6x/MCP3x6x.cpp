@@ -2,112 +2,74 @@
 
 #include <wiring_private.h>
 
-MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE) {
-  //  settings.id.raw = MCP3x6x_DEVICE_TYPE;
+MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
+                 const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK) {
+  switch (MCP3x6x_DEVICE_TYPE) {
+    case MCP3461_DEVICE_TYPE:
+      _resolution = 16;
+      _channels   = 2;
+      break;
+    case MCP3462_DEVICE_TYPE:
+      _resolution = 16;
+      _channels   = 4;
+      break;
+    case MCP3464_DEVICE_TYPE:
+      _resolution = 16;
+      _channels   = 8;
+      break;
+    case MCP3561_DEVICE_TYPE:
+      _resolution = 24;
+      _channels   = 2;
+      break;
+    case MCP3562_DEVICE_TYPE:
+      _resolution = 24;
+      _channels   = 4;
+      break;
+    case MCP3564_DEVICE_TYPE:
+      _resolution = 24;
+      _channels   = 8;
+      break;
+    default:
+#warning "undefined MCP3x6x_DEVICE_TYPE"
+      break;
+  }
 
-#if (MCP3x6x_DEVICE_TYPE == MCP3461_DEVICE_TYPE)
-  _resolution = 16;
-  _channels   = 2;
-#elif (MCP3x6x_DEVICE_TYPE == MCP3462_DEVICE_TYPE)
-  _resolution = 16;
-  _channels   = 4;
-#elif (MCP3x6x_DEVICE_TYPE == MCP3464_DEVICE_TYPE)
-  _resolution = 16;
-  _channels   = 8;
-#elif (MCP3x6x_DEVICE_TYPE == MCP3561_DEVICE_TYPE)
-  _resolution = 24;
-  _channels   = 2;
-#elif (MCP3x6x_DEVICE_TYPE == MCP3562_DEVICE_TYPE)
-  _resolution = 24;
-  _channels   = 4;
-#elif (MCP3x6x_DEVICE_TYPE == MCP3564_DEVICE_TYPE)
-  _resolution = 24;
-  _channels   = 8;
-#endif
+  _spi       = theSPI;
+  _pinMISO   = pinMISO;
+  _pinMOSI   = pinMOSI;
+  _pinCLK    = pinCLK;
+  _pinCS     = pinCS;
 
-
-
+  resolution = _resolution;
+  _channel_mask &= (0xff << _channels);  // todo fix this one
 };
 
-/*
-MCP3x6x::status_t MCP3x6x::_readADC(uint32_t *buffer) {
-  _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
-  digitalWrite(_pinCS, LOW);
-  _status.raw = _spi->transfer(MCP3x6x_ADR_ADCDATA | MCP3x6x_CMD_SREAD);
-  for (size_t i = 0; i < 4; i++) {
-    //    (uint8_t )&buffer = _spi->transfer(0x00);
-  }
-  digitalWrite(_pinCS, HIGH);
-  _spi->endTransaction();
- 
- return _status;
-}
-*/
-/*
-void MCP3x6x::_irq_handler() {
-  /*
-
-  //todo
-  byte data[4];
-  _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
-  digitalWrite(_pinCS, LOW);
-  _status.raw = _spi->transfer(0x0);
-  for (size_t i = 0; i < 4; i++) {
-    data[i] = _spi->transfer(0x00);
-  }
-
-  digitalWrite(_pinCS, HIGH);
-  _spi->endTransaction();
-*/
-//}
-
-bool MCP3x6x::begin(const uint8_t SPI_CS, SPIClass *theSPI, uint8_t SPI_MOSI, uint8_t SPI_MISO, uint8_t SPI_CLK) {
-  _pinCS = SPI_CS;
-  pinMode(_pinCS, OUTPUT);
-  digitalWrite(_pinCS, HIGH);
-
-  _spi = theSPI;
-  _spi->begin();
-  pinPeripheral(SPI_MISO, PIO_SERCOM);
-  pinPeripheral(SPI_MOSI, PIO_SERCOM);
-  pinPeripheral(SPI_CLK, PIO_SERCOM);
-
-  _status              = reset();
-  _status              = read(settings);
-
-  settings.config0.clk = clk_sel::internal;
-  _status              = write(settings.config0);
-
-  return true;
-}
-
-bool MCP3x6x::begin(const uint8_t pinIRQ_MDAT, const uint8_t pinMCLK, bool MCLK_direction, uint8_t SPI_CS, SPIClass *theSPI,
-                    uint8_t SPI_MOSI, uint8_t SPI_MISO, uint8_t SPI_CLK) {
-  _pinCS = SPI_CS;
-  pinMode(_pinCS, OUTPUT);
-  digitalWrite(_pinCS, HIGH);
-
-  _spi = theSPI;
-  _spi->begin();
-  pinPeripheral(SPI_MISO, PIO_SERCOM);
-  pinPeripheral(SPI_MOSI, PIO_SERCOM);
-  pinPeripheral(SPI_CLK, PIO_SERCOM);
-
-  _status = reset();
-  _status = read(settings);
-
-  return true;
+MCP3x6x::MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint16_t MCP3x6x_DEVICE_TYPE,
+                 const uint8_t pinCS, SPIClass *theSPI, const uint8_t pinMOSI,
+                 const uint8_t pinMISO, const uint8_t pinCLK)
+    : MCP3x6x(MCP3x6x_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {
+  _pinIRQ  = pinIRQ;
+  _pinMCLK = pinMCLK;
 }
 
 MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
   _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
   digitalWrite(_pinCS, LOW);
   _status.raw = _spi->transfer(addr);
-  _spi->transfer(data, size);
+  for (size_t i = 0; i < size; i++) {
+    *data = _spi->transfer(*data);
+  }
   digitalWrite(_pinCS, HIGH);
   _spi->endTransaction();
-
   return _status;
+}
+
+void MCP3x6x::_dma(uint8_t *tx, uint8_t *rx, size_t size) {
+  _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
+  digitalWrite(_pinCS, LOW);
+  _spi->transfer(tx, rx, size, true);
+  digitalWrite(_pinCS, HIGH);
+  _spi->endTransaction();
 }
 
 MCP3x6x::status_t MCP3x6x::_fastcmd(uint8_t cmd) {
@@ -119,85 +81,157 @@ MCP3x6x::status_t MCP3x6x::_fastcmd(uint8_t cmd) {
   return _status;
 }
 
-int32_t MCP3x6x::analogRead(uint8_t channel) {
-  //  uint32_t adcvalue;
+bool MCP3x6x::begin(uint8_t channelmask, uint8_t channelmask2) {
+  pinMode(_pinCS, OUTPUT);
+  digitalWrite(_pinCS, HIGH);
 
-  if (settings.scan.channels.raw == 0x0000) {
-    // muxmode
+  _spi->begin();
+  // todo figure out how to get dynamicaly sercom index
+  pinPeripheral(_pinMISO, PIO_SERCOM);
+  pinPeripheral(_pinMOSI, PIO_SERCOM);
+  pinPeripheral(_pinCLK, PIO_SERCOM);
 
-    /*    while (!_status.dr) {
-      // poll for new data
-//      _status = read(&adcvalue, MCP3x6x_ADR_ADCDATA, 4);
-    }
-    */
+  _status = reset();
+
+  setClockSelection(clk_sel::internal);
+
+  if (_pinIRQ != 0 || _pinMCLK != 0) {
+    // scan mode
+    settings.scan.channels.single_ended = channelmask;
+    settings.scan.channels.differential = channelmask2;
+    _status                             = write(settings.scan);
+
+    setDataFormat(data_format::id_sgnext_data);
+    setConvMode(conv_mode::continuous);
+    //    setAdcMode(adc_mode::conversion);
+    _status = conversion();
 
   } else {
-    // scanmode
+    // mux mode
+    setDataFormat(data_format::sgn_data);
+    _status = standby();
   }
 
-  /*
-  switch (settings.config3.data_format) {
-    case (data_format::sgn_data):  // default
-      _status = _read((uint8_t *)_adcdata.ch[single_channel], (MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA), 3);
-      break;
-    case (data_format::sgn_data_zero):
-      _status = _read((uint8_t *)_adcdata.ch[single_channel], (MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA), 4);
-      //        _adcdata.ch[ch] >>= 8;
-      break;
-    case (data_format::sgnext_data):
-    case (data_format::id_sgnext_data):
-      _status = _read((uint8_t *)_adcdata.ch[single_channel], (MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA), 4);
-      //        _adcdata.ch[ch] = bitRead(_adcdata.ch[ch], 24) ?
-      bitSet(_adcdata.ch[single_channel], 31);
-      break;
-  };
-
-*/
-
-  //  return _adcdata.ch[single_channel] & 0x80FFFFFF;
-
-  return 0x5a;
+  return true;
 }
 
-/*
+void MCP3x6x::_readADC(uint32_t *buffer) {
+  uint8_t addr = (MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA);
 
-MCP3x6x::Mux MCP3x6x::channel2mux(channelID ch) {
-  Mux mask;
-  mask.raw = 0;
-
-  return mask;
+  if (settings.config3.data_format == data_format::sgn_data) {
+    _transfer((uint8_t *)buffer, addr, 3);
+  } else {
+    _transfer((uint8_t *)buffer, addr, 4);
+  }
 }
 
+// reads ADC and puts content into channel structure
+MCP3x6x::channel_value MCP3x6x::getChannelValue() {
+  _readADC(&_rawadcvalue);
 
-MCP3x6x::Scan MCP3x6x::channel2scan(channelID ch) {
-  Scan mask;
-  mask.raw = 0;
+  // scanmode
+  adc_channel_value.channelid = _getChannel(_rawadcvalue);
+  //  printlnW((uint8_t)adc_channel_value.channelid);
 
- return mask;
+  // muxmode
+  // todo: adc_channel_value.channelid = get channel from somewhere;
+
+  adc_channel_value.value = _getValue(_rawadcvalue);
+
+  //  printlnW(adc_channel_value.value);
+
+  _adc_results.raw[(uint8_t)adc_channel_value.channelid] = adc_channel_value.value;
+
+  return adc_channel_value;
 }
 
-*/
+void MCP3x6x::lock(uint8_t key) {
+  settings.lock.raw = key;
+  write(settings.lock);
+}
 
-void MCP3x6x::setMode(uint8_t mode) {
-  switch (mode) {
-    case MCP3x6x_MODE_CONTINUOUS_CONVERSION:
-      settings.config0.adc       = MCP3x6x::adc_mode::conversion;
-      settings.config3.conv_mode = MCP3x6x::conv_mode::continuous;
+void MCP3x6x::unlock() {
+  settings.lock.raw = MCP3x6x_DEFAULT_LOCK;
+  write(settings.lock);
+}
+
+void MCP3x6x::setDataFormat(data_format format) {
+  settings.config3.data_format = format;
+
+  switch (format) {
+    case data_format::sgn_data:
+    case data_format::sgn_data_zero:
+      resolution--;
       break;
-    case MCP3x6x_MODE_ONESHOT_STANDBY:
-      settings.config0.adc       = MCP3x6x::adc_mode::standby;
-      settings.config3.conv_mode = MCP3x6x::conv_mode::oneshot_standby;
-    case MCP3x6x_MODE_ONESHOT_SHUTDOWN:
-      settings.config0.adc       = MCP3x6x::adc_mode::shutdown;
-      settings.config3.conv_mode = MCP3x6x::conv_mode::oneshot_shutdown;
+    case data_format::sgnext_data:
+    case data_format::id_sgnext_data:
+      break;
+    default:
+      resolution = -1;
+      break;
   }
 
-  settings.config0.clk         = MCP3x6x::clk_sel::internal;
-  settings.config3.data_format = MCP3x6x::data_format::id_sgnext_data;
-  settings.config3.en_gaincal  = true;
-  settings.config3.en_offcal   = true;
-  write(settings.config0);
-  write(settings.config3);
+  _status = write(settings.config3);
+}
 
-  //  write(settings); // dont know why this one is not working
+void MCP3x6x::setConvMode(conv_mode mode) {
+  settings.config3.conv_mode = mode;
+  _status                    = write(settings.config3);
+}
+
+void MCP3x6x::setAdcMode(adc_mode mode) {
+  settings.config0.adc = mode;
+  _status              = write(settings.config0);
+}
+
+void MCP3x6x::setClockSelection(clk_sel clk) {
+  settings.config0.clk = clk;
+  _status              = write(settings.config0);
+}
+
+// returns signed ADC value from raw data
+int32_t MCP3x6x::_getValue(uint32_t raw) {
+  //  switch (settings.config3.data_format) {
+  //    case (data_format::sgn_data):
+  //      bitWrite(raw, 31, bitRead(raw, 24));
+  //      return raw;
+  //      break;
+  //    case (data_format::sgn_data_zero):
+  //      return raw >> 8;
+  //      break;
+  //    case (data_format::sgnext_data):
+  //    case (data_format::id_sgnext_data):
+  bitWrite(raw, 31, bitRead(raw, 25));
+  return raw & 0x80FFFFFF;
+  //      break;
+  //  };
+  //  return -1;
+}
+
+// returns channelID from raw data
+MCP3x6x::channelID_t MCP3x6x::_getChannel(uint32_t raw) {
+  //  if (settings.scan.channels.raw == 0) {
+  // todo: return channel for mux mode
+  //    return (channelID)settings.mux.raw;
+  //  } else {
+  //    if (settings.config3.data_format == data_format::id_sgnext_data) {
+  return (channelID)((raw >> 24) & 0x0F);
+  //    }
+  // todo what else?
+  //  }
+}
+
+// actual triggers read in mux mode, but in scan mode only returns latest value from channel structure
+int32_t MCP3x6x::analogRead(uint8_t channel) {
+  if (settings.scan.channels.raw == 0) {
+    // mux mode
+    settings.mux.raw = channel & _channel_mask;
+    _status          = write(settings.mux);
+    _status          = conversion();
+    //    _status          = _readADC(_rawadcvalue);
+    return _getValue(_rawadcvalue);
+  } else {
+    // scan mode
+    return _getValue(_adc_results.raw[channel]);
+  }
 }

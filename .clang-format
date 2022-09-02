@@ -8,3 +8,4 @@ ReflowComments: false
 AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
 AlignConsecutiveMacros: AcrossComments
 AlignConsecutiveAssignments: AcrossEmptyLines
+IndentPPDirectives: AfterHash

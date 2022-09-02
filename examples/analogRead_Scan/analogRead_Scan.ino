@@ -10,37 +10,44 @@
 
 #include "MCP3x6x.h"
 
-MCP3564 mcp;
+#if defined ARDUINO_AVR_PROMICRO8
+MCP3561 mcp(10);
+#elif defined ARDUINO_GRAND_CENTRAL_M4
+SPIClass mySPI = SPIClass(&sercom5, 125, 126, 99, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
+MCP3561 mcp(0, 0, SS, &mySPI);
+#elif defined ADAFRUIT_METRO_M0_EXPRESS
+SPIClass mySPI(&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);
+MCP3564 mcp(8, 7, 10, &mySPI, 11, 12, 13);
+// #elif
+// todo: might need further cases, didn't check for all boards
+#else
+MCP3561 mcp();
+#endif
+
+void ISR() { mcp.getChannelValue(); }
 
 void setup() {
   Serial.begin(115200);
   while (!Serial)
     ;
 
-#if defined ARDUINO_GRAND_CENTRAL_M4
-//  SPIClass mySPI = SPIClass(&sercom5, 125, 126, 99, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
-  SPIClass mySPI = SPIClass(&sercom5, 12, 13, 11, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
-  if (!mcp.begin(2,7,OUTPUT,10, &mySPI))
-//#elif
-// todo: might need further cases, didn't check for all boards
-#else
-  if (!mcp.begin())
-#endif
-  {
+  if (!mcp.begin(0x03)) {
     // failed to initialize
     while (1)
       ;
   }
 
-//  mcp.settings.mux.vin_minus =
+  attachInterrupt(digitalPinToInterrupt(8), ISR, FALLING);
 }
 
 // the loop routine runs over and over again forever:
 void loop() {
   // read the input on default analog channel:
-  int32_t adcdata = mcp.analogRead();
+  int32_t adcdata = mcp.analogRead(0);
   // Convert the analog reading (which goes from 0 - 2^24) to a voltage (0 - 3V3):
   double voltage = adcdata * (3.3 / (pow(2, 24) - 1));
   // print out the value you read:
-  Serial.println(voltage, 20);
+  Serial.println(voltage, 10);
+  // pause program for one second
+  delay(1000);
 }

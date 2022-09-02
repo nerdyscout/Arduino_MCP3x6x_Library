@@ -10,24 +10,26 @@
 
 #include "MCP3x6x.h"
 
-MCP3561 mcp;
+#if defined ARDUINO_AVR_PROMICRO8
+MCP3561 mcp(10);
+#elif defined ARDUINO_GRAND_CENTRAL_M4
+SPIClass mySPI = SPIClass(&sercom5, 125, 126, 99, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
+MCP3561 mcp(SS, &mySPI);
+#elif defined ADAFRUIT_METRO_M0_EXPRESS
+SPIClass mySPI(&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);
+MCP3564 mcp(8, 7, 10, &mySPI, 11, 12, 13);
+// #elif
+// todo: might need further cases, didn't check for all boards
+#else
+MCP3561 mcp();
+#endif
 
 void setup() {
   Serial.begin(115200);
   while (!Serial)
     ;
 
-#if defined ARDUINO_AVR_PROMICRO8
-  if (!mcp.begin(10))
-#elif defined ARDUINO_GRAND_CENTRAL_M4
-  SPIClass mySPI = SPIClass(&sercom5, 125, 126, 99, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
-  if (!mcp.begin(SS, &mySPI))
-//#elif
-// todo: might need further cases, didn't check for all boards
-#else
-  if (!mcp.begin())
-#endif
-  {
+  if (!mcp.begin(0x03)) {
     // failed to initialize
     while (1)
       ;
