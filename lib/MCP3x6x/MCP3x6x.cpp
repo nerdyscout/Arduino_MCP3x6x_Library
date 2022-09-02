@@ -115,34 +115,24 @@ bool MCP3x6x::begin(uint8_t channelmask, uint8_t channelmask2) {
   return true;
 }
 
-void MCP3x6x::_readADC(uint32_t *buffer) {
-  uint8_t addr = (MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA);
+MCP3x6x::status_t MCP3x6x::read(Adcdata data) {
+  uint8_t buffer[4];
 
   if (settings.config3.data_format == data_format::sgn_data) {
-    _transfer((uint8_t *)buffer, addr, 3);
+    _status = _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, 3);
   } else {
-    _transfer((uint8_t *)buffer, addr, 4);
+    _status = _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, 4);
   }
+
+  data.channelid = _getChannel((uint32_t)buffer);
+  data.value     = _getValue((uint32_t)buffer);
+
+  return _status;
 }
 
-// reads ADC and puts content into channel structure
-MCP3x6x::channel_value MCP3x6x::getChannelValue() {
-  _readADC(&_rawadcvalue);
-
-  // scanmode
-  adc_channel_value.channelid = _getChannel(_rawadcvalue);
-  //  printlnW((uint8_t)adc_channel_value.channelid);
-
-  // muxmode
-  // todo: adc_channel_value.channelid = get channel from somewhere;
-
-  adc_channel_value.value = _getValue(_rawadcvalue);
-
-  //  printlnW(adc_channel_value.value);
-
-  _adc_results.raw[(uint8_t)adc_channel_value.channelid] = adc_channel_value.value;
-
-  return adc_channel_value;
+void MCP3x6x::ISR_handler() {
+  read(adcdata);
+  channel.raw[(uint8_t)adcdata.channelid] = adcdata.value;
 }
 
 void MCP3x6x::lock(uint8_t key) {
@@ -191,47 +181,45 @@ void MCP3x6x::setClockSelection(clk_sel clk) {
 
 // returns signed ADC value from raw data
 int32_t MCP3x6x::_getValue(uint32_t raw) {
-  //  switch (settings.config3.data_format) {
-  //    case (data_format::sgn_data):
-  //      bitWrite(raw, 31, bitRead(raw, 24));
-  //      return raw;
-  //      break;
-  //    case (data_format::sgn_data_zero):
-  //      return raw >> 8;
-  //      break;
-  //    case (data_format::sgnext_data):
-  //    case (data_format::id_sgnext_data):
-  bitWrite(raw, 31, bitRead(raw, 25));
-  return raw & 0x80FFFFFF;
-  //      break;
-  //  };
-  //  return -1;
+  switch (settings.config3.data_format) {
+    case (data_format::sgn_data):
+      bitWrite(raw, 31, bitRead(raw, 24));
+      return raw;
+      break;
+    case (data_format::sgn_data_zero):
+      return raw >> 8;
+      break;
+    case (data_format::sgnext_data):
+    case (data_format::id_sgnext_data):
+      bitWrite(raw, 31, bitRead(raw, 25));
+      return raw & 0x80FFFFFF;
+      break;
+  };
+  return -1;
 }
 
 // returns channelID from raw data
 MCP3x6x::channelID_t MCP3x6x::_getChannel(uint32_t raw) {
-  //  if (settings.scan.channels.raw == 0) {
-  // todo: return channel for mux mode
-  //    return (channelID)settings.mux.raw;
-  //  } else {
-  //    if (settings.config3.data_format == data_format::id_sgnext_data) {
-  return (channelID)((raw >> 24) & 0x0F);
-  //    }
-  // todo what else?
-  //  }
+  if (settings.scan.channels.raw == 0) {
+    //  todo: return channel for mux mode
+    return (channelID)settings.mux.raw;
+  } else {
+    if (settings.config3.data_format == data_format::id_sgnext_data) {
+      return (channelID)((raw >> 24) & 0x0F);
+    }
+    //  todo what else ?
+  }
 }
 
 // actual triggers read in mux mode, but in scan mode only returns latest value from channel structure
-int32_t MCP3x6x::analogRead(uint8_t channel) {
+int32_t MCP3x6x::analogRead(uint8_t channelid) {
   if (settings.scan.channels.raw == 0) {
     // mux mode
-    settings.mux.raw = channel & _channel_mask;
+    settings.mux.raw = channelid & _channel_mask;
     _status          = write(settings.mux);
     _status          = conversion();
-    //    _status          = _readADC(_rawadcvalue);
-    return _getValue(_rawadcvalue);
-  } else {
-    // scan mode
-    return _getValue(_adc_results.raw[channel]);
+    ISR_handler();
   }
+  // scan mode
+  return channel.raw[channelid];
 }

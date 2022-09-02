@@ -88,18 +88,6 @@ class MCP3x6x {
   } status_t;
   status_t _status;
 
-  union adc_content {
-    struct {
-      int32_t offset;
-      int32_t vcm;
-      int32_t avdd;
-      int32_t temp;
-      int32_t diff[4];
-      int32_t ch[8];
-    };
-    uint32_t raw[16];
-  };
-
   // defines which bit has to be set in scan register
   typedef enum class __attribute__((packed)) channelID : uint8_t {
     ch_OFFSET = 15,
@@ -131,12 +119,8 @@ class MCP3x6x {
   status_t _transfer(uint8_t *data, uint8_t addr, size_t size = 1);
   void _dma(uint8_t *tx, uint8_t *rx, size_t size = 1);
   status_t _fastcmd(uint8_t cmd);
-  void _readADC(uint32_t *buffer);
   int32_t _getValue(uint32_t raw);
   channelID_t _getChannel(uint32_t raw);
-
-  uint32_t _rawadcvalue;           // contains always latest raw data read from ADC
-  union adc_content _adc_results;  // structure with latest value per channel
 
  public:
   enum class __attribute__((packed)) adc_mode : uint8_t {
@@ -248,6 +232,14 @@ class MCP3x6x {
     dly_8   = 1,
     dly_0   = 0  // default
   };
+
+  union Adcdata {
+    struct {
+      int32_t value         : 25;
+      channelID_t channelid : 4;
+    };
+    uint32_t raw;
+  } adcdata;  // structure with latest read value
 
   union Config0 {
     struct {
@@ -377,13 +369,17 @@ class MCP3x6x {
     uint8_t raw[27];
   } settings;
 
-  union channel_value {
+  union {
     struct {
-      channelID_t channelid : 4;
-      int32_t value         : 25;
+      int32_t offset;
+      int32_t vcm;
+      int32_t avdd;
+      int32_t temp;
+      int32_t diff[4];
+      int32_t ch[8];
     };
-    uint32_t raw;
-  } adc_channel_value;  // structure with latest read value
+    uint32_t raw[16];
+  } channel;  // structure with latest value per channel
 
   uint8_t resolution;
   uint8_t channels;
@@ -402,6 +398,7 @@ class MCP3x6x {
   inline bool status_dr() { return _status.dr; }
   inline bool status_crccfg() { return _status.crccfg; }
   inline bool status_por() { return _status.por; }
+
   /* fast commands */
   inline status_t conversion() { return _fastcmd(MCP3x6x_CMD_CONVERSION); }
   inline status_t standby() { return _fastcmd(MCP3x6x_CMD_STANDBY); }
@@ -411,6 +408,7 @@ class MCP3x6x {
     memcpy(settings.raw, MCP3x6x_DEFAULTS, 27);
     return _fastcmd(MCP3x6x_CMD_RESET);
   }
+
   /* write */
   inline status_t write(Config0 data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0);
@@ -451,8 +449,9 @@ class MCP3x6x {
   inline status_t write(Settings data) {
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
   }
+
   /* read */
-  //  inline status_t read(Adcdata data) { return _transfer(&data, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, 4); }
+  status_t read(Adcdata data);
   inline status_t read(Config0 data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0);
   }
@@ -493,17 +492,18 @@ class MCP3x6x {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 27);
   }
 
-  void setDataFormat(data_format format);
-  void setConvMode(conv_mode mode);
-  void setAdcMode(adc_mode mode);
-  void setClockSelection(clk_sel clk);
-
-  int32_t analogRead(uint8_t channel);
+  void ISR_handler();
 
   void lock(uint8_t key = 0x5A);
   void unlock();
 
-  channel_value getChannelValue();
+  void setDataFormat(data_format format);
+  void setConvMode(conv_mode mode);
+  void setAdcMode(adc_mode mode);
+  void setClockSelection(clk_sel clk);
+  // ...further functions may follow...
+
+  int32_t analogRead(uint8_t channel);
 };
 
 class MCP3461 : public MCP3x6x {
