@@ -505,6 +505,7 @@ class MCP3x6x {
   // ...further functions may follow...
 
   int32_t analogRead(uint8_t channel);
+  void analogReadResolution(size_t bits);
 };
 
 class MCP3461 : public MCP3x6x {
