@@ -1,6 +1,8 @@
 #ifndef MCP3x6x_H
 #define MCP3x6x_H
 
+//#define MCP3x6x_DEBUG DEBUG
+
 #if ARDUINO >= 100
 #  include "Arduino.h"
 #else
@@ -117,7 +119,6 @@ class MCP3x6x {
   uint8_t _pinMCLK, _pinIRQ;
 
   status_t _transfer(uint8_t *data, uint8_t addr, size_t size = 1);
-  void _dma(uint8_t *tx, uint8_t *rx, size_t size = 1);
   status_t _fastcmd(uint8_t cmd);
   int32_t _getValue(uint32_t raw);
   channelID_t _getChannel(uint32_t raw);
@@ -233,12 +234,9 @@ class MCP3x6x {
     dly_0   = 0  // default
   };
 
-  union Adcdata {
-    struct {
-      int32_t value         : 25;
-      channelID_t channelid : 4;
-    };
-    uint32_t raw;
+  struct Adcdata {
+    channelID_t channelid : 4;
+    int32_t value         : 25;
   } adcdata;  // structure with latest read value
 
   union Config0 {
@@ -315,10 +313,10 @@ class MCP3x6x {
           bool vcm             : 1;
           bool offset          : 1;
         };
-        uint8_t raw[2];
+        uint16_t raw;
       } channels;
       uint8_t        : 4;  // unimplemented
-      uint8_t        : 1;  // reserved
+      bool           : 1;  // reserved
       enum delay dly : 3;
     };
     uint8_t raw[3];
@@ -429,29 +427,29 @@ class MCP3x6x {
     return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX);
   }
   inline status_t write(Scan data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_SCAN, sizeof(Scan));
+    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_SCAN, 3);
   }
   inline status_t write(Timer data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_TIMER, sizeof(Timer));
+    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_TIMER, 3);
   }
   inline status_t write(Offset data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_OFFSET, sizeof(Offset));
+    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_OFFSET, 3);
   }
   inline status_t write(Gain data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_GAIN, sizeof(Gain));
+    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_GAIN, 3);
   }
   inline status_t write(Lock data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK);
   }
   inline status_t write(Crccfg data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CRCCFG, sizeof(Crccfg));
+    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CRCCFG, 2);
   }
   inline status_t write(Settings data) {
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
   }
 
   /* read */
-  status_t read(Adcdata data);
+  status_t read(Adcdata *data);
   inline status_t read(Config0 data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0);
   }
@@ -471,22 +469,22 @@ class MCP3x6x {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_MUX);
   }
   inline status_t read(Scan data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_SCAN, sizeof(Scan));
+    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_SCAN, 3);
   }
   inline status_t read(Timer data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_TIMER, sizeof(Timer));
+    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_TIMER, 3);
   }
   inline status_t read(Offset data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_OFFSET, sizeof(Offset));
+    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_OFFSET, 3);
   }
   inline status_t read(Gain data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_GAIN, sizeof(Gain));
+    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_GAIN, 3);
   }
   inline status_t read(Lock data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_LOCK);
   }
   inline status_t read(Crccfg data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CRCCFG, sizeof(Crccfg));
+    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CRCCFG, 2);
   }
   inline status_t read(Settings data) {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 27);
@@ -501,6 +499,7 @@ class MCP3x6x {
   void setConvMode(conv_mode mode);
   void setAdcMode(adc_mode mode);
   void setClockSelection(clk_sel clk);
+  void setScanChannels(uint8_t mask, uint8_t mask2);
   // ...further functions may follow...
 
   int32_t analogRead(uint8_t channel);

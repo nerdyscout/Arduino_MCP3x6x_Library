@@ -21,13 +21,14 @@ MCP3564 mcp(8, 7, 10, &mySPI, 11, 12, 13);
 // #elif
 // todo: might need further cases, didn't check for all boards
 #else
-MCP3561 mcp();
+MCP3561 mcp;
 #endif
 
 void setup() {
   Serial.begin(115200);
   while (!Serial)
     ;
+  Serial.println(__FILE__);
 
   if (!mcp.begin(0x03)) {
     // failed to initialize
@@ -41,7 +42,7 @@ void loop() {
   // read the input on default analog channel:
   int32_t adcdata = mcp.analogRead(0);
   // Convert the analog reading (which goes from 0 - 2^24) to a voltage (0 - 3V3):
-  double voltage = adcdata * (3.3 / (pow(2, 24) - 1));
+  double voltage = adcdata * 3.3 / pow(2, mcp.resolution);
   // print out the value you read:
   Serial.println(voltage, 10);
   // pause program for one second
