@@ -503,11 +503,10 @@ class MCP3x6x {
   void setAdcMode(adc_mode mode);
   void setClockSelection(clk_sel clk);
   void setScanChannels(uint8_t mask, uint8_t mask2);
-  void setVRef(float vref=0.0);
-  float getVRef();  
   // ...further functions may follow...
 
   int32_t analogRead(uint8_t channel);
+  float analogReference(float vref=0.0);
 };
 
 class MCP3461 : public MCP3x6x {
