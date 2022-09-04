@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "MCP3x6x.h"
 
 #include <wiring_private.h>

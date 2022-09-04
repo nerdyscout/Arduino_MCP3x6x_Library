@@ -1,0 +1,24 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Arduino_MCP3x6x_Library
+Upstream-Contact: Stefan Herold <stefan.herold@posteo.de>
+Source: https://github.com/nerdyscout/Arduino_MCP3x6x_Library
+
+Files: examples/* .clang-format
+Copyright: 2022, Stefan Herold <stefan.herold@posteo.de>
+License: CC0-1.0
+
+Files: lib/*
+Copyright: 2022, Stefan Herold <stefan.herold@posteo.de>
+License: MIT
+
+Files: .github/* .gitignore
+Copyright: 2022, Stefan Herold <stefan.herold@posteo.de>
+License: CC0-1.0
+
+Files: library.json library.properties platformio.ini keywords.txt
+Copyright: 2022, Stefan Herold <stefan.herold@posteo.de>
+License: CC0-1.0
+
+Files: README.md docs/
+Copyright: 2022, Stefan Herold <stefan.herold@posteo.de>
+License: CC0-1.0

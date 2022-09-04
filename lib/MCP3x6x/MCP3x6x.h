@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #ifndef MCP3x6x_H
 #define MCP3x6x_H
 

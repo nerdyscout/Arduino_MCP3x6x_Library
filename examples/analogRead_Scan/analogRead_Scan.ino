@@ -5,7 +5,6 @@
   result to the Serial Monitor. Attach the center pin of a potentiometer to pin
   A0, and the outside pins to +3V3 and ground.
 
-  This example code is in the public domain.
 */
 
 #include "MCP3x6x.h"
