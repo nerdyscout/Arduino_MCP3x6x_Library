@@ -98,6 +98,7 @@ bool MCP3x6x::begin(uint8_t channelmask, uint8_t channelmask2) {
   } else {
     // mux mode
     setDataFormat(data_format::sgn_data);
+    setVRef();
     _status = standby();
   }
 
@@ -197,6 +198,19 @@ void MCP3x6x::setScanChannels(uint8_t mask, uint8_t mask2) {
   settings.scan.channels.vcm          = 0x40 & mask2;
   settings.scan.channels.offset       = 0x80 & mask2;
   _status                             = write(settings.scan);
+}
+
+void MCP3x6x::setVRef(float vref) {
+  if (vref==0.0)
+  {
+    settings.config0.vref_sel=1;
+    write(settings.config0);
+  }
+  _vref=vref;
+}
+
+float MCP3x6x::getVRef() {
+  return _vref;
 }
 
 // returns signed ADC value from raw data
