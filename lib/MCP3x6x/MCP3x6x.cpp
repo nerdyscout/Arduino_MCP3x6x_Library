@@ -227,14 +227,47 @@ MCP3x6x::channelID_t MCP3x6x::_getChannel(uint32_t raw) {
 }
 
 // actual triggers read in mux mode, but in scan mode only returns latest value from channel structure
-int32_t MCP3x6x::analogRead(uint8_t channelid) {
-  if (settings.scan.channels.raw == 0) {
-    // mux mode
-    settings.mux.raw = channelid & _channel_mask;
-    _status          = write(settings.mux);
-    _status          = conversion();
-    ISR_handler();
+int32_t MCP3x6x::analogRead(uint8_t pin) {
+  if (pin < 8) {
+    if (settings.scan.channels.raw == 0) {
+      // mux mode
+      settings.mux.raw = pin & _channel_mask;
+      _status          = write(settings.mux);
+      _status          = conversion();
+      ISR_handler();
+    }
+    // both modes
+    return channel.raw[pin];
   }
-  // both modes
-  return channel.raw[channelid];
+  return -1;
 }
+
+int32_t MCP3x6x::analogReadDifferential(uint8_t pinP, uint8_t pinN) {
+  //
+}
+
+int32_t MCP3x6x::analogReadContinuous() {
+  //
+}
+
+void MCP3x6x::singleEndedMode() { _differential = false; }
+
+void MCP3x6x::differentialMode() { _differential = true; }
+
+bool MCP3x6x::isDifferential() { return _differential; }
+
+bool MCP3x6x::startContinuous() { _continuous = true; }
+
+bool MCP3x6x::isContinuous() { return _continuous; }
+
+void MCP3x6x::startContinuousDifferential() {
+  _continuous   = true;
+  _differential = true;
+}
+
+void MCP3x6x::startSingleDifferential() {
+  _continuous   = false;
+  _differential = true;
+}
+
+bool MCP3x6x::isComplete() { return _status.dr; }

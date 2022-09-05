@@ -116,6 +116,9 @@ class MCP3x6x {
   size_t _channels;
   uint8_t _channel_mask = 0xFF;
 
+  bool _differential    = false;
+  bool _continuous      = false;
+
   SPIClass *_spi;
   uint8_t _pinMISO, _pinMOSI, _pinCLK, _pinCS;
   uint8_t _pinMCLK, _pinIRQ;
@@ -504,7 +507,19 @@ class MCP3x6x {
   void setScanChannels(uint8_t mask, uint8_t mask2);
   // ...further functions may follow...
 
-  int32_t analogRead(uint8_t channel);
+  int32_t analogRead(uint8_t pin);
+  int32_t analogReadDifferential(uint8_t pinP, uint8_t pinN);
+  int32_t analogReadContinuous();
+
+  //
+  void singleEndedMode();
+  void differentialMode();
+  bool isDifferential();
+  bool startContinuous();
+  bool isContinuous();
+  void startContinuousDifferential();
+  bool isComplete();
+  void startSingleDifferential();
 };
 
 class MCP3461 : public MCP3x6x {
