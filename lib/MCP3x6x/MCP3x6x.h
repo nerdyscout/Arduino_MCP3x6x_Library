@@ -117,6 +117,9 @@ class MCP3x6x {
   float _vref;
   uint8_t _channel_mask = 0xFF;
 
+  bool _differential    = false;
+  bool _continuous      = false;
+
   SPIClass *_spi;
   uint8_t _pinMISO, _pinMOSI, _pinCLK, _pinCS;
   uint8_t _pinMCLK, _pinIRQ;
