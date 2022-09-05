@@ -248,3 +248,10 @@ int32_t MCP3x6x::analogRead(uint8_t channelid) {
   // both modes
   return channel.raw[channelid];
 }
+
+void MCP3x6x::analogReadResolution(size_t bits) {
+  if (bits <= _resolution) {
+    resolution = bits;
+  }
+  // todo might be an idea to enable oversampling here.
+}

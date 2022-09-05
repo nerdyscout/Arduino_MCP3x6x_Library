@@ -506,6 +506,7 @@ class MCP3x6x {
   // ...further functions may follow...
 
   int32_t analogRead(uint8_t channel);
+  void analogReadResolution(size_t bits);
   float analogReference(float vref=0.0);
 };
 
