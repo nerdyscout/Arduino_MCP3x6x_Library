@@ -36,6 +36,8 @@ MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPICla
       break;
   }
 
+  settings.id=MCP3x6x_DEVICE_TYPE;
+
   _spi       = theSPI;
   _pinMISO   = pinMISO;
   _pinMOSI   = pinMOSI;
@@ -152,7 +154,7 @@ void MCP3x6x::lock(uint8_t key) {
 }
 
 void MCP3x6x::unlock() {
-  settings.lock.raw = MCP3x6x_DEFAULT_LOCK;
+  settings.lock.raw = _DEFAULT_LOCK;
   write(settings.lock);
 }
 

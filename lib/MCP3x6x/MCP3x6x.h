@@ -53,30 +53,27 @@
 #define MCP3x6x_ADR_RESERVED3     (MCP3x6x_SPI_ADR | (0xE << 2))
 #define MCP3x6x_ADR_CRCCFG        (MCP3x6x_SPI_ADR | (0xF << 2))
 
-/* Register Default Values */
-static const uint8_t MCP3x6x_DEFAULT_CONFIG0     = 0xC0;
-static const uint8_t MCP3x6x_DEFAULT_CONFIG1     = 0x0C;
-static const uint8_t MCP3x6x_DEFAULT_CONFIG2     = 0x8B;
-static const uint8_t MCP3x6x_DEFAULT_CONFIG3     = 0x00;
-static const uint8_t MCP3x6x_DEFAULT_IRQ         = 0x73;
-static const uint8_t MCP3x6x_DEFAULT_MUX         = 0x01;
-static const uint8_t MCP3x6x_DEFAULT_SCAN[]      = {0x00, 0x00, 0x00};
-static const uint8_t MCP3x6x_DEFAULT_TIMER[]     = {0x00, 0x00, 0x00};
-static const uint8_t MCP3x6x_DEFAULT_OFFSET[]    = {0x00, 0x00, 0x00};
-static const uint8_t MCP3x6x_DEFAULT_GAIN[]      = {0x80, 0x00, 0x00};
-static const uint8_t MCP3x6x_DEFAULT_RESERVED1[] = {0x90, 0x00, 0x00};
-static const uint8_t MCP3x6x_DEFAULT_RESERVED2   = 0x50;
-static const uint8_t MCP3x6x_DEFAULT_LOCK        = 0xA5;
-//static uint16_t MCP3x6x_DEVICE_TYPE              = 0x0000;
-static const uint16_t MCP3x6x_DEFAULT_CRCCFG = 0x0000;
-static const uint8_t MCP3x6x_DEFAULTS[27]    = {
-       MCP3x6x_DEFAULT_CONFIG0, MCP3x6x_DEFAULT_CONFIG1,    MCP3x6x_DEFAULT_CONFIG2,
-       MCP3x6x_DEFAULT_CONFIG3, MCP3x6x_DEFAULT_IRQ,        MCP3x6x_DEFAULT_MUX,
-       *MCP3x6x_DEFAULT_SCAN,   *MCP3x6x_DEFAULT_TIMER,     *MCP3x6x_DEFAULT_OFFSET,
-       *MCP3x6x_DEFAULT_GAIN,   *MCP3x6x_DEFAULT_RESERVED1, MCP3x6x_DEFAULT_RESERVED2,
-       MCP3x6x_DEFAULT_LOCK,    (uint16_t)0x0000,           MCP3x6x_DEFAULT_CRCCFG};
-
 class MCP3x6x {
+  /* Register Default Values */
+  const uint8_t _DEFAULT_CONFIG0      = 0xC0;
+  const uint8_t _DEFAULT_CONFIG1      = 0x0C;
+  const uint8_t _DEFAULT_CONFIG2      = 0x8B;
+  const uint8_t _DEFAULT_CONFIG3      = 0x00;
+  const uint8_t _DEFAULT_IRQ          = 0x73;
+  const uint8_t _DEFAULT_MUX          = 0x01;
+  const uint8_t _DEFAULT_SCAN[3]      = {0x00, 0x00, 0x00};
+  const uint8_t _DEFAULT_TIMER[3]     = {0x00, 0x00, 0x00};
+  const uint8_t _DEFAULT_OFFSET[3]    = {0x00, 0x00, 0x00};
+  const uint8_t _DEFAULT_GAIN[3]      = {0x80, 0x00, 0x00};
+  const uint8_t _DEFAULT_RESERVED1[3] = {0x90, 0x00, 0x00};
+  const uint8_t _DEFAULT_RESERVED2    = 0x50;
+  const uint8_t _DEFAULT_LOCK         = 0xA5;
+  const uint16_t _DEFAULT_CRCCFG      = 0x0000;
+  const uint8_t DEFAULTS[27]          = {
+               _DEFAULT_CONFIG0,    _DEFAULT_CONFIG1,   _DEFAULT_CONFIG2, _DEFAULT_CONFIG3, _DEFAULT_IRQ,
+               _DEFAULT_MUX,        *_DEFAULT_SCAN,     *_DEFAULT_TIMER,  *_DEFAULT_OFFSET, *_DEFAULT_GAIN,
+               *_DEFAULT_RESERVED1, _DEFAULT_RESERVED2, _DEFAULT_LOCK,    (uint16_t)0x0000, _DEFAULT_CRCCFG};
+
   typedef union {
     struct {
       struct __attribute__((__packed__)) {
@@ -364,7 +361,7 @@ class MCP3x6x {
       uint8_t reserverd1[3];
       uint8_t reserverd2;
       lock_t lock;
-      uint16_t DEVICE_TYPE;
+      uint16_t id;
       crccfg_t crccfg;
     };
     uint8_t raw[27];
@@ -406,7 +403,7 @@ class MCP3x6x {
   inline status_t shutdown() { return _fastcmd(MCP3x6x_CMD_SHUTDOWN); }
   inline status_t full_shutdown() { return _fastcmd(MCP3x6x_CMD_FULL_SHUTDOWN); }
   inline status_t reset() {
-    memcpy(settings.raw, MCP3x6x_DEFAULTS, 27);
+    memcpy(settings.raw, DEFAULTS, 27);
     return _fastcmd(MCP3x6x_CMD_RESET);
   }
 
