@@ -13,6 +13,22 @@
 
 #include <SPI.h>
 
+#define MCP_OFFSET                (0x88)
+#define MCP_VCM                   (0xF8)
+#define MCP_AVDD                  (0x98)
+#define MCP_TEMP                  (0xDE)
+#define MCP_DIFFD                 (0x67)
+#define MCP_DIFFC                 (0x45)
+#define MCP_DIFFB                 (0x23)
+#define MCP_DIFFA                 (0x01)
+#define MCP_CH7                   (0x78)
+#define MCP_CH6                   (0x68)
+#define MCP_CH5                   (0x58)
+#define MCP_CH4                   (0x48)
+#define MCP_CH3                   (0x38)
+#define MCP_CH2                   (0x28)
+#define MCP_CH1                   (0x18)
+#define MCP_CH0                   (0x08)
 /* Device IDs */
 #define MCP3461_DEVICE_TYPE       (0x0008)
 #define MCP3462_DEVICE_TYPE       (0x0009)
@@ -68,11 +84,12 @@ class MCP3x6x {
   const uint8_t _DEFAULT_RESERVED1[3] = {0x90, 0x00, 0x00};
   const uint8_t _DEFAULT_RESERVED2    = 0x50;
   const uint8_t _DEFAULT_LOCK         = 0xA5;
-  const uint16_t _DEFAULT_CRCCFG      = 0x0000;
-  const uint8_t DEFAULTS[27]          = {
-               _DEFAULT_CONFIG0,    _DEFAULT_CONFIG1,   _DEFAULT_CONFIG2, _DEFAULT_CONFIG3, _DEFAULT_IRQ,
-               _DEFAULT_MUX,        *_DEFAULT_SCAN,     *_DEFAULT_TIMER,  *_DEFAULT_OFFSET, *_DEFAULT_GAIN,
-               *_DEFAULT_RESERVED1, _DEFAULT_RESERVED2, _DEFAULT_LOCK,    (uint16_t)0x0000, _DEFAULT_CRCCFG};
+  const uint8_t _DEFAULT_CRCCFG[2]    = {0x00, 0x00};
+  const uint8_t _DEFAULTS[27]         = {_DEFAULT_CONFIG0, _DEFAULT_CONFIG1,    _DEFAULT_CONFIG2,
+                                         _DEFAULT_CONFIG3, _DEFAULT_IRQ,        _DEFAULT_MUX,
+                                         *_DEFAULT_SCAN,   *_DEFAULT_TIMER,     *_DEFAULT_OFFSET,
+                                         *_DEFAULT_GAIN,   *_DEFAULT_RESERVED1, _DEFAULT_RESERVED2,
+                                         _DEFAULT_LOCK,    (uint16_t)0x0000,    *_DEFAULT_CRCCFG};
 
   typedef union {
     struct {
@@ -89,33 +106,8 @@ class MCP3x6x {
   } status_t;
   status_t _status;
 
-  // defines which bit has to be set in scan register
-  typedef enum class __attribute__((packed)) channelID : uint8_t {
-    ch_OFFSET = 15,
-    ch_VCM    = 14,
-    ch_AVDD   = 13,
-    ch_TEMP   = 12,
-    ch_DIFF_D = 11,
-    ch_DIFF_C = 10,
-    ch_DIFF_B = 9,
-    ch_DIFF_A = 8,
-    ch_SE_7   = 7,
-    ch_SE_6   = 6,
-    ch_SE_5   = 5,
-    ch_SE_4   = 4,
-    ch_SE_3   = 3,
-    ch_SE_2   = 2,
-    ch_SE_1   = 1,
-    ch_SE_0   = 0
-  } channelID_t;
-
-  size_t _resolution;
-  size_t _channels;
-  float _vref;
-  uint8_t _channel_mask = 0xFF;
-
-  bool _differential    = false;
-  bool _continuous      = false;
+  int32_t _getValue(uint32_t raw);
+  uint8_t _getChannel(uint32_t raw);
 
   SPIClass *_spi;
   uint8_t _pinMISO, _pinMOSI, _pinCLK, _pinCS;
@@ -123,6 +115,11 @@ class MCP3x6x {
 
   float _reference   = 3.3;
   size_t _resolution, _resolution_max;
+  size_t _channels_max;
+  uint16_t _channel_mask;
+  const uint8_t _channelID[16] = {MCP_CH0,  MCP_CH1,  MCP_CH2,   MCP_CH3,   MCP_CH4,   MCP_CH5,
+                                  MCP_CH6,  MCP_CH7,  MCP_DIFFA, MCP_DIFFB, MCP_DIFFC, MCP_DIFFD,
+                                  MCP_TEMP, MCP_AVDD, MCP_VCM,   MCP_OFFSET};
 
  public:
   enum class __attribute__((packed)) adc_mode : uint8_t {
@@ -295,13 +292,13 @@ class MCP3x6x {
     uint8_t raw;
   } irq_t;
 
-  typedef union {
+  typedef union Mux {
     struct {
       enum mux vin_minus : 4;
       enum mux vin_plus  : 4;
     };
     uint8_t raw;
-    //    Mux(uint8_t data) : raw(data){};
+    Mux(uint8_t data) : raw(data){};
   } mux_t;
 
   typedef union {
@@ -316,7 +313,7 @@ class MCP3x6x {
           bool offset          : 1;
         };
         uint16_t raw;
-      } channels;
+      } channel;
       uint8_t        : 4;  // unimplemented
       bool           : 1;  // reserved
       enum delay dly : 3;
@@ -344,25 +341,23 @@ class MCP3x6x {
     uint8_t raw[2];
   } crccfg_t;
 
-  union Settings {
-    struct {
-      config0_t config0;
-      config1_t config1;
-      config2_t config2;
-      config3_t config3;
-      irq_t irq;
-      mux_t mux;
-      scan_t scan;
-      timer_t timer;
-      offset_t offsetcal;
-      gain_t gaincal;
-      uint8_t reserverd1[3];
-      uint8_t reserverd2;
-      lock_t lock;
-      uint16_t id;
-      crccfg_t crccfg;
-    };
-    uint8_t raw[27];
+  struct Settings {
+    config0_t config0;
+    config1_t config1;
+    config2_t config2;
+    config3_t config3;
+    irq_t irq;
+    mux_t mux;
+    scan_t scan;
+    timer_t timer;
+    offset_t offsetcal;
+    gain_t gaincal;
+    uint8_t reserverd1[3];
+    uint8_t reserverd2;
+    lock_t lock;
+    uint16_t id;
+    crccfg_t crccfg;
+    Settings() : mux(0x01){};
   } settings;
 
   union {
@@ -375,7 +370,7 @@ class MCP3x6x {
       int32_t ch[8];
     };
     uint32_t raw[16];
-  } channel;  // structure with latest value per channel
+  } result;  // structure with latest value per channel
 
   uint8_t channels;
 
@@ -386,7 +381,7 @@ class MCP3x6x {
           const uint8_t pinCLK);
   ~MCP3x6x() { end(); };
 
-  bool begin(uint8_t channelmask, uint8_t channelmask2 = 0x00);
+  bool begin();
   void end() { _spi->end(); }
 
   /* status */
@@ -400,7 +395,7 @@ class MCP3x6x {
   inline status_t shutdown() { return _fastcmd(MCP3x6x_CMD_SHUTDOWN); }
   inline status_t full_shutdown() { return _fastcmd(MCP3x6x_CMD_FULL_SHUTDOWN); }
   inline status_t reset() {
-    memcpy(settings.raw, DEFAULTS, 27);
+    //    memcpy(settings, _DEFAULTS, 27);
     return _fastcmd(MCP3x6x_CMD_RESET);
   }
 
@@ -441,9 +436,11 @@ class MCP3x6x {
   inline status_t write(crccfg_t data) {
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CRCCFG, 2);
   }
+  /*
   inline status_t write(Settings data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
+    return _transfer((uint8_t)data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
   }
+  */
 
   /* read */
   status_t read(Adcdata *data);
@@ -483,9 +480,11 @@ class MCP3x6x {
   inline status_t read(crccfg_t data) {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CRCCFG, 2);
   }
+  /*
   inline status_t read(Settings data) {
-    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 27);
+    return _transfer((uint8_t)data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 27);
   }
+  */
 
   void ISR_handler();
 
@@ -496,7 +495,8 @@ class MCP3x6x {
   void setConvMode(conv_mode mode);
   void setAdcMode(adc_mode mode);
   void setClockSelection(clk_sel clk);
-  void setScanChannels(uint8_t mask, uint8_t mask2);
+  void setScanChannel(mux_t ch);
+  void unsetScanChannel(mux_t ch);
   // ...further functions may follow...
 
   int32_t analogRead(mux_t ch);

@@ -31,7 +31,7 @@ void setup() {
     ;
   Serial.println(__FILE__);
 
-  if (!mcp.begin(0x03)) {
+  if (!mcp.begin()) {
     // failed to initialize
     while (1)
       ;
@@ -43,8 +43,9 @@ void setup() {
 // the loop routine runs over and over again forever:
 void loop() {
   // read the input on default analog channel:
-  int32_t adcdata0 = mcp.analogRead(0);
-  int32_t adcdata1 = mcp.analogRead(1);
+  int32_t adcdata0 = mcp.analogRead(MCP_CH0);
+  int32_t adcdata1 = mcp.analogRead(MCP_CH1);
+
   // Convert the analog reading (which goes from 0 - 2^24) to a voltage (0 - 3V3):
   double voltage0 = adcdata0 * mcp.getReference() / mcp.getMaxValue();
   double voltage1 = adcdata1 * mcp.getReference() / mcp.getMaxValue();
