@@ -8,27 +8,27 @@ MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPICla
                  const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK) {
   switch (MCP3x6x_DEVICE_TYPE) {
     case MCP3461_DEVICE_TYPE:
-      _resolution = 16;
+      _resolution_max = 16;
       _channels   = 2;
       break;
     case MCP3462_DEVICE_TYPE:
-      _resolution = 16;
+      _resolution_max = 16;
       _channels   = 4;
       break;
     case MCP3464_DEVICE_TYPE:
-      _resolution = 16;
+      _resolution_max = 16;
       _channels   = 8;
       break;
     case MCP3561_DEVICE_TYPE:
-      _resolution = 24;
+      _resolution_max = 24;
       _channels   = 2;
       break;
     case MCP3562_DEVICE_TYPE:
-      _resolution = 24;
+      _resolution_max = 24;
       _channels   = 4;
       break;
     case MCP3564_DEVICE_TYPE:
-      _resolution = 24;
+      _resolution_max = 24;
       _channels   = 8;
       break;
     default:
@@ -44,7 +44,7 @@ MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPICla
   _pinCLK    = pinCLK;
   _pinCS     = pinCS;
 
-  resolution = _resolution;
+  _resolution = _resolution_max;
   _channel_mask &= (0xff << _channels);  // todo fix this one
 };
 
@@ -100,7 +100,7 @@ bool MCP3x6x::begin(uint8_t channelmask, uint8_t channelmask2) {
   } else {
     // mux mode
     setDataFormat(data_format::sgn_data);
-    analogReference();
+    setReference();
     _status = standby();
   }
 
@@ -164,13 +164,13 @@ void MCP3x6x::setDataFormat(data_format format) {
   switch (format) {
     case data_format::sgn_data:
     case data_format::sgn_data_zero:
-      resolution--;
+      _resolution--;
       break;
     case data_format::sgnext_data:
     case data_format::id_sgnext_data:
       break;
     default:
-      resolution = -1;
+      _resolution = -1;
       break;
   }
 
@@ -202,14 +202,16 @@ void MCP3x6x::setScanChannels(uint8_t mask, uint8_t mask2) {
   _status                             = write(settings.scan);
 }
 
-float MCP3x6x::analogReference(float vref) {
+void MCP3x6x::setReference(float vref) {
+  _reference = vref;
   if (vref == 0.0) {
-    vref = 2.4;
+    vref                      = 2.4;
     settings.config0.vref_sel = 1;
     write(settings.config0);
   }
-  return _vref = vref;
 }
+
+float MCP3x6x::getReference() { return _reference; }
 
 // returns signed ADC value from raw data
 int32_t MCP3x6x::_getValue(uint32_t raw) {
@@ -268,7 +270,8 @@ void MCP3x6x::differentialMode() { _differential = true; }
 
 bool MCP3x6x::isDifferential() { return _differential; }
 
-bool MCP3x6x::startContinuous() { _continuous = true; }
+uint32_t MCP3x6x::getMaxValue() { return pow(2, _resolution); }
+
 
 bool MCP3x6x::isContinuous() { return _continuous; }
 
@@ -282,11 +285,10 @@ void MCP3x6x::startSingleDifferential() {
   _differential = true;
 }
 
-void MCP3x6x::analogReadResolution(size_t bits) {
-  if (bits <= _resolution) {
-    resolution = bits;
+void MCP3x6x::setResolution(size_t bits) {
+  if (bits < _resolution_max) {
+    _resolution = bits;
   }
-  // todo might be an idea to enable oversampling here.
 }
 
 bool MCP3x6x::isComplete() { return _status.dr; }

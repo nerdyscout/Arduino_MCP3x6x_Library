@@ -121,10 +121,8 @@ class MCP3x6x {
   uint8_t _pinMISO, _pinMOSI, _pinCLK, _pinCS;
   uint8_t _pinMCLK, _pinIRQ;
 
-  status_t _transfer(uint8_t *data, uint8_t addr, size_t size = 1);
-  status_t _fastcmd(uint8_t cmd);
-  int32_t _getValue(uint32_t raw);
-  channelID_t _getChannel(uint32_t raw);
+  float _reference   = 3.3;
+  size_t _resolution, _resolution_max;
 
  public:
   enum class __attribute__((packed)) adc_mode : uint8_t {
@@ -379,7 +377,6 @@ class MCP3x6x {
     uint32_t raw[16];
   } channel;  // structure with latest value per channel
 
-  uint8_t resolution;
   uint8_t channels;
 
   MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
@@ -504,6 +501,10 @@ class MCP3x6x {
 
   int32_t analogRead(mux_t ch);
   void setResolution(size_t bits);
+
+  void setReference(float vref = 0.0);
+  float getReference();
+  uint32_t getMaxValue();
 };
 
 class MCP3461 : public MCP3x6x {
