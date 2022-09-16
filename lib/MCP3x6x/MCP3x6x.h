@@ -3,7 +3,7 @@
 #ifndef MCP3x6x_H
 #define MCP3x6x_H
 
-//#define MCP3x6x_DEBUG DEBUG
+#define MCP3x6x_DEBUG DEBUG
 
 #if ARDUINO >= 100
 #  include "Arduino.h"
@@ -106,6 +106,9 @@ class MCP3x6x {
   } status_t;
   status_t _status;
 
+  status_t _fastcmd(uint8_t cmd) { return _transfer(0x00, cmd, 0); }
+  void _reverse_array(uint8_t *array, size_t size);
+  status_t _transfer(uint8_t *data, uint8_t addr, size_t size = 1);
   int32_t _getValue(uint32_t raw);
   uint8_t _getChannel(uint32_t raw);
 
@@ -113,6 +116,7 @@ class MCP3x6x {
   uint8_t _pinMISO, _pinMOSI, _pinCLK, _pinCS;
   uint8_t _pinMCLK, _pinIRQ;
 
+  bool _differential = false;
   float _reference   = 3.3;
   size_t _resolution, _resolution_max;
   size_t _channels_max;
@@ -233,8 +237,8 @@ class MCP3x6x {
   };
 
   struct Adcdata {
-    channelID_t channelid : 4;
-    int32_t value         : 25;
+    uint8_t channelid : 4;
+    int32_t value     : 25;
   } adcdata;  // structure with latest read value
 
   typedef union {
@@ -362,12 +366,12 @@ class MCP3x6x {
 
   union {
     struct {
-      int32_t offset;
-      int32_t vcm;
-      int32_t avdd;
-      int32_t temp;
-      int32_t diff[4];
       int32_t ch[8];
+      int32_t diff[4];
+      int32_t temp;
+      int32_t avdd;
+      int32_t vcm;
+      int32_t offset;
     };
     uint32_t raw[16];
   } result;  // structure with latest value per channel
@@ -381,7 +385,7 @@ class MCP3x6x {
           const uint8_t pinCLK);
   ~MCP3x6x() { end(); };
 
-  bool begin();
+  bool begin(uint16_t channelmask = 0, float vref = 0.0);
   void end() { _spi->end(); }
 
   /* status */
@@ -486,17 +490,17 @@ class MCP3x6x {
   }
   */
 
-  void ISR_handler();
+  void IRQ_handler();
 
   void lock(uint8_t key = 0x5A);
   void unlock();
 
   void setDataFormat(data_format format);
-  void setConvMode(conv_mode mode);
+  void setConversionMode(conv_mode mode);
   void setAdcMode(adc_mode mode);
   void setClockSelection(clk_sel clk);
-  void setScanChannel(mux_t ch);
-  void unsetScanChannel(mux_t ch);
+  void enableScanChannel(mux_t ch);
+  void disableScanChannel(mux_t ch);
   // ...further functions may follow...
 
   int32_t analogRead(mux_t ch);
@@ -505,6 +509,16 @@ class MCP3x6x {
   void setReference(float vref = 0.0);
   float getReference();
   uint32_t getMaxValue();
+  bool isComplete();
+  void startContinuous();
+  void stopContinuous();
+  void startContinuousDifferential();
+  bool isContinuous();
+  void singleEndedMode();
+  void differentialMode();
+  bool isDifferential();
+  int32_t analogReadContinuous(mux_t ch);
+  int32_t analogReadDifferential(mux pinP, mux pinN);
 };
 
 class MCP3461 : public MCP3x6x {
@@ -571,5 +585,7 @@ class MCP3564 : public MCP3x6x {
           const uint8_t pinCLK = SCK)
       : MCP3x6x(pinIRQ, pinMCLK, MCP3564_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
 };
+
+extern void mcp_wrapper();
 
 #endif  // MCP3x6x_H

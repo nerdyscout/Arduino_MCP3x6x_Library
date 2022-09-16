@@ -38,11 +38,11 @@ MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPICla
 
   //  settings.id = MCP3x6x_DEVICE_TYPE;
 
-  _spi       = theSPI;
-  _pinMISO   = pinMISO;
-  _pinMOSI   = pinMOSI;
-  _pinCLK    = pinCLK;
-  _pinCS     = pinCS;
+  _spi        = theSPI;
+  _pinMISO    = pinMISO;
+  _pinMOSI    = pinMOSI;
+  _pinCLK     = pinCLK;
+  _pinCS      = pinCS;
 
   _resolution = _resolution_max;
   _channel_mask |= 0xff << _channels_max;  // todo use this one
@@ -54,28 +54,33 @@ MCP3x6x::MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint16_t MCP
     : MCP3x6x(MCP3x6x_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {
   _pinIRQ  = pinIRQ;
   _pinMCLK = pinMCLK;
+
+  attachInterrupt(digitalPinToInterrupt(_pinIRQ), mcp_wrapper, FALLING);
+}
+
+void MCP3x6x::_reverse_array(uint8_t *array, size_t size) {
+  for (size_t i = 0, e = size; i < e / 2; i++, e--) {
+    uint8_t temp = array[i];
+    array[i]     = array[e - 1];
+    array[e - 1] = temp;
+  }
 }
 
 MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
+  _reverse_array(data, size);
+  noInterrupts();
   _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
   digitalWrite(_pinCS, LOW);
   _status.raw = _spi->transfer(addr);
   _spi->transfer(data, size);
   digitalWrite(_pinCS, HIGH);
   _spi->endTransaction();
+  interrupts();
+  //  _reverse_array(data, size);
   return _status;
 }
 
-MCP3x6x::status_t MCP3x6x::_fastcmd(uint8_t cmd) {
-  _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
-  digitalWrite(_pinCS, LOW);
-  _status.raw = _spi->transfer(cmd);
-  digitalWrite(_pinCS, HIGH);
-  _spi->endTransaction();
-  return _status;
-}
-
-bool MCP3x6x::begin() {
+bool MCP3x6x::begin(uint16_t channelmask, float vref) {
   pinMode(_pinCS, OUTPUT);
   digitalWrite(_pinCS, HIGH);
 
@@ -88,40 +93,26 @@ bool MCP3x6x::begin() {
 #endif
 
   _status = reset();
+  setClockSelection(clk_sel::internal);        // todo make configurable by function parameter
+  setDataFormat(data_format::id_sgnext_data);  // todo make configurable by function parameter
 
-  setClockSelection(clk_sel::internal);
-
-  if (_pinIRQ != 0 || _pinMCLK != 0) {
-    // scan mode
-    //    setScanChannel(); //todo
-    setDataFormat(data_format::id_sgnext_data);
-    setConvMode(conv_mode::continuous);
-    _status = conversion();
-  } else {
-    // mux mode
-    setDataFormat(data_format::sgn_data);
-    setReference();
-    _status = standby();
+  // scanmode
+  if (channelmask != 0) {
+    settings.scan.channel.raw = channelmask;  // todo apply _channel_mask
+    _status                   = write(settings.scan);
   }
+
+  setReference(vref);
+  _status = standby();
 
   return true;
 }
 
 MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
-  uint8_t buffer[4];
-
-  if (settings.config3.data_format == data_format::sgn_data) {
-    _status = _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, 3);
-  } else {
-    _status = _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, 4);
-  }
-
-  // reversing byte order
-  for (size_t i = 0, e = sizeof(buffer); i < e / 2; i++, e--) {
-    uint8_t temp  = buffer[i];
-    buffer[i]     = buffer[e - 1];
-    buffer[e - 1] = temp;
-  }
+  size_t s = settings.config3.data_format == data_format::sgn_data ? 3 : 4;
+  uint8_t buffer[s];
+  _status = _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
+  //  _reverse_array(buffer, s);
 
 #if MCP3x6x_DEBUG
   Serial.print("buffer: 0x");
@@ -137,8 +128,10 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
   return _status;
 }
 
-void MCP3x6x::ISR_handler() {
-  read(&adcdata);
+void MCP3x6x::IRQ_handler() {
+  while (!_status.dr) {
+    _status = read(&adcdata);
+  }
   result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
 #if MCP3x6x_DEBUG
   Serial.print("channel: ");
@@ -150,12 +143,12 @@ void MCP3x6x::ISR_handler() {
 
 void MCP3x6x::lock(uint8_t key) {
   settings.lock.raw = key;
-  write(settings.lock);
+  _status           = write(settings.lock);
 }
 
 void MCP3x6x::unlock() {
   settings.lock.raw = _DEFAULT_LOCK;
-  write(settings.lock);
+  _status           = write(settings.lock);
 }
 
 void MCP3x6x::setDataFormat(data_format format) {
@@ -173,11 +166,14 @@ void MCP3x6x::setDataFormat(data_format format) {
       _resolution = -1;
       break;
   }
-
+#if MCP3x6x_DEBUG
+  Serial.print("resolution");
+  Serial.println(_resolution);
+#endif
   _status = write(settings.config3);
 }
 
-void MCP3x6x::setConvMode(conv_mode mode) {
+void MCP3x6x::setConversionMode(conv_mode mode) {
   settings.config3.conv_mode = mode;
   _status                    = write(settings.config3);
 }
@@ -192,17 +188,22 @@ void MCP3x6x::setClockSelection(clk_sel clk) {
   _status              = write(settings.config0);
 }
 
-void MCP3x6x::setScanChannel(mux_t ch) {
+void MCP3x6x::enableScanChannel(mux_t ch) {
   for (size_t i = 0; i < sizeof(_channelID); i++) {
     if (_channelID[i] == ch.raw) {
       bitSet(settings.scan.channel.raw, i);
+#ifdef MCP3x6x_DEBUG
+      Serial.println(i);
+      Serial.println(ch.raw, HEX);
+      Serial.println(settings.scan.channel.raw, HEX);
+#endif
       break;
     }
   }
   _status = write(settings.scan);
 }
 
-void MCP3x6x::unsetScanChannel(mux_t ch) {
+void MCP3x6x::disableScanChannel(mux_t ch) {
   for (size_t i = 0; i < sizeof(_channelID); i++) {
     if (_channelID[i] == ch.raw) {
       bitClear(settings.scan.channel.raw, i);
@@ -213,12 +214,12 @@ void MCP3x6x::unsetScanChannel(mux_t ch) {
 }
 
 void MCP3x6x::setReference(float vref) {
-  _reference = vref;
   if (vref == 0.0) {
     vref                      = 2.4;
     settings.config0.vref_sel = 1;
-    write(settings.config0);
+    _status                   = write(settings.config0);
   }
+  _reference = vref;
 }
 
 float MCP3x6x::getReference() { return _reference; }
@@ -256,12 +257,29 @@ uint8_t MCP3x6x::_getChannel(uint32_t raw) {
 }
 
 int32_t MCP3x6x::analogRead(mux_t ch) {
-  settings.mux                                  = ch;
-  _status                                       = write(settings.mux);
+  // MuxMode
+  if (settings.scan.channel.raw == 0) {
+    Serial.println("mux");
+    settings.mux = ch;
+    _status      = write(settings.mux);
+    _status      = conversion();
+    while (!_status.dr) {
+      _status = read(&adcdata);
+    }
+    return result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
+  }
 
-  _status                                       = conversion();
-  _status                                       = read(&adcdata);
-  return result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
+  Serial.println("scan");
+  // ScanMode
+  for (size_t i = 0; i < sizeof(_channelID); i++) {
+    if (_channelID[i] == ch.raw) {
+      _status = conversion();
+      while (!_status.dr) {
+        _status = read(&adcdata);
+      }
+      return adcdata.value;
+    }
+  }
 }
 
 int32_t MCP3x6x::analogReadDifferential(mux pinP, mux pinN) {
@@ -272,7 +290,14 @@ int32_t MCP3x6x::analogReadDifferential(mux pinP, mux pinN) {
   _status                                       = read(&adcdata);
   return result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
 }
-
+/*
+void MCP3x6x::analogReadResolution(size_t bits) {
+  if (bits <= _resolution_max) {
+    resolution = bits;
+  }
+  // todo might be an idea to enable oversampling here.
+}
+*/
 void MCP3x6x::singleEndedMode() { _differential = false; }
 
 void MCP3x6x::differentialMode() { _differential = true; }
@@ -281,17 +306,28 @@ bool MCP3x6x::isDifferential() { return _differential; }
 
 uint32_t MCP3x6x::getMaxValue() { return pow(2, _resolution); }
 
+bool MCP3x6x::isComplete() { return _status.dr; }
 
-bool MCP3x6x::isContinuous() { return _continuous; }
-
-void MCP3x6x::startContinuousDifferential() {
-  _continuous   = true;
-  _differential = true;
+void MCP3x6x::startContinuous() {
+  setConversionMode(conv_mode::continuous);
+  conversion();
 }
 
-void MCP3x6x::startSingleDifferential() {
-  _continuous   = false;
-  _differential = true;
+void MCP3x6x::stopContinuous() {
+  setConversionMode(conv_mode::oneshot_standby);
+  standby();
+}
+
+void MCP3x6x::startContinuousDifferential() {
+  differentialMode();
+  startContinuous();
+}
+
+bool MCP3x6x::isContinuous() {
+  if (settings.config3.conv_mode == conv_mode::continuous) {
+    return true;
+  }
+  return false;
 }
 
 void MCP3x6x::setResolution(size_t bits) {
@@ -300,4 +336,14 @@ void MCP3x6x::setResolution(size_t bits) {
   }
 }
 
-bool MCP3x6x::isComplete() { return _status.dr; }
+int32_t MCP3x6x::analogReadContinuous(mux_t ch) {
+  if (isContinuous()) {
+    for (size_t i = 0; i < sizeof(_channelID); i++) {
+      if (_channelID[i] == ch.raw) {
+        return result.raw[(uint8_t)adcdata.channelid];
+      }
+      Serial.println(i);
+    }
+  }
+  return -1;
+}
