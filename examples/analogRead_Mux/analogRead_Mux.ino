@@ -13,7 +13,7 @@
 MCP3561 mcp(10);
 #elif defined ARDUINO_GRAND_CENTRAL_M4
 SPIClass mySPI = SPIClass(&sercom5, 125, 126, 99, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
-MCP3561 mcp(SS, &mySPI);
+MCP3561 mcp(98, &mySPI);
 #elif defined ADAFRUIT_METRO_M0_EXPRESS
 SPIClass mySPI(&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);
 MCP3561 mcp(10, &mySPI, 11, 12, 13);
@@ -30,7 +30,7 @@ void setup() {
   Serial.println(__FILE__);
 
   if (!mcp.begin()) {
-    // failed to initialize
+    Serial.println("failed to initialize MCP");
     while (1)
       ;
   }
@@ -41,11 +41,13 @@ void loop() {
   // read the input on default analog channel:
   int32_t adcdata = mcp.analogRead(MCP_CH0);
 
-  // Convert the analog reading (which goes from 0 - 2^24) to a voltage (0 - 3V3):
+  // Convert the analog reading
   double voltage = adcdata * mcp.getReference() / mcp.getMaxValue();
 
   // print out the value you read:
+  Serial.print("voltage: ");
   Serial.println(voltage, 10);
+
   // pause program for one second
   delay(1000);
 }

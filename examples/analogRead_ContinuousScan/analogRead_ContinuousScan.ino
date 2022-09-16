@@ -9,6 +9,8 @@
 
 #include "MCP3x6x.h"
 
+#define MCP3x6x_DEBUG 1
+
 #if defined ARDUINO_AVR_PROMICRO8
 MCP3561 mcp(2, 3, 10);
 #elif defined ARDUINO_GRAND_CENTRAL_M4
@@ -39,23 +41,34 @@ void setup() {
       ;
   }
   mcp.enableScanChannel(MCP_CH0);
+  mcp.startContinuous();
+
+  Serial.println("MCP setup done");
 }
+
+unsigned long previousMillis = 0;
+const long interval          = 1000;
 
 // the loop routine runs over and over again forever:
 void loop() {
-  // read the input on default analog channel:
-  int32_t adcdata0 = mcp.analogRead(MCP_CH0);
-  int32_t adcdata1 = mcp.analogRead(MCP_CH1);
+  unsigned long currentMillis = millis();
+  Serial.println(currentMillis);
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
 
-  // Convert the analog reading
-  double voltage0 = adcdata0 * mcp.getReference() / mcp.getMaxValue();
-  double voltage1 = adcdata1 * mcp.getReference() / mcp.getMaxValue();
+    // read the input on default analog channel:
+    int32_t adcdata0 = mcp.analogReadContinuous(MCP_CH0);
+//    int32_t adcdata1 = mcp.analogReadContinuous(MCP_CH1);
 
-  // print out the value you read:
-  Serial.print("voltage0: ");
-  Serial.println(voltage0, 10);
-  Serial.print("voltage1: ");
-  Serial.println(voltage1, 10);
-  // pause program for one second
-  delay(1000);
+    // Convert the analog reading
+    double voltage0 = adcdata0 * mcp.getReference() / mcp.getMaxValue();
+//    double voltage1 = adcdata1 * mcp.getReference() / mcp.getMaxValue();
+
+    // print out the value you read:
+    Serial.print("voltage0: ");
+    Serial.println(voltage0, 10);
+//    Serial.print("voltage1: ");
+//    Serial.println(voltage1, 10);
+
+  }
 }
