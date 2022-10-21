@@ -109,7 +109,17 @@ bool MCP3x6x::begin(uint16_t channelmask, float vref) {
 }
 
 MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
-  size_t s = settings.config3.data_format == data_format::sgn_data ? 3 : 4;
+  size_t s = 0;
+
+  switch (_resolution_max) {
+    case 16:
+      s = settings.config3.data_format == data_format::sgn_data ? 2 : 4;
+      break;
+    case 24:
+      s = settings.config3.data_format == data_format::sgn_data ? 3 : 4;
+      break;
+  }
+
   uint8_t buffer[s];
   _status = _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
   //  _reverse_array(buffer, s);
@@ -226,20 +236,40 @@ float MCP3x6x::getReference() { return _reference; }
 
 // returns signed ADC value from raw data
 int32_t MCP3x6x::_getValue(uint32_t raw) {
-  switch (settings.config3.data_format) {
-    case (data_format::sgn_data):
-      bitWrite(raw, 31, bitRead(raw, 24));
-      return raw;
+  switch (_resolution_max) {
+    case 16:
+      switch (settings.config3.data_format) {
+        case (data_format::sgn_data_zero):
+          return raw >> 8;
+        case (data_format::sgn_data):
+          bitWrite(raw, 31, bitRead(raw, 16));
+          return raw;
+          break;
+        case (data_format::sgnext_data):
+        case (data_format::id_sgnext_data):
+          bitWrite(raw, 31, bitRead(raw, 17));
+          return raw & 0x8000FFFF;
+          break;
+      };
       break;
-    case (data_format::sgn_data_zero):
-      return raw >> 8;
+
+    case 24:
+      switch (settings.config3.data_format) {
+        case (data_format::sgn_data_zero):
+          return raw >> 8;
+        case (data_format::sgn_data):
+          bitWrite(raw, 31, bitRead(raw, 24));
+          return raw;
+          break;
+        case (data_format::sgnext_data):
+        case (data_format::id_sgnext_data):
+          bitWrite(raw, 31, bitRead(raw, 25));
+          return raw & 0x80FFFFFF;
+          break;
+      };
       break;
-    case (data_format::sgnext_data):
-    case (data_format::id_sgnext_data):
-      bitWrite(raw, 31, bitRead(raw, 25));
-      return raw & 0x80FFFFFF;
-      break;
-  };
+  }
+
   return -1;
 }
 
