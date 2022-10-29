@@ -67,16 +67,12 @@ void MCP3x6x::_reverse_array(uint8_t *array, size_t size) {
 }
 
 MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
-  _reverse_array(data, size);
-  noInterrupts();
   _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
   digitalWrite(_pinCS, LOW);
   _status.raw = _spi->transfer(addr);
   _spi->transfer(data, size);
   digitalWrite(_pinCS, HIGH);
   _spi->endTransaction();
-  interrupts();
-  //  _reverse_array(data, size);
   return _status;
 }
 
@@ -122,7 +118,7 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
 
   uint8_t buffer[s];
   _status = _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
-  //  _reverse_array(buffer, s);
+  _reverse_array(buffer, s);
 
 #if MCP3x6x_DEBUG
   Serial.print("buffer: 0x");
