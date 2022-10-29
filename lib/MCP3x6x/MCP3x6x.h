@@ -516,10 +516,14 @@ class MCP3x6x {
   void startContinuousDifferential();
   bool isContinuous();
   void singleEndedMode();
+
   void differentialMode();
   bool isDifferential();
+
+  int32_t analogRead(mux_t ch);
   int32_t analogReadContinuous(mux_t ch);
   int32_t analogReadDifferential(mux pinP, mux pinN);
+
 };
 
 class MCP3461 : public MCP3x6x {

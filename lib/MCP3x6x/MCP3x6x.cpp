@@ -139,6 +139,7 @@ void MCP3x6x::IRQ_handler() {
     _status = read(&adcdata);
   }
   result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
+
 #if MCP3x6x_DEBUG
   Serial.print("channel: ");
   Serial.println((uint8_t)adcdata.channelid);
@@ -306,6 +307,7 @@ int32_t MCP3x6x::analogRead(mux_t ch) {
       return adcdata.value;
     }
   }
+  return -1;
 }
 
 int32_t MCP3x6x::analogReadDifferential(mux pinP, mux pinN) {
@@ -368,7 +370,6 @@ int32_t MCP3x6x::analogReadContinuous(mux_t ch) {
       if (_channelID[i] == ch.raw) {
         return result.raw[(uint8_t)adcdata.channelid];
       }
-      Serial.println(i);
     }
   }
   return -1;
