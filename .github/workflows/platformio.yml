@@ -3,8 +3,8 @@ name: PlatformIO
 on: [push]
 
 jobs:
-  build:
 
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -12,7 +12,6 @@ jobs:
           - examples/analogRead_Mux/analogRead_Mux.ino
           - examples/analogRead_Scan/analogRead_Scan.ino
           - examples/analogRead_ContinuousScan/analogRead_ContinuousScan.ino
-
     steps:
     - uses: actions/checkout@v2
     - name: Cache pip
@@ -36,3 +35,11 @@ jobs:
       run: pio ci -c platformio.ini --lib=lib/MCP3x6x
       env:
         PLATFORMIO_CI_SRC: ${{ matrix.example }}
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - uses: bojit/platformio-publish@main
+      with:
+        token: ${{ secrets.PLATFORMIO_TOKEN }}

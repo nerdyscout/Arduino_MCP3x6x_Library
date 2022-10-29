@@ -1,15 +1,15 @@
-name: Arduino
+# name: Arduino
 
-on: [pull_request, push]
+# on: [pull_request, push]
 
-jobs:
-  arduino_ci:
-    runs-on: ubuntu-latest
+# jobs:
+#   arduino_ci:
+#     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v2
-      - uses: Arduino-CI/action@stable-1.x
-        env:
-          USE_SUBDIR: lib/MCP3x6x
-          EXPECT_EXAMPLES: true
-          EXPECT_UNITTESTS: false
+#     steps:
+#       - uses: actions/checkout@v2
+#       - uses: Arduino-CI/action@stable-1.x
+#         env:
+#           USE_SUBDIR: lib/MCP3x6x
+#           EXPECT_EXAMPLES: true
+#           EXPECT_UNITTESTS: false
