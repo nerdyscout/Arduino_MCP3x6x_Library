@@ -159,6 +159,7 @@ void MCP3x6x::unlock() {
 
 void MCP3x6x::setDataFormat(data_format format) {
   settings.config3.data_format = format;
+  _status                      = write(settings.config3);
 
   switch (format) {
     case data_format::sgn_data:
@@ -176,7 +177,6 @@ void MCP3x6x::setDataFormat(data_format format) {
   Serial.print("resolution");
   Serial.println(_resolution);
 #endif
-  _status = write(settings.config3);
 }
 
 void MCP3x6x::setConversionMode(conv_mode mode) {
