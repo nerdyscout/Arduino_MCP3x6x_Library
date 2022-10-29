@@ -316,14 +316,15 @@ int32_t MCP3x6x::analogReadDifferential(mux pinP, mux pinN) {
   _status                                       = read(&adcdata);
   return result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
 }
-/*
+
 void MCP3x6x::analogReadResolution(size_t bits) {
   if (bits <= _resolution_max) {
-    resolution = bits;
+    _resolution = bits;
   }
-  // todo might be an idea to enable oversampling here.
 }
-*/
+
+void MCP3x6x::setResolution(size_t bits) { analogReadResolution(bits); }
+
 void MCP3x6x::singleEndedMode() { _differential = false; }
 
 void MCP3x6x::differentialMode() { _differential = true; }

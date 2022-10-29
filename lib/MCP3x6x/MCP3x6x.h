@@ -505,7 +505,7 @@ class MCP3x6x {
 
   int32_t analogRead(mux_t ch);
   void setResolution(size_t bits);
-
+  void analogReadResolution(size_t bits);
   void setReference(float vref = 0.0);
   float getReference();
   uint32_t getMaxValue();
