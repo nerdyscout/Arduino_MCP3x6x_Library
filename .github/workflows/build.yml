@@ -1,0 +1,74 @@
+name: build
+
+on: [pull_request, push]
+
+jobs:
+  PlatformIO:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example: 
+          - examples/analogRead_Mux/analogRead_Mux.ino
+          - examples/analogRead_Scan/analogRead_Scan.ino
+          - examples/analogRead_ContinuousScan/analogRead_ContinuousScan.ino
+    steps:
+    - uses: actions/checkout@v2
+    - name: Cache pip
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: ${{ runner.os }}-pip-
+    - name: Cache PlatformIO
+      uses: actions/cache@v2
+      with:
+        path: ~/.platformio
+        key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+    - name: Set up Python
+      uses: actions/setup-python@v2
+    - name: Install PlatformIO
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade platformio
+    - name: Run PlatformIO
+      run: pio ci -c platformio.ini --lib=lib/MCP3x6x
+      env:
+        PLATFORMIO_CI_SRC: ${{ matrix.example }}
+
+#  ArduinoCI:
+#    name: ArduinoCI (${{ matrix.sketch-names }})
+#    runs-on: ubuntu-latest
+##    env:
+##     PLATFORM_DEFAULT_URL: ""
+#    strategy:
+#      matrix:
+#        arduino-boards-fqbn:
+#          - arduino:avr:uno
+#          - esp8266:esp8266:nodemcuv2
+#          - samd:samd:metro m0 
+#        sketch-names:
+#          - examples/analogRead_Mux/analogRead_Mux.ino
+#          - examples/analogRead_Scan/analogRead_Scan.ino
+#          - examples/analogRead_ContinuousScan/analogRead_ContinuousScan.ino
+#        include:
+#          - arduino-boards-fqbn: arduino:avr:uno
+#            platform-url: https://arduino.esp8266.com/stable/package_esp8266com_index.json
+#          - arduino-boards-fqbn: esp8266:esp8266:nodemcuv2
+#            platform-url: https://arduino.esp8266.com/stable/package_esp8266com_index.json
+#          - arduino-boards-fqbn: esp32:esp32:esp32 dev
+#            platform-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+#          - arduino-boards-fqbn: avr:avr:metro m0
+#            platform-url: https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
+#          - arduino-boards-fqbn: avr:avr:pro micro
+#            platform-url: https://raw.githubusercontent.com/sparkfun/Arduino_Boards/master/IDE_Board_Manager/package_sparkfun_index.json
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v2
+#      - name: Compile all examples
+#        uses: ArminJo/arduino-test-compile@v3
+#        with:
+#          arduino-board-fqbn: ${{ matrix.arduino-boards-fqbn }}
+##          platform-default-url: ${{ env.PLATFORM_DEFAULT_URL }}
+#          platform-url: ${{ matrix.platform-url }}
+#          sketch-names: ${{ matrix.sketch-names }}
+#

@@ -1,0 +1,22 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  Github:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        prerelease: false
+
+  PlatformIO:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: bojit/platformio-publish@main
+      with:
+        token: ${{ secrets.PLATFORMIO_TOKEN }}
