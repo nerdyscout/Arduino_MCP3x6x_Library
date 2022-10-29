@@ -357,10 +357,9 @@ bool MCP3x6x::isContinuous() {
   return false;
 }
 
-void MCP3x6x::setResolution(size_t bits) {
-  if (bits < _resolution_max) {
-    _resolution = bits;
-  }
+void MCP3x6x::setAveraging(osr rate) {
+  settings.config1.osr = rate;
+  _status              = write(settings.config1);
 }
 
 int32_t MCP3x6x::analogReadContinuous(mux_t ch) {

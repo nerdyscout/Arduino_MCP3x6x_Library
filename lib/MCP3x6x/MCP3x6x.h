@@ -503,7 +503,8 @@ class MCP3x6x {
   void disableScanChannel(mux_t ch);
   // ...further functions may follow...
 
-  int32_t analogRead(mux_t ch);
+  void setAveraging(osr rate);
+
   void setResolution(size_t bits);
   void analogReadResolution(size_t bits);
   void setReference(float vref = 0.0);
