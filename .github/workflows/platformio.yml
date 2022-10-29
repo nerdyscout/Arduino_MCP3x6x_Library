@@ -11,6 +11,7 @@ jobs:
         example: 
           - examples/analogRead_Mux/analogRead_Mux.ino
           - examples/analogRead_Scan/analogRead_Scan.ino
+          - examples/analogRead_ContinuousScan/analogRead_ContinuousScan.ino
 
     steps:
     - uses: actions/checkout@v2
