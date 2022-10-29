@@ -28,7 +28,7 @@ Both constructors fall back to default definitions which are common in the Ardui
 
 For initialization of the ADC you must run once:
 ```
-  if (!mcp.begin(0x00)) {
+  if (!mcp.begin()) {
     // failed to initialize
     while (1)
       ;
@@ -38,7 +38,7 @@ After that you could simple do ```int32_t adcdata0 = mcp.analogRead(0);``` to ge
 
 An initialization like this:
 ```
-  if (!mcp.begin(0x00, 0x01)) {
+  if (!mcp.begin(2)) {
     // failed to initialize
     while (1)
       ;
@@ -46,6 +46,6 @@ An initialization like this:
   attachInterrupt(digitalPinToInterrupt(8), mcp_handler, FALLING);
 ```
 will enable reading differential channel0, in that case ```int32_t adcdata0 = mcp.analogRead(8);``` will give the result.
-This also requires an interupt handler ```void mcp_handler() { mcp.ISR_handler(); }```.
+This also requires an interupt handler ```void mcp_wrapper() { mcp.IRQ_handler(); }```.
 
 ***Setting up and reading (differential) channels will change in further version!***
