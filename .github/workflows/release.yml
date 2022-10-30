@@ -9,10 +9,22 @@ jobs:
   Github:
     runs-on: ubuntu-latest
     steps:
+# release
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         prerelease: false
+# Doxygen
+    - name: Add version to doxyfile
+      run: echo "PROJECT_NUMBER = $(git describe --tags --abbrev=0 | cut -c2-)" >> Doxyfile
+    - name: Run Doxygen
+      uses: mattnotmitt/doxygen-action@v1.9.4
+      with:
+        doxyfile-path: 'Doxyfile'
+    - uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs
 
   PlatformIO:
     runs-on: ubuntu-latest
