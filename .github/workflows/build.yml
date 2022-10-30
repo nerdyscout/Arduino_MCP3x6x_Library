@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example: 
+        example:
           - examples/analogRead_Mux/analogRead_Mux.ino
           - examples/analogRead_Scan/analogRead_Scan.ino
           - examples/analogRead_ContinuousScan/analogRead_ContinuousScan.ino
@@ -45,7 +45,7 @@ jobs:
 #        arduino-boards-fqbn:
 #          - arduino:avr:uno
 #          - esp8266:esp8266:nodemcuv2
-#          - samd:samd:metro m0 
+#          - samd:samd:metro m0
 #        sketch-names:
 #          - examples/analogRead_Mux/analogRead_Mux.ino
 #          - examples/analogRead_Scan/analogRead_Scan.ino

@@ -4,7 +4,7 @@ Supports Microchip 16bit [MCP3461/MCP3462/MCP3464/](https://www.microchip.com/en
 
 ## Supported Boards
 
-This project is set up to be build with different MCUs, but I am not able the test each of them. 
+This project is set up to be build with different MCUs, but I am not able the test each of them.
 Personally I use the SAMD most, so this should be the most stable code.
 
 ### Introduction

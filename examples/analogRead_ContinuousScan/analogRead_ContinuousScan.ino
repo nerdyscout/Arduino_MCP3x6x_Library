@@ -58,17 +58,16 @@ void loop() {
 
     // read the input on default analog channel:
     int32_t adcdata0 = mcp.analogReadContinuous(MCP_CH0);
-//    int32_t adcdata1 = mcp.analogReadContinuous(MCP_CH1);
+    // int32_t adcdata1 = mcp.analogReadContinuous(MCP_CH1);
 
     // Convert the analog reading
     double voltage0 = adcdata0 * mcp.getReference() / mcp.getMaxValue();
-//    double voltage1 = adcdata1 * mcp.getReference() / mcp.getMaxValue();
+    // double voltage1 = adcdata1 * mcp.getReference() / mcp.getMaxValue();
 
     // print out the value you read:
     Serial.print("voltage0: ");
     Serial.println(voltage0, 10);
-//    Serial.print("voltage1: ");
-//    Serial.println(voltage1, 10);
-
+    // Serial.print("voltage1: ");
+    // Serial.println(voltage1, 10);
   }
 }
