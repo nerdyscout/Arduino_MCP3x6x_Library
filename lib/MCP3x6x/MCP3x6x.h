@@ -155,10 +155,10 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) cs_sel : uint8_t {
-    bias15uA = 3,  //!<
-    bias37uA = 2,  //!< todo check datasheet
-    bias09uA = 1,  //!<
-    bias0uA  = 0   //!< default
+    bias37uA = 3,  //!< 15 μA is applied to the ADC inputs
+    bias15uA = 2,  //!< 3.7 μA is applied to the ADC inputs
+    bias09uA = 1,  //!< 0.9 μA is applied to the ADC inputs
+    bias0uA  = 0   //!< No current source is applied to the ADC inputs (default)
   };
 
   /**
@@ -166,9 +166,10 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) clk_sel : uint8_t {
-    internal_output = 3,  //!<
-    internal        = 2,  //!<
-    external        = 0   //!<  default
+    internal_output = 3,  //!< Internal clock is selected and AMCLK is present on the analog master
+                          //!< clock output pin
+    internal = 2,  //!< Internal clock is selected and no clock output is present on the CLK pin
+    external = 0   //!< External digital clock (default)
   };
 
   /**
@@ -232,70 +233,79 @@ class MCP3x6x {
   };
 
   /**
-   * @brief
+   * @brief Conversion Mode Selection
    *
    */
   enum class __attribute__((packed)) conv_mode : uint8_t {
-    continuous       = 3,  //!<
-    oneshot_standby  = 2,  //!<
-    oneshot_shutdown = 0   //!< default
+    continuous = 3,  //!< Continuous Conversion mode or continuous conversion cycle in SCAN mode
+    oneshot_standby = 2,  //!< One-shot conversion or one-shot cycle in SCAN mode. It sets
+                          //!< ADC_MODE[1:0] to ‘10’ (standby) at the end of the conversion or at
+                          //!< the end of the conversion cycle in SCAN mode.
+    oneshot_shutdown = 0  //!<  One-shot conversion or one-shot cycle in SCAN mode. It sets
+                          //!<  ADC_MODE[1:0] to ‘0x’ (ADC Shutdown) at the end of the conversion or
+                          //!<  at the end of the conversion cycle in SCAN mode (default).
   };
 
   /**
-   * @brief
+   * @brief ADC Output Data Format Selection
    *
    */
   enum class __attribute__((packed)) data_format : uint8_t {
-    id_sgnext_data = 3,  //!<
-    sgnext_data    = 2,  //!<
-    sgn_data_zero  = 1,  //!<
-    sgn_data       = 0   //!< default
+    id_sgnext_data =
+        3,  //!< 32-bit (25-bit right justified data + Channel ID): CHID[3:0] + SGN extension (4
+            //!< bits) + 24-bit ADC data. It allows overrange with the SGN extension.
+    sgnext_data = 2,  //!< 32-bit (25-bit right justified data): SGN extension (8-bit) + 24-bit ADC
+                      //!< data. It allows overrange with the SGN extension
+    sgn_data_zero = 1,  //!< 32-bit (24-bit left justified data): 24-bit ADC data + 0x00 (8-bit). It
+                        //!< does not allow overrange (ADC code locked to 0xFFFFFF or 0x800000).
+    sgn_data = 0  //!< 24-bit (default ADC coding): 24-bit ADC data. It does not allow overrange
+                  //!< (ADC code locked to 0xFFFFFF or 0x800000).
   };
 
   /**
-   * @brief
+   * @brief CRC Checksum Format Selection on Read Communications
    *
    */
   enum class __attribute__((packed)) crc_format : uint8_t {
-    crc32 = 1,  //!<
-    crc16 = 0   //!< default
+    crc32 = 1,  //!< 32-bit wide (CRC-16 followed by 16 zeros)
+    crc16 = 0   //!< 16-bit wide (CRC-16 only) (default)
   };
 
   /**
-   * @brief
+   * @brief MUX_VIN Input Selection
    *
    */
   enum class __attribute__((packed)) mux : uint8_t {
-    mux_VCM          = 15,  //!<
-    mux_TemperatureM = 14,  //!<
-    mux_TemperatureP = 13,  //!<
-    mux_REFINM       = 12,  //!<
-    mux_REFINP       = 11,  //!<
-    mux_AVDD         = 9,   //!<
-    mux_AGND         = 8,   //!<
-    mux_CH7          = 7,   //!<
-    mux_CH6          = 6,   //!<
-    mux_CH5          = 5,   //!<
-    mux_CH4          = 4,   //!<
-    mux_CH3          = 3,   //!<
-    mux_CH2          = 2,   //!<
-    mux_CH1          = 1,   //!<  default vin-
-    mux_CH0          = 0    //!< default vin+
+    mux_VCM          = 15,  //!< Internal VCM
+    mux_TemperatureM = 14,  //!< Internal Temperature Sensor Diode M (Temp Diode M)
+    mux_TemperatureP = 13,  //!< Internal Temperature Sensor Diode P (Temp Diode P)
+    mux_REFINM       = 12,  //!< REFIN-
+    mux_REFINP       = 11,  //!< REFIN+
+    mux_AVDD         = 9,   //!< AVDD
+    mux_AGND         = 8,   //!< AGND
+    mux_CH7          = 7,   //!< CH7
+    mux_CH6          = 6,   //!< CH6
+    mux_CH5          = 5,   //!< CH5
+    mux_CH4          = 4,   //!< CH4
+    mux_CH3          = 3,   //!< CH3
+    mux_CH2          = 2,   //!< CH2
+    mux_CH1          = 1,   //!< CH1 (default vin-)
+    mux_CH0          = 0    //!< CH0 (default vin+)
   };
 
   /**
-   * @brief
+   * @brief Delay Time Between Each Conversion During a Scan Cycle
    *
    */
   enum class __attribute__((packed)) delay : uint8_t {
-    dly_512 = 7,  //!<
-    dly_256 = 6,  //!<
-    dly_128 = 5,  //!<
-    dly_64  = 4,  //!<
-    dly_32  = 3,  //!<
-    dly_16  = 2,  //!<
-    dly_8   = 1,  //!<
-    dly_0   = 0   //!< default
+    dly_512 = 7,  //!< 512 * DMCLK
+    dly_256 = 6,  //!< 256 * DMCLK
+    dly_128 = 5,  //!< 128 * DMCLK
+    dly_64  = 4,  //!< 64 * DMCLK
+    dly_32  = 3,  //!< 32 * DMCLK
+    dly_16  = 2,  //!< 16 * DMCLK
+    dly_8   = 1,  //!< 8 * DMCLK
+    dly_0   = 0   //!< 0: no delay (default)
   };
 
   /**
@@ -310,8 +320,10 @@ class MCP3x6x {
   /**
    * @brief configuration register 0
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1576710>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union Config0 {
     struct {
       enum adc_mode adc : 2;  //!< ADC Operating Mode Selection
       enum cs_sel bias  : 2;  //!< Current Source/Sink Selection Bits for Sensor Bias
@@ -325,8 +337,10 @@ class MCP3x6x {
   /**
    * @brief configuration register 1
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269089>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union config1 {
     struct {
       uint8_t      : 2;  //!< reserved
       enum osr osr : 4;  //!< Oversampling Ratio for Delta-Sigma A/D Conversion
@@ -338,8 +352,10 @@ class MCP3x6x {
   /**
    * @brief configuration register 2
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269283>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union Config2 {
     struct {
       uint8_t          : 2;  //!< reserved // Should always be equal to ‘11’
       bool az_mu       : 1;  //!< Auto-Zeroing MUX Setting
@@ -352,8 +368,10 @@ class MCP3x6x {
   /**
    * @brief configuration register 3
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269504>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union Config3 {
     struct {
       bool en_gaincal              : 1;  //!< Enable Digital Gain Calibration
       bool en_offcal               : 1;  //!< Enable Digital Offset Calibration
@@ -368,8 +386,10 @@ class MCP3x6x {
   /**
    * @brief interrupt request register
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269747>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union Irq {
     struct {
       bool en_stp        : 1;  //!< Enable Conversion Start Interrupt Output
       bool en_fastcmd    : 1;  //!< Enable Fast Commands in the COMMAND Byte
@@ -380,11 +400,13 @@ class MCP3x6x {
       bool               : 1;  //!< unimplemented
     };
     uint8_t raw;  //!< raw access to register
-  } irq_t;        //!< todo
+  } irq_t;
 
   /**
    * @brief multiplexer register
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1273028>MCP346x.pdf</a>
    */
   typedef union Mux {
     /**
@@ -398,71 +420,83 @@ class MCP3x6x {
       enum mux vin_plus  : 4;  //!< MUX_VIN+ Input Selection
     };
     uint8_t raw;  //!< raw access to register
-  } mux_t;        //!< todo
+  } mux_t;
 
   /**
    * @brief scan mode settings register
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270252>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union Scan {
     struct {
       union {
         struct {
-          uint8_t single_ended : 8;  //!<
-          uint8_t differential : 4;  //!<
-          bool temp            : 1;  //!<
-          bool avdd            : 1;  //!<
-          bool vcm             : 1;  //!<
-          bool offset          : 1;  //!<
+          uint8_t single_ended : 8;  //!< Single-Ended Channel CH0-CH7
+          uint8_t differential : 4;  //!< Differential Channel A-D
+          bool temp            : 1;  //!< TEMP
+          bool avdd            : 1;  //!< AVDD
+          bool vcm             : 1;  //!< VCM
+          bool offset          : 1;  //!< OFFSET
         };
         uint16_t raw;  //!< raw access to register
       } channel;
-      uint8_t        : 4;  //!< unimplemented
-      bool           : 1;  //!< reserved
+      uint8_t        : 4;  //!< unimplemented: read as ‘0’
+      bool           : 1;  //!< reserved: should be set to ‘0‘
       enum delay dly : 3;  //!< delay time between each conversion during a scan cycle
     };
     uint8_t raw[3];  //!< raw access to register
-  } scan_t;          //!< todo
+  } scan_t;
 
   /**
    * @brief timer delay value register
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270583>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union Timer {
     uint8_t raw[3];  //!< Selection Bits for the Time Interval Between Two Consecutive Scan Cycles
-  } timer_t;         //!< todo
+  } timer_t;
 
   /**
    * @brief offset calibration register
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270742>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union Offset {
     uint8_t raw[3];  //!< Offset Error Digital Calibration Code (two’s complement, MSb first coding)
-  } offset_t;        //!< todo
+  } offset_t;
 
   /**
    * @brief gain calibration register
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270900>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union Gain {
     uint8_t raw[3];  //!< Gain Error Digital Calibration Code (unsigned, MSb first coding)
-  } gain_t;          //!< todo
+  } gain_t;
 
   /**
    * @brief SPI write mode locking password value register
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1271641>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union Lock {
     uint8_t raw;  //!< Write Access Password Entry Code
-  } lock_t;       //!< todo
+  } lock_t;
 
   /**
    * @brief crc configuration register
    *
+   * <a
+   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1272118>MCP346x.pdf</a>
    */
-  typedef union {
+  typedef union Crccfg {
     uint8_t raw[2];  //!< CRC-16 Checksum Value
-  } crccfg_t;        //!< todo
+  } crccfg_t;
 
   /**
    * @brief settings
@@ -1059,6 +1093,10 @@ class MCP3x6x {
   int32_t analogReadDifferential(mux pinP, mux pinN);
 };
 
+/**
+ * @brief inherited class
+ *
+ */
 class MCP3461 : public MCP3x6x {
  public:
   /**
@@ -1090,6 +1128,10 @@ class MCP3461 : public MCP3x6x {
       : MCP3x6x(pinIRQ, pinMCLK, MCP3461_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
 };
 
+/**
+ * @brief inherited class
+ *
+ */
 class MCP3462 : public MCP3x6x {
  public:
   /**
@@ -1121,6 +1163,10 @@ class MCP3462 : public MCP3x6x {
       : MCP3x6x(pinIRQ, pinMCLK, MCP3462_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
 };
 
+/**
+ * @brief inherited class
+ *
+ */
 class MCP3464 : public MCP3x6x {
  public:
   /**
@@ -1152,6 +1198,10 @@ class MCP3464 : public MCP3x6x {
       : MCP3x6x(pinIRQ, pinMCLK, MCP3464_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
 };
 
+/**
+ * @brief inherited class
+ *
+ */
 class MCP3561 : public MCP3x6x {
  public:
   /**
@@ -1183,6 +1233,10 @@ class MCP3561 : public MCP3x6x {
       : MCP3x6x(pinIRQ, pinMCLK, MCP3561_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
 };
 
+/**
+ * @brief inherited class
+ *
+ */
 class MCP3562 : public MCP3x6x {
  public:
   /**
@@ -1214,6 +1268,10 @@ class MCP3562 : public MCP3x6x {
       : MCP3x6x(pinIRQ, pinMCLK, MCP3562_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
 };
 
+/**
+ * @brief inherited class
+ *
+ */
 class MCP3564 : public MCP3x6x {
  public:
   /**
