@@ -108,9 +108,9 @@ class MCP3x6x {
   typedef union {
     struct {
       struct __attribute__((__packed__)) {
-        bool por;
-        bool crccfg;
-        bool dr;
+        bool por;     //!< status: power on reset
+        bool crccfg;  //!< status: crc
+        bool dr;      //!< status: data ready
       };
       uint8_t      : 1;  //!< !addr[0]
       uint8_t addr : 2;  //!< addresse
@@ -145,9 +145,9 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) adc_mode : uint8_t {
-    conversion = 3,  //!< ADC Conversion mode
-    standby    = 2,  //!< ADC Standby mode
-    shutdown   = 0   //!< ADC shutdown mode (default)
+    CONVERSION = 3,  //!< ADC Conversion mode
+    STANDBY    = 2,  //!< ADC Standby mode
+    SHUTDOWN   = 0   //!< ADC shutdown mode (default)
   };
 
   /**
@@ -155,10 +155,10 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) cs_sel : uint8_t {
-    bias37uA = 3,  //!< 15 μA is applied to the ADC inputs
-    bias15uA = 2,  //!< 3.7 μA is applied to the ADC inputs
-    bias09uA = 1,  //!< 0.9 μA is applied to the ADC inputs
-    bias0uA  = 0   //!< No current source is applied to the ADC inputs (default)
+    BIAS_15UA = 3,  //!< 15 μA is applied to the ADC inputs
+    BIAS_37UA = 2,  //!< 3.7 μA is applied to the ADC inputs
+    BIAS_09UA = 1,  //!< 0.9 μA is applied to the ADC inputs
+    BIAS_0UA  = 0   //!< No current source is applied to the ADC inputs (default)
   };
 
   /**
@@ -166,10 +166,10 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) clk_sel : uint8_t {
-    internal_output = 3,  //!< Internal clock is selected and AMCLK is present on the analog master
-                          //!< clock output pin
-    internal = 2,  //!< Internal clock is selected and no clock output is present on the CLK pin
-    external = 0   //!< External digital clock (default)
+    INTERN_OUTPUT = 3,  //!< Internal clock is selected and AMCLK is present on the analog master
+                        //!< clock output pin
+    INTERN = 2,  //!< Internal clock is selected and no clock output is present on the CLK pin
+    EXTERN = 0   //!< External digital clock (default)
   };
 
   /**
@@ -177,22 +177,22 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) osr : uint8_t {
-    OSR98304 = 15,  //!< OSR: 98304
-    OSR81920 = 14,  //!< OSR: 81920
-    OSR49152 = 13,  //!< OSR: 49152
-    OSR40960 = 12,  //!< OSR: 40960
-    OSR24576 = 11,  //!< OSR: 24576
-    OSR20480 = 10,  //!< OSR: 20480
-    OSR16384 = 9,   //!< OSR: 16384
-    OSR8192  = 8,   //!< OSR: 8192
-    OSR4096  = 7,   //!< OSR: 4096
-    OSR2048  = 6,   //!< OSR: 2048
-    OSR1024  = 5,   //!< OSR: 1024
-    OSR512   = 4,   //!< OSR: 512
-    OSR256   = 3,   //!< OSR: 256 (default)
-    OSR128   = 2,   //!< OSR: 128
-    OSR64    = 1,   //!< OSR: 64
-    OSR32    = 0    //!< OSR: 32
+    OSR_98304 = 15,  //!< OSR: 98304
+    OSR_81920 = 14,  //!< OSR: 81920
+    OSR_49152 = 13,  //!< OSR: 49152
+    OSR_40960 = 12,  //!< OSR: 40960
+    OSR_24576 = 11,  //!< OSR: 24576
+    OSR_20480 = 10,  //!< OSR: 20480
+    OSR_16384 = 9,   //!< OSR: 16384
+    OSR_8192  = 8,   //!< OSR: 8192
+    OSR_4096  = 7,   //!< OSR: 4096
+    OSR_2048  = 6,   //!< OSR: 2048
+    OSR_1024  = 5,   //!< OSR: 1024
+    OSR_512   = 4,   //!< OSR: 512
+    OSR_256   = 3,   //!< OSR: 256 (default)
+    OSR_128   = 2,   //!< OSR: 128
+    OSR_64    = 1,   //!< OSR: 64
+    OSR_32    = 0    //!< OSR: 32
   };
 
   /**
@@ -200,10 +200,10 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) pre : uint8_t {
-    MCLK8 = 3,  //!< AMCLK = MCLK/8
-    MCLK4 = 2,  //!< AMCLK = MCLK/4
-    MCLK2 = 1,  //!< AMCLK = MCLK/2
-    MCLK0 = 0   //!< AMCLK = MCLK (default)
+    MCLK_8 = 3,  //!< AMCLK = MCLK/8
+    MCLK_4 = 2,  //!< AMCLK = MCLK/4
+    MCLK_2 = 1,  //!< AMCLK = MCLK/2
+    MCLK_0 = 0   //!< AMCLK = MCLK (default)
   };
 
   /**
@@ -211,10 +211,10 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) boost : uint8_t {
-    boost3   = 3,  //!< ADC channel has current x2
-    boost2   = 2,  //!< ADC channel has current x1 (default)
-    boost066 = 1,  //!< ADC channel has current x2/3
-    boost05  = 0   //!< ADC channel has current x1/2
+    BOOST_3   = 3,  //!< ADC channel has current x2
+    BOOST_2   = 2,  //!< ADC channel has current x1 (default)
+    BOOST_066 = 1,  //!< ADC channel has current x2/3
+    BOOST_05  = 0   //!< ADC channel has current x1/2
   };
 
   /**
@@ -222,14 +222,14 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) gain : uint8_t {
-    gain64 = 7,  //!< Gain is x64 (x16 analog, x4 digital)
-    gain32 = 6,  //!< Gain is x32 (x16 analog, x2 digital)
-    gain16 = 5,  //!< Gain is x16
-    gain8  = 4,  //!< Gain is x8
-    gain4  = 3,  //!< Gain is x4
-    gain2  = 2,  //!< Gain is x2
-    gain1  = 1,  //!< Gain is x1 (default)
-    gain13 = 0   //!< Gain is x 1/3
+    GAIN_64  = 7,  //!< Gain is x64 (x16 analog, x4 digital)
+    GAIN_32  = 6,  //!< Gain is x32 (x16 analog, x2 digital)
+    GAIN_16  = 5,  //!< Gain is x16
+    GAIN_8   = 4,  //!< Gain is x8
+    GAIN_4   = 3,  //!< Gain is x4
+    GAIN_2   = 2,  //!< Gain is x2
+    GAIN_1   = 1,  //!< Gain is x1 (default)
+    GAIN_033 = 0   //!< Gain is x 1/3
   };
 
   /**
@@ -237,11 +237,11 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) conv_mode : uint8_t {
-    continuous = 3,  //!< Continuous Conversion mode or continuous conversion cycle in SCAN mode
-    oneshot_standby = 2,  //!< One-shot conversion or one-shot cycle in SCAN mode. It sets
+    CONTINUOUS = 3,  //!< Continuous Conversion mode or continuous conversion cycle in SCAN mode
+    ONESHOT_STANDBY = 2,  //!< One-shot conversion or one-shot cycle in SCAN mode. It sets
                           //!< ADC_MODE[1:0] to ‘10’ (standby) at the end of the conversion or at
                           //!< the end of the conversion cycle in SCAN mode.
-    oneshot_shutdown = 0  //!<  One-shot conversion or one-shot cycle in SCAN mode. It sets
+    ONESHOT_SHUTDOWN = 0  //!<  One-shot conversion or one-shot cycle in SCAN mode. It sets
                           //!<  ADC_MODE[1:0] to ‘0x’ (ADC Shutdown) at the end of the conversion or
                           //!<  at the end of the conversion cycle in SCAN mode (default).
   };
@@ -251,14 +251,14 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) data_format : uint8_t {
-    id_sgnext_data =
+    ID_SGNEXT_DATA =
         3,  //!< 32-bit (25-bit right justified data + Channel ID): CHID[3:0] + SGN extension (4
             //!< bits) + 24-bit ADC data. It allows overrange with the SGN extension.
-    sgnext_data = 2,  //!< 32-bit (25-bit right justified data): SGN extension (8-bit) + 24-bit ADC
+    SGNEXT_DATA = 2,  //!< 32-bit (25-bit right justified data): SGN extension (8-bit) + 24-bit ADC
                       //!< data. It allows overrange with the SGN extension
-    sgn_data_zero = 1,  //!< 32-bit (24-bit left justified data): 24-bit ADC data + 0x00 (8-bit). It
+    SGN_DATA_ZERO = 1,  //!< 32-bit (24-bit left justified data): 24-bit ADC data + 0x00 (8-bit). It
                         //!< does not allow overrange (ADC code locked to 0xFFFFFF or 0x800000).
-    sgn_data = 0  //!< 24-bit (default ADC coding): 24-bit ADC data. It does not allow overrange
+    SGN_DATA = 0  //!< 24-bit (default ADC coding): 24-bit ADC data. It does not allow overrange
                   //!< (ADC code locked to 0xFFFFFF or 0x800000).
   };
 
@@ -267,8 +267,8 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) crc_format : uint8_t {
-    crc32 = 1,  //!< 32-bit wide (CRC-16 followed by 16 zeros)
-    crc16 = 0   //!< 16-bit wide (CRC-16 only) (default)
+    CRC_32 = 1,  //!< 32-bit wide (CRC-16 followed by 16 zeros)
+    CRC_16 = 0   //!< 16-bit wide (CRC-16 only) (default)
   };
 
   /**
@@ -276,21 +276,21 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) mux : uint8_t {
-    mux_VCM          = 15,  //!< Internal VCM
-    mux_TemperatureM = 14,  //!< Internal Temperature Sensor Diode M (Temp Diode M)
-    mux_TemperatureP = 13,  //!< Internal Temperature Sensor Diode P (Temp Diode P)
-    mux_REFINM       = 12,  //!< REFIN-
-    mux_REFINP       = 11,  //!< REFIN+
-    mux_AVDD         = 9,   //!< AVDD
-    mux_AGND         = 8,   //!< AGND
-    mux_CH7          = 7,   //!< CH7
-    mux_CH6          = 6,   //!< CH6
-    mux_CH5          = 5,   //!< CH5
-    mux_CH4          = 4,   //!< CH4
-    mux_CH3          = 3,   //!< CH3
-    mux_CH2          = 2,   //!< CH2
-    mux_CH1          = 1,   //!< CH1 (default vin-)
-    mux_CH0          = 0    //!< CH0 (default vin+)
+    MUX_VCM          = 15,  //!< Internal VCM
+    MUX_TemperatureM = 14,  //!< Internal Temperature Sensor Diode M (Temp Diode M)
+    MUX_TemperatureP = 13,  //!< Internal Temperature Sensor Diode P (Temp Diode P)
+    MUX_REFINM       = 12,  //!< REFIN-
+    MUX_REFINP       = 11,  //!< REFIN+
+    MUX_AVDD         = 9,   //!< AVDD
+    MUX_AGND         = 8,   //!< AGND
+    MUX_CH7          = 7,   //!< CH7
+    MUX_CH6          = 6,   //!< CH6
+    MUX_CH5          = 5,   //!< CH5
+    MUX_CH4          = 4,   //!< CH4
+    MUX_CH3          = 3,   //!< CH3
+    MUX_CH2          = 2,   //!< CH2
+    MUX_CH1          = 1,   //!< CH1 (default vin-)
+    MUX_CH0          = 0    //!< CH0 (default vin+)
   };
 
   /**
@@ -298,14 +298,14 @@ class MCP3x6x {
    *
    */
   enum class __attribute__((packed)) delay : uint8_t {
-    dly_512 = 7,  //!< 512 * DMCLK
-    dly_256 = 6,  //!< 256 * DMCLK
-    dly_128 = 5,  //!< 128 * DMCLK
-    dly_64  = 4,  //!< 64 * DMCLK
-    dly_32  = 3,  //!< 32 * DMCLK
-    dly_16  = 2,  //!< 16 * DMCLK
-    dly_8   = 1,  //!< 8 * DMCLK
-    dly_0   = 0   //!< 0: no delay (default)
+    DLY_512 = 7,  //!< 512 * DMCLK
+    DLY_256 = 6,  //!< 256 * DMCLK
+    DLY_128 = 5,  //!< 128 * DMCLK
+    DLY_64  = 4,  //!< 64 * DMCLK
+    DLY_32  = 3,  //!< 32 * DMCLK
+    DLY_16  = 2,  //!< 16 * DMCLK
+    DLY_8   = 1,  //!< 8 * DMCLK
+    DLY_0   = 0   //!< 0: no delay (default)
   };
 
   /**

@@ -100,8 +100,8 @@ bool MCP3x6x::begin(uint16_t channelmask, float vref) {
 #endif
 
   _status = reset();
-  setClockSelection(clk_sel::internal);        // todo make configurable by function parameter
-  setDataFormat(data_format::id_sgnext_data);  // todo make configurable by function parameter
+  setClockSelection(clk_sel::INTERN);          // todo make configurable by function parameter
+  setDataFormat(data_format::ID_SGNEXT_DATA);  // todo make configurable by function parameter
 
   // scanmode
   if (channelmask != 0) {
@@ -120,10 +120,10 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
 
   switch (_resolution_max) {
     case 16:
-      s = settings.config3.data_format == data_format::sgn_data ? 2 : 4;
+      s = settings.config3.data_format == data_format::SGN_DATA ? 2 : 4;
       break;
     case 24:
-      s = settings.config3.data_format == data_format::sgn_data ? 3 : 4;
+      s = settings.config3.data_format == data_format::SGN_DATA ? 3 : 4;
       break;
   }
 
@@ -174,12 +174,12 @@ void MCP3x6x::setDataFormat(data_format format) {
   _status                      = write(settings.config3);
 
   switch (format) {
-    case data_format::sgn_data:
-    case data_format::sgn_data_zero:
+    case data_format::SGN_DATA:
+    case data_format::SGN_DATA_ZERO:
       _resolution--;
       break;
-    case data_format::sgnext_data:
-    case data_format::id_sgnext_data:
+    case data_format::SGNEXT_DATA:
+    case data_format::ID_SGNEXT_DATA:
       break;
     default:
       _resolution = -1;
@@ -247,14 +247,14 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
   switch (_resolution_max) {
     case 16:
       switch (settings.config3.data_format) {
-        case (data_format::sgn_data_zero):
+        case (data_format::SGN_DATA_ZERO):
           return raw >> 8;
-        case (data_format::sgn_data):
+        case (data_format::SGN_DATA):
           bitWrite(raw, 31, bitRead(raw, 16));
           return raw;
           break;
-        case (data_format::sgnext_data):
-        case (data_format::id_sgnext_data):
+        case (data_format::SGNEXT_DATA):
+        case (data_format::ID_SGNEXT_DATA):
           bitWrite(raw, 31, bitRead(raw, 17));
           return raw & 0x8000FFFF;
           break;
@@ -263,14 +263,14 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
 
     case 24:
       switch (settings.config3.data_format) {
-        case (data_format::sgn_data_zero):
+        case (data_format::SGN_DATA_ZERO):
           return raw >> 8;
-        case (data_format::sgn_data):
+        case (data_format::SGN_DATA):
           bitWrite(raw, 31, bitRead(raw, 24));
           return raw;
           break;
-        case (data_format::sgnext_data):
-        case (data_format::id_sgnext_data):
+        case (data_format::SGNEXT_DATA):
+        case (data_format::ID_SGNEXT_DATA):
           bitWrite(raw, 31, bitRead(raw, 25));
           return raw & 0x80FFFFFF;
           break;
@@ -282,7 +282,7 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
 }
 
 uint8_t MCP3x6x::_getChannel(uint32_t raw) {
-  if (settings.config3.data_format == data_format::id_sgnext_data) {
+  if (settings.config3.data_format == data_format::ID_SGNEXT_DATA) {
     return ((raw >> 28) & 0x0F);
   } else {
     for (size_t i = 0; i < sizeof(_channelID); i++) {
@@ -349,12 +349,12 @@ uint32_t MCP3x6x::getMaxValue() { return pow(2, _resolution); }
 bool MCP3x6x::isComplete() { return _status.dr; }
 
 void MCP3x6x::startContinuous() {
-  setConversionMode(conv_mode::continuous);
+  setConversionMode(conv_mode::CONTINUOUS);
   conversion();
 }
 
 void MCP3x6x::stopContinuous() {
-  setConversionMode(conv_mode::oneshot_standby);
+  setConversionMode(conv_mode::ONESHOT_STANDBY);
   standby();
 }
 
@@ -364,7 +364,7 @@ void MCP3x6x::startContinuousDifferential() {
 }
 
 bool MCP3x6x::isContinuous() {
-  if (settings.config3.conv_mode == conv_mode::continuous) {
+  if (settings.config3.conv_mode == conv_mode::CONTINUOUS) {
     return true;
   }
   return false;
