@@ -19,7 +19,8 @@ jobs:
         examples:
           - examples/analogRead_Mux/analogRead_Mux.ino
           - examples/analogRead_Scan/analogRead_Scan.ino
-          - examples/analogRead_ContinuousScan/analogRead_ContinuousScan.ino
+          - examples/analogRead_Scan_Differential/analogRead_Scan_Differential.ino
+          - examples/analogReadContinuous_Scan/analogReadContinuous_Scan.ino
     steps:
     - uses: actions/checkout@v3
     - uses: arduino/arduino-lint-action@v1
