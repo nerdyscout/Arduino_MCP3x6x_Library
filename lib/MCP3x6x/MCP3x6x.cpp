@@ -70,7 +70,7 @@ MCP3x6x::MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint16_t MCP
 }
 
 void MCP3x6x::_reverse_array(uint8_t *array, size_t size) {
-  for (size_t i = 0, e = size; i < e / 2; i++, e--) {
+  for (size_t i = 0, e = size; i <= e / 2; i++, e--) {
     uint8_t temp = array[i];
     array[i]     = array[e - 1];
     array[e - 1] = temp;
@@ -248,16 +248,15 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
     case 16:
       switch (settings.config3.data_format) {
         case (data_format::SGN_DATA_ZERO):
-          return raw >> 8;
+          return raw >> 16;
         case (data_format::SGN_DATA):
           bitWrite(raw, 31, bitRead(raw, 16));
+          bitClear(raw, 16);
           return raw;
-          break;
         case (data_format::SGNEXT_DATA):
         case (data_format::ID_SGNEXT_DATA):
           bitWrite(raw, 31, bitRead(raw, 17));
           return raw & 0x8000FFFF;
-          break;
       };
       break;
 
@@ -267,13 +266,12 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
           return raw >> 8;
         case (data_format::SGN_DATA):
           bitWrite(raw, 31, bitRead(raw, 24));
+          bitClear(raw, 24);
           return raw;
-          break;
         case (data_format::SGNEXT_DATA):
         case (data_format::ID_SGNEXT_DATA):
           bitWrite(raw, 31, bitRead(raw, 25));
           return raw & 0x80FFFFFF;
-          break;
       };
       break;
   }
