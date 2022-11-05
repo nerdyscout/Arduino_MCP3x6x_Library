@@ -1,0 +1,30 @@
+name: lint
+
+on: [push, pull_request]
+
+jobs:
+  reuse:
+    runs-on: ubuntu-latest
+    name: REUSE Compliance Check
+    steps:
+    - uses: actions/checkout@v3
+    - name: REUSE Compliance Check
+      uses: fsfe/reuse-action@v1
+
+  Arduino:
+    name: ${{ matrix.example }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        examples:
+          - examples/analogRead_Mux/analogRead_Mux.ino
+          - examples/analogRead_Scan/analogRead_Scan.ino
+          - examples/analogRead_Scan_Differential/analogRead_Scan_Differential.ino
+          - examples/analogReadContinuous_Scan/analogReadContinuous_Scan.ino
+    steps:
+    - uses: actions/checkout@v3
+    - uses: arduino/arduino-lint-action@v1
+      with:
+        path: ${{ matrix.examples }}
+        library-manager: update
+#        compliance: specification
