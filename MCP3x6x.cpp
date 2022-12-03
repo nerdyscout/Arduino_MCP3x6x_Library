@@ -295,13 +295,14 @@ uint8_t MCP3x6x::_getChannel(uint32_t raw) {
 int32_t MCP3x6x::analogRead(mux_t ch) {
   // MuxMode
   if (settings.scan.channel.raw == 0) {
-    Serial.println("mux");
+    //Serial.println("mux");
     settings.mux = ch;
     _status      = write(settings.mux);
     _status      = conversion();
     while (!_status.dr) {
       _status = read(&adcdata);
     }
+    _status = read(&adcdata);
     return result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
   }
 
