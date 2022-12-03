@@ -108,9 +108,9 @@ class MCP3x6x {
   typedef union {
     struct {
       struct __attribute__((__packed__)) {
-        bool por;     //!< status: power on reset
-        bool crccfg;  //!< status: crc
-        bool dr;      //!< status: data ready
+        bool por   : 1;  //!< status: power on reset
+        bool crccfg: 1;  //!< status: crc
+        bool dr    : 1;  //!< status: data ready
       };
       uint8_t      : 1;  //!< !addr[0]
       uint8_t addr : 2;  //!< addresse
