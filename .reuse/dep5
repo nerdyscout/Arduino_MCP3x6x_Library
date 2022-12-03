@@ -19,6 +19,6 @@ Files: library.json library.properties platformio.ini keywords.txt
 Copyright: 2022, Stefan Herold <stefan.herold@posteo.de>
 License: CC0-1.0
 
-Files: README.md
+Files: docs/** README.md
 Copyright: 2022, Stefan Herold <stefan.herold@posteo.de>
 License: CC0-1.0
