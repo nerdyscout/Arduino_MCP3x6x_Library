@@ -19,8 +19,6 @@ jobs:
       run: echo "PROJECT_NUMBER = $(git describe --tags --abbrev=0 | cut -c2-)" >> Doxyfile
     - name: Run Doxygen
       uses: mattnotmitt/doxygen-action@v1
-      with:
-        doxyfile-path: 'Doxyfile'
     - uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
