@@ -11,7 +11,7 @@ Files: lib/*
 Copyright: 2022, Stefan Herold <stefan.herold@posteo.de>
 License: MIT
 
-Files: .github/* .gitignore
+Files: .github/* .gitignore .pre-commit-config.yaml Doxyfile
 Copyright: 2022, Stefan Herold <stefan.herold@posteo.de>
 License: CC0-1.0
 
