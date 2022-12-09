@@ -13,20 +13,20 @@ jobs:
           - examples/analogRead_Scan_Differential/analogRead_Scan_Differential.ino
           - examples/analogReadContinuous_Scan/analogReadContinuous_Scan.ino
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Cache pip
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: ${{ runner.os }}-pip-
     - name: Cache PlatformIO
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/.platformio
         key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
     - name: Install PlatformIO
       run: |
         python -m pip install --upgrade pip
@@ -64,7 +64,7 @@ jobs:
 #            platform-url: https://raw.githubusercontent.com/sparkfun/Arduino_Boards/master/IDE_Board_Manager/package_sparkfun_index.json
 #    steps:
 #      - name: Checkout
-#        uses: actions/checkout@v2
+#        uses: actions/checkout@v3
 #      - name: Compile all examples
 #        uses: ArminJo/arduino-test-compile@v3
 #        with:

@@ -321,7 +321,7 @@ class MCP3x6x {
    * @brief configuration register 0
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1576710>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1576710>MCP346x.pdf</a>
    */
   typedef union Config0 {
     struct {
@@ -338,7 +338,7 @@ class MCP3x6x {
    * @brief configuration register 1
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269089>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269089>MCP346x.pdf</a>
    */
   typedef union config1 {
     struct {
@@ -353,7 +353,7 @@ class MCP3x6x {
    * @brief configuration register 2
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269283>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269283>MCP346x.pdf</a>
    */
   typedef union Config2 {
     struct {
@@ -369,7 +369,7 @@ class MCP3x6x {
    * @brief configuration register 3
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269504>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269504>MCP346x.pdf</a>
    */
   typedef union Config3 {
     struct {
@@ -387,7 +387,7 @@ class MCP3x6x {
    * @brief interrupt request register
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269747>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269747>MCP346x.pdf</a>
    */
   typedef union Irq {
     struct {
@@ -406,7 +406,7 @@ class MCP3x6x {
    * @brief multiplexer register
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1273028>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1273028>MCP346x.pdf</a>
    */
   typedef union Mux {
     /**
@@ -426,7 +426,7 @@ class MCP3x6x {
    * @brief scan mode settings register
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270252>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270252>MCP346x.pdf</a>
    */
   typedef union Scan {
     struct {
@@ -452,7 +452,7 @@ class MCP3x6x {
    * @brief timer delay value register
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270583>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270583>MCP346x.pdf</a>
    */
   typedef union Timer {
     uint8_t raw[3];  //!< Selection Bits for the Time Interval Between Two Consecutive Scan Cycles
@@ -462,7 +462,7 @@ class MCP3x6x {
    * @brief offset calibration register
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270742>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270742>MCP346x.pdf</a>
    */
   typedef union Offset {
     uint8_t raw[3];  //!< Offset Error Digital Calibration Code (two’s complement, MSb first coding)
@@ -472,7 +472,7 @@ class MCP3x6x {
    * @brief gain calibration register
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270900>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270900>MCP346x.pdf</a>
    */
   typedef union Gain {
     uint8_t raw[3];  //!< Gain Error Digital Calibration Code (unsigned, MSb first coding)
@@ -482,7 +482,7 @@ class MCP3x6x {
    * @brief SPI write mode locking password value register
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1271641>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1271641>MCP346x.pdf</a>
    */
   typedef union Lock {
     uint8_t raw;  //!< Write Access Password Entry Code
@@ -492,7 +492,7 @@ class MCP3x6x {
    * @brief crc configuration register
    *
    * <a
-   * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1272118>MCP346x.pdf</a>
+   * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1272118>MCP346x.pdf</a>
    */
   typedef union Crccfg {
     uint8_t raw[2];  //!< CRC-16 Checksum Value
