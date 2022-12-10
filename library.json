@@ -15,16 +15,28 @@
             "name": "analogRead_Mux",
             "base": "examples/analogRead_Mux",
             "files": [
-                "lib/MCP3x6x/MCP3x6x.cpp",
-                "lib/MCP3x6x/MCP3x6x.h"
+                "analogRead_Mux.ino"
             ]
         },
         {
             "name": "analogRead_Scan",
             "base": "examples/analogRead_Scan",
             "files": [
-                "lib/MCP3x6x/MCP3x6x.cpp",
-                "lib/MCP3x6x/MCP3x6x.h"
+                "analogRead_Scan.ino"
+            ]
+        },
+        {
+            "name": "analogRead_Scan_Differential",
+            "base": "examples/analogRead_Scan_Differential",
+            "files": [
+                "analogRead_Scan_Differential.ino"
+            ]
+        },
+        {
+            "name": "analogReadContinuous_Scan",
+            "base": "examples/analogReadContinuous_Scan",
+            "files": [
+                "analogReadContinuous_Scan.ino"
             ]
         }
     ]
