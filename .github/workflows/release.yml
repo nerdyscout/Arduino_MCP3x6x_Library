@@ -1,20 +1,14 @@
 name: release
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    created:
 
 jobs:
-  Github:
+  Doxygen:
     runs-on: ubuntu-latest
     steps:
-# release
-    - uses: "marvinpinto/action-automatic-releases@latest"
-      with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        prerelease: false
-# Doxygen
+    - uses: actions/checkout@v3
     - name: Add version to doxyfile
       run: echo "PROJECT_NUMBER = $(git describe --tags --abbrev=0 | cut -c2-)" >> Doxyfile
     - name: Run Doxygen

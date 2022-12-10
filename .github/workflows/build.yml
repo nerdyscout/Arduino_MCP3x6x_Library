@@ -1,6 +1,14 @@
 name: build
 
-on: [pull_request, push]
+on:
+  pull_request:
+    paths:
+      - 'examples/**'
+      - 'lib/**'
+  push:
+    paths:
+      - 'examples/**'
+      - 'lib/**'
 
 jobs:
   PlatformIO:
