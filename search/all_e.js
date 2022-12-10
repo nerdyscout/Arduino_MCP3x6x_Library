@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['scan_0',['Scan',['../unionMCP3x6x_1_1Scan.xhtml',1,'MCP3x6x']]],
+  ['scan_1',['scan',['../structMCP3x6x_1_1Settings.xhtml#add94b11f10dc136a1fc1e906ef559bd5',1,'MCP3x6x::Settings']]],
+  ['scan_5ft_2',['scan_t',['../classMCP3x6x.xhtml#a3077496834f145371bef4eb1d4db9f9e',1,'MCP3x6x']]],
+  ['setadcmode_3',['setAdcMode',['../classMCP3x6x.xhtml#ab7918f42e7c7edb835f436fcccfdd0a1',1,'MCP3x6x']]],
+  ['setaveraging_4',['setAveraging',['../classMCP3x6x.xhtml#a4fedb7b103535a720372d34c89a52dda',1,'MCP3x6x']]],
+  ['setclockselection_5',['setClockSelection',['../classMCP3x6x.xhtml#a713fa1dff6937c2eda42b50917cd46e2',1,'MCP3x6x']]],
+  ['setconversionmode_6',['setConversionMode',['../classMCP3x6x.xhtml#aada1bad3d02e8787dc04171073df64fb',1,'MCP3x6x']]],
+  ['setdataformat_7',['setDataFormat',['../classMCP3x6x.xhtml#a758ddf18bcb4ecee1d0db685e76f5f79',1,'MCP3x6x']]],
+  ['setgain_8',['setGain',['../classMCP3x6x.xhtml#a5c81f0391bb4703fe4bf93fa4f74e024',1,'MCP3x6x']]],
+  ['setreference_9',['setReference',['../classMCP3x6x.xhtml#a971f9c3b7905cefad83fd7c94d67f079',1,'MCP3x6x']]],
+  ['setresolution_10',['setResolution',['../classMCP3x6x.xhtml#ad63ba0b6ce1b7fede5bd0d200f3c5231',1,'MCP3x6x']]],
+  ['settings_11',['Settings',['../structMCP3x6x_1_1Settings.xhtml',1,'MCP3x6x']]],
+  ['settings_12',['settings',['../classMCP3x6x.xhtml#a642e9067585e39e88c196a5eaa16547d',1,'MCP3x6x']]],
+  ['shutdown_13',['shutdown',['../classMCP3x6x.xhtml#aeb2d54f57ec2a5d5f4f5766303e48248',1,'MCP3x6x']]],
+  ['single_5fended_14',['single_ended',['../unionMCP3x6x_1_1Scan.xhtml#a28e44e45ed969a1dd9995a46259f7225',1,'MCP3x6x::Scan']]],
+  ['singleendedmode_15',['singleEndedMode',['../classMCP3x6x.xhtml#ae16209a522143d0bbf84c82bcc27fa8a',1,'MCP3x6x']]],
+  ['standby_16',['standby',['../classMCP3x6x.xhtml#a759a707676d991484468960a1d9d798b',1,'MCP3x6x']]],
+  ['startcontinuous_17',['startContinuous',['../classMCP3x6x.xhtml#afaf4b7c527d87508e75d264298266189',1,'MCP3x6x']]],
+  ['startcontinuousdifferential_18',['startContinuousDifferential',['../classMCP3x6x.xhtml#ac18db670e6e9491150b3fd895c29cba6',1,'MCP3x6x']]],
+  ['status_5fcrccfg_19',['status_crccfg',['../classMCP3x6x.xhtml#a26974f00b684013b3cb64056a06415be',1,'MCP3x6x']]],
+  ['status_5fdr_20',['status_dr',['../classMCP3x6x.xhtml#a27b3d44e7095bc9004eb985432693842',1,'MCP3x6x']]],
+  ['status_5fpor_21',['status_por',['../classMCP3x6x.xhtml#aafa8bc080bcd3863a54be2c763d9d7f5',1,'MCP3x6x']]],
+  ['stopcontinuous_22',['stopContinuous',['../classMCP3x6x.xhtml#acb343d23393085cef89d0d4e15b9c735',1,'MCP3x6x']]]
+];

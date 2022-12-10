@@ -1,0 +1,7 @@
+var searchData=
+[
+  ['data_5fformat_0',['data_format',['../unionMCP3x6x_1_1Config3.xhtml#a24e4bd4c51ffc9f7dda216ee3e67e87e',1,'MCP3x6x::Config3']]],
+  ['differential_1',['differential',['../unionMCP3x6x_1_1Scan.xhtml#a592129a7481ca1df9dd47636d3ea92ed',1,'MCP3x6x::Scan']]],
+  ['dly_2',['dly',['../unionMCP3x6x_1_1Scan.xhtml#a8db79b60d00986958800de857a0d4784',1,'MCP3x6x::Scan']]],
+  ['dr_5fstatus_3',['dr_status',['../unionMCP3x6x_1_1Irq.xhtml#abeba21668f9a5378fc8fb07ba9227078',1,'MCP3x6x::Irq']]]
+];

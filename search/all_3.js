@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['cfg0_0',['cfg0',['../unionMCP3x6x_1_1Config0.xhtml#af74a17dacfacb03425e0581906de30b6',1,'MCP3x6x::Config0']]],
+  ['channelid_1',['channelid',['../structMCP3x6x_1_1Adcdata.xhtml#aba0491def927fee32e9edd15b14119e5',1,'MCP3x6x::Adcdata']]],
+  ['channels_2',['channels',['../classMCP3x6x.xhtml#a2cf1d66d5f4652556d072fd50981b3ba',1,'MCP3x6x']]],
+  ['clk_3',['clk',['../unionMCP3x6x_1_1Config0.xhtml#af8ba2f57aff9cea1dfaf132982610067',1,'MCP3x6x::Config0']]],
+  ['config0_4',['config0',['../structMCP3x6x_1_1Settings.xhtml#a735bbb4bf437a1b07ab4072559387a63',1,'MCP3x6x::Settings']]],
+  ['config0_5',['Config0',['../unionMCP3x6x_1_1Config0.xhtml',1,'MCP3x6x']]],
+  ['config0_5ft_6',['config0_t',['../classMCP3x6x.xhtml#aa0278181a67e051a244878504241bf62',1,'MCP3x6x']]],
+  ['config1_7',['config1',['../structMCP3x6x_1_1Settings.xhtml#a33818bc2efa468ec568ee609a2ca5ceb',1,'MCP3x6x::Settings::config1()'],['../unionMCP3x6x_1_1config1.xhtml',1,'MCP3x6x::config1']]],
+  ['config1_5ft_8',['config1_t',['../classMCP3x6x.xhtml#a963567e135e9804a5c747dde8c4e726b',1,'MCP3x6x']]],
+  ['config2_9',['config2',['../structMCP3x6x_1_1Settings.xhtml#ae4b8754d52948f977161375e010a3a1e',1,'MCP3x6x::Settings']]],
+  ['config2_10',['Config2',['../unionMCP3x6x_1_1Config2.xhtml',1,'MCP3x6x']]],
+  ['config2_5ft_11',['config2_t',['../classMCP3x6x.xhtml#aa029df4fb2cca2a3366fb627d348d255',1,'MCP3x6x']]],
+  ['config3_12',['config3',['../structMCP3x6x_1_1Settings.xhtml#a548e602a253076f15cad6c192742e924',1,'MCP3x6x::Settings']]],
+  ['config3_13',['Config3',['../unionMCP3x6x_1_1Config3.xhtml',1,'MCP3x6x']]],
+  ['config3_5ft_14',['config3_t',['../classMCP3x6x.xhtml#abeb9df8e378ca20a5fb1fac6b7a8fb99',1,'MCP3x6x']]],
+  ['conv_5fmode_15',['conv_mode',['../unionMCP3x6x_1_1Config3.xhtml#a7b6e77fe9b9ae5b7e5de1aef31ac3bc8',1,'MCP3x6x::Config3']]],
+  ['conversion_16',['conversion',['../classMCP3x6x.xhtml#a837f2b541e096a26875ae9a17efeaed3',1,'MCP3x6x']]],
+  ['crc_5fformat_17',['crc_format',['../unionMCP3x6x_1_1Config3.xhtml#a68dbf131881b75d0d229abd1f184491b',1,'MCP3x6x::Config3']]],
+  ['crccfg_18',['crccfg',['../structMCP3x6x_1_1Settings.xhtml#ac28705742d999dfd3e945763d69d6906',1,'MCP3x6x::Settings']]],
+  ['crccfg_19',['Crccfg',['../unionMCP3x6x_1_1Crccfg.xhtml',1,'MCP3x6x']]],
+  ['crccfg_5fstatus_20',['crccfg_status',['../unionMCP3x6x_1_1Irq.xhtml#a7d4583bc68d2adea499af59620191d40',1,'MCP3x6x::Irq']]],
+  ['crccfg_5ft_21',['crccfg_t',['../classMCP3x6x.xhtml#ad1bcf9b2d1daced3a4c9eb3951b5737a',1,'MCP3x6x']]]
+];
