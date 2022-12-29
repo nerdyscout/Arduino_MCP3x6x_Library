@@ -13,7 +13,9 @@
 
 #include "MCP3x6x.h"
 
-#include <wiring_private.h>
+#if ARDUINO_ARCH_SAMD
+#  include <wiring_private.h>
+#endif
 
 MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
                  const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK) {

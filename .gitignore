@@ -1,3 +1,4 @@
 .pio
 .vscode/*
 docs/**
+test/*cache*
