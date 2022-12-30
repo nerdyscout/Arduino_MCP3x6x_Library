@@ -3,3 +3,4 @@
 docs/**
 test/*cache*
 *.zip
+*.pro-bak

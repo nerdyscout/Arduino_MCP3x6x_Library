@@ -95,6 +95,9 @@
     )
   )
 
+  (property "date" "2022-12-30")
+  (property "version" "d426c8c")
+
   (net 0 "")
   (net 1 "unconnected-(A1-Pad1)")
   (net 2 "unconnected-(A1-Pad2)")

@@ -13,10 +13,10 @@ preflight:
   check_zone_fills: true
   ignore_unconnected: false
   update_qr: true
-  # filters:
-  #   - filter: 'suppress courtyards overlap'
-  #     regex: 'Courtyards overlap'
-  #     error: 'courtyards_overlap'
+  filters:
+    - filter: 'suppress courtyards overlap'
+      regex: 'Courtyards overlap'
+      error: 'courtyards_overlap'
   #   - filter: 'suppress clearance violation'
   #     regex: 'Clearance violation'
   #     error: 'clearance'
