@@ -2,3 +2,4 @@
 .vscode/*
 docs/**
 test/*cache*
+*.zip
