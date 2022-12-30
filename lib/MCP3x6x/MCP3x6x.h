@@ -41,18 +41,22 @@
 #define MCP_CH1    (0x18)  //!< corresponding mux setting
 #define MCP_CH0    (0x08)  //!< corresponding mux setting
 
-#define MCP3461_DEVICE_TYPE    (0x0008)  //!< MCP3461 device ID
-#define MCP3462_DEVICE_TYPE    (0x0009)  //!< MCP3462 device ID
-#define MCP3464_DEVICE_TYPE    (0x000B)  //!< MCP3464 device ID
-#define MCP3561_DEVICE_TYPE    (0x000C)  //!< MCP3561 device ID
-#define MCP3562_DEVICE_TYPE    (0x000D)  //!< MCP3562 device ID
-#define MCP3564_DEVICE_TYPE    (0x000F)  //!< MCP3564 device ID
-#define MCP3x6x_DEVICE_ADDRESS (0x01)    //!< todo
+#define MCP3461_DEVICE_TYPE (0x0008)  //!< MCP3461 device ID
+#define MCP3462_DEVICE_TYPE (0x0009)  //!< MCP3462 device ID
+#define MCP3464_DEVICE_TYPE (0x000B)  //!< MCP3464 device ID
+#define MCP3561_DEVICE_TYPE (0x000C)  //!< MCP3561 device ID
+#define MCP3562_DEVICE_TYPE (0x000D)  //!< MCP3562 device ID
+#define MCP3564_DEVICE_TYPE (0x000F)  //!< MCP3564 device ID
 
+#ifndef MCP3x6x_DEVICE_ADDRESS
+#  define MCP3x6x_DEVICE_ADDRESS (0x01)  //!< DEVICE ADDRESS
+#endif
+#ifndef MCP3x6x_SPI_SPEED
+#  define MCP3x6x_SPI_SPEED (2000000)  //!< SPI SPEED Value
+#endif
+#define MCP3x6x_SPI_ADR   (MCP3x6x_DEVICE_ADDRESS << 6)  //!< SPI ADDRESS
 #define MCP3x6x_SPI_ORDER MSBFIRST                       //!< SPI ORDER
 #define MCP3x6x_SPI_MODE  SPI_MODE0                      //!< SPI MODE
-#define MCP3x6x_SPI_ADR   (MCP3x6x_DEVICE_ADDRESS << 6)  //!< SPI ADDRESS
-#define MCP3x6x_SPI_SPEED (200000)                       //!< SPI SPEED Value
 
 #define MCP3x6x_CMD_CONVERSION    (MCP3x6x_SPI_ADR | 0b101000)  //!< fast command
 #define MCP3x6x_CMD_STANDBY       (MCP3x6x_SPI_ADR | 0b101100)  //!< fast command
