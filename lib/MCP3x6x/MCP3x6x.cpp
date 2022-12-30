@@ -59,7 +59,7 @@ MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPICla
 
   _resolution = _resolution_max;
   _channel_mask |= 0xff << _channels_max;  // todo use this one
-};
+}
 
 MCP3x6x::MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint16_t MCP3x6x_DEVICE_TYPE,
                  const uint8_t pinCS, SPIClass *theSPI, const uint8_t pinMOSI,
@@ -69,6 +69,8 @@ MCP3x6x::MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint16_t MCP
   _pinMCLK = pinMCLK;
 
   attachInterrupt(digitalPinToInterrupt(_pinIRQ), mcp_wrapper, FALLING);
+
+  // todo: init pinMCLK
 }
 
 void MCP3x6x::_reverse_array(uint8_t *array, size_t size) {
@@ -96,6 +98,7 @@ bool MCP3x6x::begin(uint16_t channelmask, float vref) {
   digitalWrite(_pinCS, HIGH);
 
   _spi->begin();
+
 #if ARDUINO_ARCH_SAMD
   // todo figure out how to get dynamicaly sercom index
   pinPeripheral(_pinMISO, PIO_SERCOM);
@@ -263,8 +266,8 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
           bitWrite(raw, 31, bitRead(raw, 17));
           return raw & 0x8000FFFF;
       };
-      break;
 
+      break;
     case 24:
       switch (settings.config3.data_format) {
         case (data_format::SGN_DATA_ZERO):
@@ -280,7 +283,6 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
       };
       break;
   }
-
   return -1;
 }
 

@@ -108,9 +108,9 @@ class MCP3x6x {
   typedef union {
     struct {
       struct __attribute__((__packed__)) {
-        bool por   : 1;  //!< status: power on reset
-        bool crccfg: 1;  //!< status: crc
-        bool dr    : 1;  //!< status: data ready
+        bool por    : 1;  //!< status: power on reset
+        bool crccfg : 1;  //!< status: crc
+        bool dr     : 1;  //!< status: data ready
       };
       uint8_t      : 1;  //!< !addr[0]
       uint8_t addr : 2;  //!< addresse
@@ -903,6 +903,7 @@ class MCP3x6x {
   inline status_t read(crccfg_t data) {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CRCCFG, 2);
   }
+
   /*
   inline status_t read(Settings data) {
     return _transfer((uint8_t)data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 27);
@@ -977,7 +978,7 @@ class MCP3x6x {
    * @param rate
    */
   void setAveraging(osr rate);
-    
+
   /**
    * @brief set gain
    *
