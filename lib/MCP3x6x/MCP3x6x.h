@@ -651,7 +651,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t reset() {
-    //    memcpy(settings, _DEFAULTS, 27);
+    // memcpy(&settings, _DEFAULTS, sizeof(_DEFAULTS));
     return _fastcmd(MCP3x6x_CMD_RESET);
   }
 
@@ -1017,6 +1017,13 @@ class MCP3x6x {
    * @return float
    */
   float getReference();
+
+  /**
+   * @brief get Resolution
+   *
+   * @return size_t
+   */
+  size_t getResolution();
 
   /**
    * @brief get maximal value (=pow(2,resolution))

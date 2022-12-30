@@ -248,6 +248,8 @@ void MCP3x6x::setReference(float vref) {
   _reference = vref;
 }
 
+size_t MCP3x6x::getResolution() { return _resolution; }
+
 float MCP3x6x::getReference() { return _reference; }
 
 // returns signed ADC value from raw data
