@@ -38,8 +38,12 @@ void setup() {
 
 // the loop routine runs over and over again forever:
 void loop() {
+  int32_t adcdata;
+
   // read the input on default analog channel:
-  int32_t adcdata = mcp.analogRead(MCP_CH0);
+  do {
+    adcdata = mcp.analogRead(MCP_CH0);
+  } while (!mcp.status_dr());
 
   // Convert the analog reading
   double voltage = adcdata * mcp.getReference() / mcp.getMaxValue();
@@ -47,7 +51,4 @@ void loop() {
   // print out the value you read:
   Serial.print("voltage: ");
   Serial.println(voltage, 10);
-
-  // pause program for one second
-  delay(1000);
 }
