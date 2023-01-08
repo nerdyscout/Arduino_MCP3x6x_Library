@@ -45,11 +45,11 @@ MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPICla
       _channels_max   = 8;
       break;
     default:
-#warning "undefined MCP3x6x_DEVICE_TYPE"
-      break;
+      return;
   }
 
-  //  settings.id = MCP3x6x_DEVICE_TYPE;
+  memcpy(&settings, _DEFAULT_SETTINGS, sizeof(_DEFAULT_SETTINGS));
+  settings.id = MCP3x6x_DEVICE_TYPE;
 
   _spi        = theSPI;
   _pinMISO    = pinMISO;
@@ -106,7 +106,7 @@ bool MCP3x6x::begin(uint16_t channelmask, float vref) {
   pinPeripheral(_pinCLK, PIO_SERCOM);
 #endif
 
-  _status = reset();
+  _status = reset(true);
   setClockSelection(clk_sel::INTERN);          // todo make configurable by function parameter
   setDataFormat(data_format::ID_SGNEXT_DATA);  // todo make configurable by function parameter
 

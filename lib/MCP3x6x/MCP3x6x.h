@@ -103,11 +103,11 @@ class MCP3x6x {
   const uint8_t _DEFAULT_RESERVED2    = 0x50;                //!< default value
   const uint8_t _DEFAULT_LOCK         = 0xA5;                //!< default value
   const uint8_t _DEFAULT_CRCCFG[2]    = {0x00, 0x00};        //!< default value
-  const uint8_t _DEFAULTS[27]         = {_DEFAULT_CONFIG0, _DEFAULT_CONFIG1,    _DEFAULT_CONFIG2,
+  const uint8_t _DEFAULT_SETTINGS[27] = {_DEFAULT_CONFIG0, _DEFAULT_CONFIG1,    _DEFAULT_CONFIG2,
                                          _DEFAULT_CONFIG3, _DEFAULT_IRQ,        _DEFAULT_MUX,
                                          *_DEFAULT_SCAN,   *_DEFAULT_TIMER,     *_DEFAULT_OFFSET,
                                          *_DEFAULT_GAIN,   *_DEFAULT_RESERVED1, _DEFAULT_RESERVED2,
-                                         _DEFAULT_LOCK,    (uint16_t)0x0000,    *_DEFAULT_CRCCFG};
+                                         _DEFAULT_LOCK,    (uint16_t)0x00,      *_DEFAULT_CRCCFG};
 
   typedef union {
     struct {
@@ -648,10 +648,15 @@ class MCP3x6x {
   /**
    * @brief Fast Command
    *
+   * @param reset_instance
    * @return status_t
    */
-  inline status_t reset() {
-    // memcpy(&settings, _DEFAULTS, sizeof(_DEFAULTS));
+  inline status_t reset(bool reset_instance = false) {
+    if (reset_instance) {
+      uint16_t id = settings.id;
+      memcpy(&settings, _DEFAULT_SETTINGS, sizeof(_DEFAULT_SETTINGS));
+      settings.id = id;
+    }
     return _fastcmd(MCP3x6x_CMD_RESET);
   }
 
