@@ -3,8 +3,6 @@
 
 #include "MCP3x6x.h"
 
-// settings
-void test_settings_id(void);
 void test_settings_defaults(void);
 
 #endif

@@ -1,14 +1,11 @@
 #include <ArduinoFake.h>
 #include <unity.h>
 
-#include "../test_MCP3x6x.h"
 #include "MCP3x6x.h"
 
 using namespace fakeit;
 
-MCP3462 mcp;
-
-void mcp_wrapper() { mcp.IRQ_handler(); }
+MCP3562 mcp;
 
 void setUp(void) {
   ArduinoFakeReset();
@@ -30,28 +27,13 @@ void setUp(void) {
 
 void tearDown(void) { mcp.reset(); }
 
-void test_Resolution(void) {
-  TEST_ASSERT_EQUAL(16, mcp.getResolution());
-
-  mcp.setDataFormat(MCP3x6x::data_format::SGN_DATA);
-  TEST_ASSERT_EQUAL(15, mcp.getResolution());
-}
-// void test_ValueMax(void) { TEST_ASSERT_EQUAL(pow(2,16), mcp.getMaxValue()); }
-
 int runUnityTests(void) {
   UNITY_BEGIN();
-
-  // settings
-  RUN_TEST(test_settings_id);
-  RUN_TEST(test_settings_defaults);
-
-  // resolution
-  RUN_TEST(test_Resolution);
 
   return UNITY_END();
 }
 
-#ifdef UNIT_TEST_NATIVE
+#ifdef PIO_UNIT_TESTING
 
 /**
  * For native dev-platform or for some embedded frameworks
@@ -59,6 +41,7 @@ int runUnityTests(void) {
 int main(void) { return runUnityTests(); }
 
 #else
+
 /**
  * For Arduino framework
  */

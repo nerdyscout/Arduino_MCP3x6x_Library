@@ -4,11 +4,11 @@ on:
   pull_request:
     paths:
       - 'examples/**'
-      - 'lib/**'
+      - 'src/**'
   push:
     paths:
       - 'examples/**'
-      - 'lib/**'
+      - 'src/**'
 
 jobs:
   PlatformIO:
@@ -40,15 +40,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install --upgrade platformio
     - name: Run PlatformIO
-      run: pio ci -c platformio.ini --lib=lib/MCP3x6x
       env:
+        PLATFORMIO_AUTH_TOKEN: ${{ secrets.PLATFORMIO_AUTH_TOKEN }}
         PLATFORMIO_CI_SRC: ${{ matrix.example }}
+      run: pio ci -c platformio.ini --lib=src/MCP3x6x
 
 #  ArduinoCI:
 #    name: ArduinoCI (${{ matrix.sketch-names }})
 #    runs-on: ubuntu-latest
-##    env:
-##     PLATFORM_DEFAULT_URL: ""
 #    strategy:
 #      matrix:
 #        arduino-boards-fqbn:
