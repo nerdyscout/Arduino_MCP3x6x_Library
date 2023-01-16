@@ -79,12 +79,10 @@ void MCP3x6x::_reverse_array(uint8_t *array, size_t size) {
 
 MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
   _spi->beginTransaction(SPISettings(MCP3x6x_SPI_SPEED, MCP3x6x_SPI_ORDER, MCP3x6x_SPI_MODE));
-  noInterrupts();
   digitalWrite(_pinCS, LOW);
   _status.raw = _spi->transfer(addr);
   _spi->transfer(data, size);
   digitalWrite(_pinCS, HIGH);
-  interrupts();
   _spi->endTransaction();
   return _status;
 }
@@ -297,23 +295,18 @@ uint8_t MCP3x6x::_getChannel(uint32_t raw) {
 int32_t MCP3x6x::analogRead(mux_t ch) {
   // MuxMode
   if (settings.scan.channel.raw == 0) {
-    #ifdef MCP3x6x_DEBUG
-        Serial.println("mux");
-    #endif
+    //Serial.println("mux");
     settings.mux = ch;
     _status      = write(settings.mux);
     _status      = conversion();
-    while (!_status.dr) {
-      _status = read(&adcdata);
-    }
-    //_status = read(&adcdata);
+//    while (!_status.dr) {
+//      _status = read(&adcdata);
+//    }
+    _status = read(&adcdata);
     return result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
   }
 
-
-  #ifdef MCP3x6x_DEBUG
-    Serial.println("scan");
-  #endif
+  Serial.println("scan");
   // ScanMode
   for (size_t i = 0; i < sizeof(_channelID); i++) {
     if (_channelID[i] == ch.raw) {
@@ -383,6 +376,11 @@ void MCP3x6x::setAveraging(osr rate) {
 
 void MCP3x6x::setGain(gain gain) {
   settings.config2.gain = gain;
+  _status               = write(settings.config2);
+}
+
+void MCP3x6x::setBoost(boost boost) {
+  settings.config2.boost = boost;
   _status               = write(settings.config2);
 }
 
