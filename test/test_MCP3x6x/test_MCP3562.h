@@ -1,5 +1,5 @@
-#ifndef TEST_MCP3562_H
-#define TEST_MCP3562_H
+#ifndef TEST_MCP3x6x_H
+#define TEST_MCP3x6x_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -8,8 +8,6 @@ extern "C" {
 void setUp(void);
 void tearDown(void);
 int runUnityTests(void);
-
-void test_settings_defaults(void);
 
 #ifdef __cplusplus
 }

@@ -11,7 +11,7 @@
  *
  */
 
-#include "MCPChannel.h"
+#include "MCPChannel.hpp"
 
 #include <Arduino.h>
 

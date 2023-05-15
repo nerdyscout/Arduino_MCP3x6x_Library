@@ -7,7 +7,7 @@
 
 */
 
-#include "MCP3x6x.h"
+#include "MCP3x6x.hpp"
 
 #define MCP3x6x_DEBUG 1
 
@@ -29,7 +29,7 @@ MCP3561 mcp;
 
 void mcp_wrapper() { mcp.IRQ_handler(); }
 
-void setup() {
+void setup(void) {
   Serial.begin(115200);
   while (!Serial)
     ;
@@ -51,7 +51,7 @@ unsigned long previousMillis = 0;
 const long interval          = 1000;
 
 // the loop routine runs over and over again forever:
-void loop() {
+void loop(void) {
   unsigned long currentMillis = millis();
   Serial.println(currentMillis);
   if (currentMillis - previousMillis >= interval) {

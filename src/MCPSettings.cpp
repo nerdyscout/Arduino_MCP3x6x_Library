@@ -11,7 +11,7 @@
  *
  */
 
-#include "MCPSettings.h"
+#include "MCPSettings.hpp"
 
 #include <Arduino.h>
 #include <string.h>

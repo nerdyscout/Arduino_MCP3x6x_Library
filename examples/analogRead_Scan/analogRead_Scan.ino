@@ -7,7 +7,7 @@
 
 */
 
-#include "MCP3x6x.h"
+#include "MCP3x6x.hpp"
 
 #if defined ARDUINO_AVR_PROMICRO8
 MCP3561 mcp(2, 3, 10);
@@ -27,7 +27,7 @@ MCP3561 mcp;
 
 void mcp_wrapper() { mcp.IRQ_handler(); }
 
-void setup() {
+void setup(void) {
   Serial.begin(115200);
   while (!Serial)
     ;
@@ -43,7 +43,7 @@ void setup() {
 }
 
 // the loop routine runs over and over again forever:
-void loop() {
+void loop(void) {
   // read the input on default analog channel:
   int32_t adcdata0 = mcp.analogRead(MCP_CH0);
   int32_t adcdata1 = mcp.analogRead(MCP_CH1);

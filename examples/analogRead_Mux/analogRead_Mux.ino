@@ -7,7 +7,7 @@
 
 */
 
-#include "MCP3x6x.h"
+#include "MCP3x6x.hpp"
 
 #if defined ARDUINO_AVR_PROMICRO8
 MCP3561 mcp(10);
@@ -23,7 +23,7 @@ MCP3561 mcp(10, &mySPI, 11, 12, 13);
 MCP3561 mcp;
 #endif
 
-void setup() {
+void setup(void) {
   Serial.begin(115200);
   while (!Serial)
     ;
@@ -37,7 +37,7 @@ void setup() {
 }
 
 // the loop routine runs over and over again forever:
-void loop() {
+void loop(void) {
   int32_t adcdata;
 
   // read the input on default analog channel:

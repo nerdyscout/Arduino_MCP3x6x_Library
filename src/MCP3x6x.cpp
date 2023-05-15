@@ -10,12 +10,12 @@
  * @copyright Copyright (c) 2023
  *
  */
-#include "MCP3x6x.h"
+#include "MCP3x6x.hpp"
 
 #include <Arduino.h>
 
-#include "MCPChannel.h"
-#include "MCPSettings.h"
+#include "MCPChannel.hpp"
+#include "MCPSettings.hpp"
 
 #if ARDUINO_ARCH_SAMD
 #  include <wiring_private.h>

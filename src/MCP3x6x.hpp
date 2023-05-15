@@ -16,8 +16,8 @@
 
 #define MCP3x6x_DEBUG DEBUG  //!< sets debug active
 
-#include "MCPChannel.h"
-#include "MCPSettings.h"
+#include "MCPChannel.hpp"
+#include "MCPSettings.hpp"
 
 #if ARDUINO >= 100
 #  include <Arduino.h>

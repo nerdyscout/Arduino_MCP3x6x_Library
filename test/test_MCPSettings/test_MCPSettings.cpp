@@ -1,12 +1,38 @@
-
 #include "test_MCPSettings.h"
 
-#include <ArduinoFake.h>
 #include <unity.h>
 
-#include "MCPSettings.h"
+#include "MCPSettings.hpp"
+
+MCPSettings settings;
+
+#ifdef PIO_UNIT_TESTING
+#  include <ArduinoFake.h>
 
 using namespace fakeit;
+
+/**
+ * For native dev-platform or for some embedded frameworks
+ */
+int main(void) { return runUnityTests(); }
+
+#else
+#  include <Arduino.h>
+
+/**
+ * For Arduino framework
+ */
+void setup(void) {
+  // Wait ~2 seconds before the Unity test runner
+  // establishes connection with a board Serial interface
+  delay(2000);
+
+  runUnityTests();
+}
+
+void loop(void) {}
+
+#endif
 
 void setUp(void) {}
 
@@ -20,33 +46,7 @@ int runUnityTests(void) {
   return UNITY_END();
 }
 
-#ifdef PIO_UNIT_TESTING
-
-/**
- * For native dev-platform or for some embedded frameworks
- */
-int main(void) { return runUnityTests(); }
-
-#else
-
-/**
- * For Arduino framework
- */
-void setup() {
-  // Wait ~2 seconds before the Unity test runner
-  // establishes connection with a board Serial interface
-  delay(2000);
-
-  runUnityTests();
-}
-
-void loop() {}
-
-#endif
-
 void test_settings_defaults(void) {
-  MCPSettings settings;
-
   TEST_ASSERT_EQUAL(0xC0, settings.config0.raw);
   TEST_ASSERT_EQUAL(0x0C, settings.config1.raw);
   TEST_ASSERT_EQUAL(0x8B, settings.config2.raw);

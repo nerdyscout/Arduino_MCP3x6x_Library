@@ -9,8 +9,6 @@ void setUp(void);
 void tearDown(void);
 int runUnityTests(void);
 
-void test_settings_defaults(void);
-
 #ifdef __cplusplus
 }
 #endif

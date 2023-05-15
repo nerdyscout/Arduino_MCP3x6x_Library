@@ -1,11 +1,38 @@
-#include <ArduinoFake.h>
+#include "test_MCP3562.h"
+
 #include <unity.h>
 
-#include "MCP3x6x.h"
+#include "MCP3x6x.hpp"
+
+MCP3562 mcp;
+
+#ifdef PIO_UNIT_TESTING
+#  include <ArduinoFake.h>
 
 using namespace fakeit;
 
-MCP3562 mcp;
+/**
+ * For native dev-platform or for some embedded frameworks
+ */
+int main(void) { return runUnityTests(); }
+
+#else
+#  include <Arduino.h>
+
+/**
+ * For Arduino framework
+ */
+void setup(void) {
+  // Wait ~2 seconds before the Unity test runner
+  // establishes connection with a board Serial interface
+  delay(2000);
+
+  runUnityTests();
+}
+
+void loop(void) {}
+
+#endif
 
 void setUp(void) {
   ArduinoFakeReset();
@@ -30,29 +57,7 @@ void tearDown(void) { mcp.reset(); }
 int runUnityTests(void) {
   UNITY_BEGIN();
 
+  //  RUN_TEST(name);
+
   return UNITY_END();
 }
-
-#ifdef PIO_UNIT_TESTING
-
-/**
- * For native dev-platform or for some embedded frameworks
- */
-int main(void) { return runUnityTests(); }
-
-#else
-
-/**
- * For Arduino framework
- */
-void setup() {
-  // Wait ~2 seconds before the Unity test runner
-  // establishes connection with a board Serial interface
-  delay(2000);
-
-  runUnityTests();
-}
-
-void loop() {}
-
-#endif
