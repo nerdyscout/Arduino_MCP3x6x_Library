@@ -9,7 +9,7 @@ repos:
     - id: check-yaml
 #    - id: check-added-large-files
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: ''  # Use the sha / tag you want to point at
+    rev: '16.0.6'
     hooks:
     - id: clang-format
   - repo: https://github.com/pocc/pre-commit-hooks
