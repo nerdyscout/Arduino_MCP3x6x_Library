@@ -13,6 +13,7 @@ repos:
   - repo: https://gitlab.com/daverona/pre-commit/cpp
     rev: 0.8.0                 # use the most recent version
     hooks:
-    - id: clang-format         # formatter for C/C++ code based on a style guide
-    - id: cpplint              # linter (or style-error checker) for Google C++ Style Guide
-    - id: cppcheck             # static analyzer for C/C++ code
+    - id: docker-clang-format  # clang-format in Docker container
+      args: ["-style=file"]
+    - id: docker-cpplint       # cpplint in Docker container
+    - id: docker-cppcheck      # cppcheck in Docker container
