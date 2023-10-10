@@ -10,7 +10,7 @@ repos:
     - id: check-yaml
     - id: check-json
 
-  - repo: github.com/bmorcos/pre-commit-hooks-cpp 
+  - repo: https://github.com/bmorcos/pre-commit-hooks-cpp 
     rev: master
     hooks:
     -   id: clang-format
