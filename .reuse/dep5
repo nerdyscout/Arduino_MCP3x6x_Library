@@ -11,6 +11,10 @@ Files: src/* test/*
 Copyright: 2023, Stefan Herold <stefan.herold@posteo.de>
 License: MIT
 
+Files: pcb/*
+Copyright: 2023, Stefan Herold <stefan.herold@posteo.de>
+License: CERN-OHL-S-2.0
+
 Files: .github/* .gitignore .pre-commit-config.yaml Doxyfile
 Copyright: 2023, Stefan Herold <stefan.herold@posteo.de>
 License: CC0-1.0
