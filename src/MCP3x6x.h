@@ -144,7 +144,7 @@ class MCP3x6x {
    * @brief ADC Operating Mode Selection
    *
    */
-  enum class __attribute__((packed)) adc_mode : uint8_t {
+  enum __attribute__((packed)) adc_mode {
     CONVERSION = 3,  //!< ADC Conversion mode
     STANDBY    = 2,  //!< ADC Standby mode
     SHUTDOWN   = 0   //!< ADC shutdown mode (default)
@@ -154,7 +154,7 @@ class MCP3x6x {
    * @brief Current Source/Sink Selection Bits for Sensor Bias.
    *
    */
-  enum class __attribute__((packed)) cs_sel : uint8_t {
+  enum __attribute__((packed)) cs_sel {
     BIAS_15UA = 3,  //!< 15 μA is applied to the ADC inputs
     BIAS_37UA = 2,  //!< 3.7 μA is applied to the ADC inputs
     BIAS_09UA = 1,  //!< 0.9 μA is applied to the ADC inputs
@@ -165,7 +165,7 @@ class MCP3x6x {
    * @brief clock selection
    *
    */
-  enum class __attribute__((packed)) clk_sel : uint8_t {
+  enum __attribute__((packed)) clk_sel {
     INTERN_OUTPUT = 3,  //!< Internal clock is selected and AMCLK is present on the analog master
                         //!< clock output pin
     INTERN = 2,  //!< Internal clock is selected and no clock output is present on the CLK pin
@@ -176,7 +176,7 @@ class MCP3x6x {
    * @brief Oversampling Ratio for Delta-Sigma A/D Conversion
    *
    */
-  enum class __attribute__((packed)) osr : uint8_t {
+  enum __attribute__((packed)) osr {
     OSR_98304 = 15,  //!< OSR: 98304
     OSR_81920 = 14,  //!< OSR: 81920
     OSR_49152 = 13,  //!< OSR: 49152
@@ -199,7 +199,7 @@ class MCP3x6x {
    * @brief Prescaler Value Selection for AMCLK
    *
    */
-  enum class __attribute__((packed)) pre : uint8_t {
+  enum __attribute__((packed)) pre {
     MCLK_8 = 3,  //!< AMCLK = MCLK/8
     MCLK_4 = 2,  //!< AMCLK = MCLK/4
     MCLK_2 = 1,  //!< AMCLK = MCLK/2
@@ -210,7 +210,7 @@ class MCP3x6x {
    * @brief ADC Bias Current Selection
    *
    */
-  enum class __attribute__((packed)) boost : uint8_t {
+  enum __attribute__((packed)) boost {
     BOOST_3   = 3,  //!< ADC channel has current x2
     BOOST_2   = 2,  //!< ADC channel has current x1 (default)
     BOOST_066 = 1,  //!< ADC channel has current x2/3
@@ -221,7 +221,7 @@ class MCP3x6x {
    * @brief ADC Gain Selection
    *
    */
-  enum class __attribute__((packed)) gain : uint8_t {
+  enum __attribute__((packed)) gain {
     GAIN_64  = 7,  //!< Gain is x64 (x16 analog, x4 digital)
     GAIN_32  = 6,  //!< Gain is x32 (x16 analog, x2 digital)
     GAIN_16  = 5,  //!< Gain is x16
@@ -236,7 +236,7 @@ class MCP3x6x {
    * @brief Conversion Mode Selection
    *
    */
-  enum class __attribute__((packed)) conv_mode : uint8_t {
+  enum __attribute__((packed)) conv_mode {
     CONTINUOUS = 3,  //!< Continuous Conversion mode or continuous conversion cycle in SCAN mode
     ONESHOT_STANDBY = 2,  //!< One-shot conversion or one-shot cycle in SCAN mode. It sets
                           //!< ADC_MODE[1:0] to ‘10’ (standby) at the end of the conversion or at
@@ -250,7 +250,7 @@ class MCP3x6x {
    * @brief ADC Output Data Format Selection
    *
    */
-  enum class __attribute__((packed)) data_format : uint8_t {
+  enum __attribute__((packed)) data_format {
     ID_SGNEXT_DATA =
         3,  //!< 32-bit (25-bit right justified data + Channel ID): CHID[3:0] + SGN extension (4
             //!< bits) + 24-bit ADC data. It allows overrange with the SGN extension.
@@ -266,7 +266,7 @@ class MCP3x6x {
    * @brief CRC Checksum Format Selection on Read Communications
    *
    */
-  enum class __attribute__((packed)) crc_format : uint8_t {
+  enum __attribute__((packed)) crc_format {
     CRC_32 = 1,  //!< 32-bit wide (CRC-16 followed by 16 zeros)
     CRC_16 = 0   //!< 16-bit wide (CRC-16 only) (default)
   };
@@ -275,7 +275,7 @@ class MCP3x6x {
    * @brief MUX_VIN Input Selection
    *
    */
-  enum class __attribute__((packed)) mux : uint8_t {
+  enum __attribute__((packed)) mux {
     MUX_VCM          = 15,  //!< Internal VCM
     MUX_TemperatureM = 14,  //!< Internal Temperature Sensor Diode M (Temp Diode M)
     MUX_TemperatureP = 13,  //!< Internal Temperature Sensor Diode P (Temp Diode P)
@@ -297,7 +297,7 @@ class MCP3x6x {
    * @brief Delay Time Between Each Conversion During a Scan Cycle
    *
    */
-  enum class __attribute__((packed)) delay : uint8_t {
+  enum __attribute__((packed)) delay {
     DLY_512 = 7,  //!< 512 * DMCLK
     DLY_256 = 6,  //!< 256 * DMCLK
     DLY_128 = 5,  //!< 128 * DMCLK
