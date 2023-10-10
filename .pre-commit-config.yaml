@@ -10,10 +10,10 @@ repos:
     - id: check-yaml
     - id: check-json
 
-  - repo: https://gitlab.com/daverona/pre-commit/cpp
-    rev: 0.8.0                 # use the most recent version
+  - repo: github.com/bmorcos/pre-commit-hooks-cpp 
+    rev: master
     hooks:
-    - id: docker-clang-format  # clang-format in Docker container
-      args: ["-style=file"]
-    - id: docker-cpplint       # cpplint in Docker container
-    - id: docker-cppcheck      # cppcheck in Docker container
+    -   id: clang-format
+        args: ["-style=file"]
+    -   id: cpplint
+    -   id: cppcheck
