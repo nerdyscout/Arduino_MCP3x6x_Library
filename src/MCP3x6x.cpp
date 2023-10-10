@@ -57,7 +57,7 @@ MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPICla
 
   _resolution = _resolution_max;
   _channel_mask |= 0xff << _channels_max;  // todo use this one
-};
+}
 
 MCP3x6x::MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint16_t MCP3x6x_DEVICE_TYPE,
                  const uint8_t pinCS, SPIClass *theSPI, const uint8_t pinMOSI,
@@ -259,7 +259,7 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
         case (data_format::ID_SGNEXT_DATA):
           bitWrite(raw, 31, bitRead(raw, 17));
           return raw & 0x8000FFFF;
-      };
+      }
       break;
 
     case 24:
@@ -274,7 +274,7 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
         case (data_format::ID_SGNEXT_DATA):
           bitWrite(raw, 31, bitRead(raw, 25));
           return raw & 0x80FFFFFF;
-      };
+      }
       break;
   }
 

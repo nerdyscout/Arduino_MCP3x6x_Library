@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef MCP3x6x_H
-#define MCP3x6x_H
+#ifndef SRC_MCP3X6X_H_
+#define SRC_MCP3X6X_H_
 
 #define MCP3x6x_DEBUG DEBUG  //!< sets debug active
 
@@ -105,9 +105,9 @@ class MCP3x6x {
                                          *_DEFAULT_GAIN,   *_DEFAULT_RESERVED1, _DEFAULT_RESERVED2,
                                          _DEFAULT_LOCK,    (uint16_t)0x0000,    *_DEFAULT_CRCCFG};
 
-  typedef union {
+  typedef union __attribute__((__packed__)) {
     struct {
-      struct __attribute__((__packed__)) {
+      struct {
         bool por;     //!< status: power on reset
         bool crccfg;  //!< status: crc
         bool dr;      //!< status: data ready
@@ -414,7 +414,7 @@ class MCP3x6x {
      *
      * @param data
      */
-    Mux(uint8_t data) : raw(data){};
+    Mux(uint8_t data) : raw(data) {}
     struct {
       enum mux vin_minus : 4;  //!< MUX_VIN- Input Selection
       enum mux vin_plus  : 4;  //!< MUX_VIN+ Input Selection
@@ -518,7 +518,7 @@ class MCP3x6x {
     lock_t lock;            //!< register setting
     uint16_t id;            //!< register setting
     crccfg_t crccfg;        //!< register setting
-    Settings() : mux(0x01){};
+    Settings() : mux(0x01) {}
   } settings;  //!< todo
 
   /**
@@ -571,7 +571,7 @@ class MCP3x6x {
    * @brief Destroy the MCP3x6x object
    *
    */
-  ~MCP3x6x() { end(); };
+  ~MCP3x6x() { end(); }
 
   /**
    * @brief begin communication
@@ -1110,7 +1110,7 @@ class MCP3461 : public MCP3x6x {
    */
   MCP3461(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3461_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3461_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3461 object
    *
@@ -1125,7 +1125,7 @@ class MCP3461 : public MCP3x6x {
   MCP3461(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3461_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3461_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1145,7 +1145,7 @@ class MCP3462 : public MCP3x6x {
    */
   MCP3462(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3462_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3462_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3462 object
    *
@@ -1160,7 +1160,7 @@ class MCP3462 : public MCP3x6x {
   MCP3462(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3462_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3462_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1180,7 +1180,7 @@ class MCP3464 : public MCP3x6x {
    */
   MCP3464(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3464_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3464_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3464 object
    *
@@ -1195,7 +1195,7 @@ class MCP3464 : public MCP3x6x {
   MCP3464(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3464_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3464_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1215,7 +1215,7 @@ class MCP3561 : public MCP3x6x {
    */
   MCP3561(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3561_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3561_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3561 object
    *
@@ -1230,7 +1230,7 @@ class MCP3561 : public MCP3x6x {
   MCP3561(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3561_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3561_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1250,7 +1250,7 @@ class MCP3562 : public MCP3x6x {
    */
   MCP3562(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3562_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3562_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3562 object
    *
@@ -1265,7 +1265,7 @@ class MCP3562 : public MCP3x6x {
   MCP3562(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3562_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3562_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1285,7 +1285,7 @@ class MCP3564 : public MCP3x6x {
    */
   MCP3564(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3564_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3564_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3564 object
    *
@@ -1300,7 +1300,7 @@ class MCP3564 : public MCP3x6x {
   MCP3564(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3564_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3564_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1309,4 +1309,4 @@ class MCP3564 : public MCP3x6x {
  */
 extern void mcp_wrapper();
 
-#endif  // MCP3x6x_H
+#endif  // SRC_MCP3X6X_H_

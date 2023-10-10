@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef TEST_TEST_MCP3x6x_H_
-#define TEST_TEST_MCP3x6x_H_
+#ifndef TEST_TEST_MCP3X6X_H_
+#define TEST_TEST_MCP3X6X_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,4 +29,4 @@ void test_instance(void);
 }
 #endif
 
-#endif  // TEST_TEST_MCP3x6x_H_
+#endif  // TEST_TEST_MCP3X6X_H_
