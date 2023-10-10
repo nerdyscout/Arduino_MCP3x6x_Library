@@ -32,7 +32,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install --upgrade platformio
     - name: Run PlatformIO
-      run: pio ci -c platformio.ini --lib=lib/MCP3x6x
+      run: pio ci -c platformio.ini --lib=src/
       env:
         PLATFORMIO_CI_SRC: ${{ matrix.example }}
 

@@ -7,7 +7,7 @@ Files: examples/* .clang-format
 Copyright: 2023, Stefan Herold <stefan.herold@posteo.de>
 License: CC0-1.0
 
-Files: lib/*
+Files: src/* test/*
 Copyright: 2023, Stefan Herold <stefan.herold@posteo.de>
 License: MIT
 
