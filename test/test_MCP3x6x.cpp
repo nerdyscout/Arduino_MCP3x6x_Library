@@ -20,14 +20,7 @@
 
 // using namespace fakeit;
 
-#ifdef UNIT_TEST
-
-/**
- * For native dev-platform or for some embedded frameworks
- */
-int main(void) { return runUnityTests(); }
-
-#else
+#ifdef ARDUINO
 
 /**
  * For Arduino framework
@@ -41,6 +34,13 @@ void setup(void) {
 }
 
 void loop(void) {}
+
+#else
+
+/**
+ * For native dev-platform or for some embedded frameworks
+ */
+int main(void) { return runUnityTests(); }
 
 #endif
 

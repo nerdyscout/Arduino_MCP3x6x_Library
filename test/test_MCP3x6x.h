@@ -22,11 +22,11 @@ void setUp(void);
 void tearDown(void);
 int runUnityTests(void);
 
-// tests
-void test_instance(void);
-
 #ifdef __cplusplus
 }
 #endif
+
+// tests
+void test_instance(void);
 
 #endif  // TEST_TEST_MCP3X6X_H_
