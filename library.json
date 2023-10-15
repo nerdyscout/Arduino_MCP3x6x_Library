@@ -26,6 +26,22 @@
                 "src/MCP3x6x.cpp",
                 "src/MCP3x6x.h"
             ]
+        },
+        {
+            "name": "analogRead_Scan_Differential",
+            "base": "examples/analogRead_Scan_Differential",
+            "files": [
+                "src/MCP3x6x.cpp",
+                "src/MCP3x6x.h"
+            ]
+        },
+        {
+            "name": "analogReadContinuous_Scan",
+            "base": "examples/analogReadContinuous_Scan",
+            "files": [
+                "src/MCP3x6x.cpp",
+                "src/MCP3x6x.h"
+            ]
         }
     ]
 }
