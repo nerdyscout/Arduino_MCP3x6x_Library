@@ -1,4 +1,4 @@
-name: build
+name: build examples
 
 on: [pull_request, push]
 
@@ -32,7 +32,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install --upgrade platformio
     - name: Run PlatformIO
-      run: pio ci -c platformio.ini --lib=src/
+      run: pio ci -c platformio_ci.ini --lib=src/
       env:
         PLATFORMIO_CI_SRC: ${{ matrix.example }}
 

@@ -16,12 +16,6 @@
 
 #define MCP3x6x_DEBUG DEBUG  //!< sets debug active
 
-#if ARDUINO >= 100
-#  include "Arduino.h"
-#else
-#  include "WProgram.h"
-#endif
-
 #include <SPI.h>
 
 #define MCP_OFFSET (0x88)  //!< corresponding mux setting
@@ -87,6 +81,10 @@
 #define MCP3x6x_ADR_LOCK      (MCP3x6x_SPI_ADR | (0xD << 2))  //!< Register LOCK address
 #define MCP3x6x_ADR_RESERVED3 (MCP3x6x_SPI_ADR | (0xE << 2))  //!< Register
 #define MCP3x6x_ADR_CRCCFG    (MCP3x6x_SPI_ADR | (0xF << 2))  //!< Register CRCCFG address
+
+// #ifdef __cplusplus
+// extern "C" {
+// #endif
 
 /**
  * @brief base class
@@ -1316,5 +1314,9 @@ class MCP3564 : public MCP3x6x {
  *
  */
 extern void mcp_wrapper();
+
+// #ifdef __cplusplus
+// }
+// #endif  // __cplusplus
 
 #endif  // SRC_MCP3X6X_H_

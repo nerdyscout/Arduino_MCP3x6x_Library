@@ -13,7 +13,9 @@
 
 #include "MCP3x6x.h"
 
-#include <wiring_private.h>
+// #ifdef ARDUINO_ARCH_SAMD
+// #  include <wiring_private.h>
+// #endif
 
 MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
                  const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK) {
@@ -43,7 +45,6 @@ MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPICla
       _channels_max   = 8;
       break;
     default:
-#warning "undefined MCP3x6x_DEVICE_TYPE"
       break;
   }
 
@@ -94,12 +95,12 @@ bool MCP3x6x::begin(uint16_t channelmask, float vref) {
   digitalWrite(_pinCS, HIGH);
 
   _spi->begin();
-#if ARDUINO_ARCH_SAMD
-  // todo figure out how to get dynamicaly sercom index
-  pinPeripheral(_pinMISO, PIO_SERCOM);
-  pinPeripheral(_pinMOSI, PIO_SERCOM);
-  pinPeripheral(_pinCLK, PIO_SERCOM);
-#endif
+  // #if ARDUINO_ARCH_SAMD
+  //   // todo figure out how to get dynamicaly sercom index
+  //   pinPeripheral(_pinMISO, PIO_SERCOM);
+  //   pinPeripheral(_pinMOSI, PIO_SERCOM);
+  //   pinPeripheral(_pinCLK, PIO_SERCOM);
+  // #endif
 
   _status = reset();
   setClockSelection(clk_sel::INTERN);          // todo make configurable by function parameter
