@@ -11,7 +11,9 @@
  *
  */
 
-#include "MCP3x6x.h"
+#include "MCP3x6x.hpp"
+
+#include <Arduino.h>
 
 // #ifdef ARDUINO_ARCH_SAMD
 // #  include <wiring_private.h>

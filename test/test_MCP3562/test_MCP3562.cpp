@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * @file test_MCP3461.cpp
+ * @file test_MCP3562.cpp
  * @author Stefan Herold (stefan.herold@posteo.de)
  * @brief
  * @version 0.0.2
@@ -20,7 +20,7 @@
 #include <unity.h>
 
 #include "MCP3x6x.hpp"
-#include "test_MCP3461.h"
+#include "test_MCP3562.h"
 
 void setup(void) {
   // Wait ~2 seconds before the Unity test runner
@@ -67,4 +67,4 @@ void tearDown(void) {}
 
 // actual test cases
 
-void test_instance(void) { MCP3461 mcp(); }
+void test_instance(void) { MCP3562 mcp(); }
