@@ -87,26 +87,6 @@
  *
  */
 class MCP3x6x {
-  const uint8_t _DEFAULT_CONFIG0      = 0xC0;                //!< default value
-  const uint8_t _DEFAULT_CONFIG1      = 0x0C;                //!< default value
-  const uint8_t _DEFAULT_CONFIG2      = 0x8B;                //!< default value
-  const uint8_t _DEFAULT_CONFIG3      = 0x00;                //!< default value
-  const uint8_t _DEFAULT_IRQ          = 0x73;                //!< default value
-  const uint8_t _DEFAULT_MUX          = 0x01;                //!< default value
-  const uint8_t _DEFAULT_SCAN[3]      = {0x00, 0x00, 0x00};  //!< default value
-  const uint8_t _DEFAULT_TIMER[3]     = {0x00, 0x00, 0x00};  //!< default value
-  const uint8_t _DEFAULT_OFFSET[3]    = {0x00, 0x00, 0x00};  //!< default value
-  const uint8_t _DEFAULT_GAIN[3]      = {0x80, 0x00, 0x00};  //!< default value
-  const uint8_t _DEFAULT_RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
-  const uint8_t _DEFAULT_RESERVED2    = 0x50;                //!< default value
-  const uint8_t _DEFAULT_LOCK         = 0xA5;                //!< default value
-  const uint8_t _DEFAULT_CRCCFG[2]    = {0x00, 0x00};        //!< default value
-  const uint8_t _DEFAULTS[27]         = {_DEFAULT_CONFIG0, _DEFAULT_CONFIG1,    _DEFAULT_CONFIG2,
-                                         _DEFAULT_CONFIG3, _DEFAULT_IRQ,        _DEFAULT_MUX,
-                                         *_DEFAULT_SCAN,   *_DEFAULT_TIMER,     *_DEFAULT_OFFSET,
-                                         *_DEFAULT_GAIN,   *_DEFAULT_RESERVED1, _DEFAULT_RESERVED2,
-                                         _DEFAULT_LOCK,    (uint16_t)0x0000,    *_DEFAULT_CRCCFG};
-
   typedef union __attribute__((__packed__)) {
     struct {
       struct {
@@ -134,8 +114,7 @@ class MCP3x6x {
 
   bool _differential = false;
   float _reference   = 3.3;
-  size_t _resolution, _resolution_max;
-  size_t _channels_max;
+  size_t _resolution;
   uint16_t _channel_mask;
   const uint8_t _channelID[16] = {MCP_CH0,  MCP_CH1,  MCP_CH2,   MCP_CH3,   MCP_CH4,   MCP_CH5,
                                   MCP_CH6,  MCP_CH7,  MCP_DIFFA, MCP_DIFFB, MCP_DIFFC, MCP_DIFFD,
@@ -326,6 +305,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1576710>MCP346x.pdf</a>
    */
   typedef union Config0 {
+    Config0(uint8_t data) : raw(data) {}
     struct {
       enum adc_mode adc : 2;  //!< ADC Operating Mode Selection
       enum cs_sel bias  : 2;  //!< Current Source/Sink Selection Bits for Sensor Bias
@@ -343,6 +323,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269089>MCP346x.pdf</a>
    */
   typedef union Config1 {
+    Config1(uint8_t data) : raw(data) {}
     struct {
       uint8_t      : 2;  //!< reserved
       enum osr osr : 4;  //!< Oversampling Ratio for Delta-Sigma A/D Conversion
@@ -358,6 +339,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269283>MCP346x.pdf</a>
    */
   typedef union Config2 {
+    Config2(uint8_t data) : raw(data) {}
     struct {
       uint8_t          : 2;  //!< reserved // Should always be equal to ‘11’
       bool az_mu       : 1;  //!< Auto-Zeroing MUX Setting
@@ -374,6 +356,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269504>MCP346x.pdf</a>
    */
   typedef union Config3 {
+    Config3(uint8_t data) : raw(data) {}
     struct {
       bool en_gaincal              : 1;  //!< Enable Digital Gain Calibration
       bool en_offcal               : 1;  //!< Enable Digital Offset Calibration
@@ -392,6 +375,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269747>MCP346x.pdf</a>
    */
   typedef union Irq {
+    Irq(uint8_t data) : raw(data) {}
     struct {
       bool en_stp        : 1;  //!< Enable Conversion Start Interrupt Output
       bool en_fastcmd    : 1;  //!< Enable Fast Commands in the COMMAND Byte
@@ -411,11 +395,6 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1273028>MCP346x.pdf</a>
    */
   typedef union Mux {
-    /**
-     * @brief Construct a new Mux object
-     *
-     * @param data
-     */
     Mux(uint8_t data) : raw(data) {}
     struct {
       enum mux vin_minus : 4;  //!< MUX_VIN- Input Selection
@@ -431,6 +410,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270252>MCP346x.pdf</a>
    */
   typedef union Scan {
+    Scan(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
     struct {
       union {
         struct {
@@ -457,6 +437,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270583>MCP346x.pdf</a>
    */
   typedef union Timer {
+    Timer(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
     uint8_t raw[3];  //!< Selection Bits for the Time Interval Between Two Consecutive Scan Cycles
   } timer_t;
 
@@ -467,6 +448,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270742>MCP346x.pdf</a>
    */
   typedef union Offset {
+    Offset(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
     uint8_t raw[3];  //!< Offset Error Digital Calibration Code (two’s complement, MSb first coding)
   } offset_t;
 
@@ -477,6 +459,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270900>MCP346x.pdf</a>
    */
   typedef union Gain {
+    Gain(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
     uint8_t raw[3];  //!< Gain Error Digital Calibration Code (unsigned, MSb first coding)
   } gain_t;
 
@@ -487,6 +470,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1271641>MCP346x.pdf</a>
    */
   typedef union Lock {
+    Lock(uint8_t data) : raw(data) {}
     uint8_t raw;  //!< Write Access Password Entry Code
   } lock_t;
 
@@ -497,32 +481,86 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1272118>MCP346x.pdf</a>
    */
   typedef union Crccfg {
-    uint8_t raw[2];  //!< CRC-16 Checksum Value
+    Crccfg(const uint8_t data[2]) : raw{data[0], data[1]} {}
+    union {
+      //      uint16_t val;
+      uint8_t raw[2];  //!< CRC-16 Checksum Value
+    };
   } crccfg_t;
 
   /**
    * @brief settings
    *
    */
-  struct Settings {
-   public:
-    config0_t config0;                  //!< register setting
-    config1_t config1;                  //!< register setting
-    config2_t config2;                  //!< register setting
-    config3_t config3;                  //!< register setting
-    irq_t irq;                          //!< register setting
-    mux_t mux;                          //!< register setting
-    scan_t scan;                        //!< register setting
-    timer_t timer;                      //!< register setting
-    offset_t offsetcal;                 //!< register setting
-    gain_t gaincal;                     //!< register setting
-    uint8_t reserverd1[3] = {0, 0, 0};  //!< register setting
-    uint8_t reserverd2    = 0;          //!< register setting
-    lock_t lock;                        //!< register setting
-    uint16_t id = 0;                    //!< register setting
-    crccfg_t crccfg;                    //!< register setting
+  class Settings {
+    size_t getMaxResolution() {
+      switch (id) {
+        case MCP3461_DEVICE_TYPE:
+        case MCP3462_DEVICE_TYPE:
+        case MCP3464_DEVICE_TYPE:
+          return 16;
+        case MCP3561_DEVICE_TYPE:
+        case MCP3562_DEVICE_TYPE:
+        case MCP3564_DEVICE_TYPE:
+          return 24;
+        default:
+          return 0;
+      }
+    }
 
-    Settings() : mux(0x01) {}
+    size_t getChannelCount() {
+      switch (id) {
+        case MCP3461_DEVICE_TYPE:
+        case MCP3561_DEVICE_TYPE:
+          return 2;
+        case MCP3462_DEVICE_TYPE:
+        case MCP3562_DEVICE_TYPE:
+          return 4;
+        case MCP3464_DEVICE_TYPE:
+        case MCP3564_DEVICE_TYPE:
+          return 8;
+        default:
+          return 0;
+      }
+    }
+
+   public:
+    struct {
+      const uint8_t CONFIG0   = 0xC0;                //!< default value
+      const uint8_t CONFIG1   = 0x0C;                //!< default value
+      const uint8_t CONFIG2   = 0x8B;                //!< default value
+      const uint8_t CONFIG3   = 0x00;                //!< default value
+      const uint8_t IRQ       = 0x73;                //!< default value
+      const uint8_t MUX       = 0x01;                //!< default value
+      const uint8_t SCAN[3]   = {0x00, 0x00, 0x00};  //!< default value
+      const uint8_t TIMER[3]  = {0x00, 0x00, 0x00};  //!< default value
+      const uint8_t OFFSET[3] = {0x00, 0x00, 0x00};  //!< default value
+      const uint8_t GAIN[3]   = {0x80, 0x00, 0x00};  //!< default value
+      //      const uint8_t RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
+      //      const uint8_t RESERVED2    = 0x50;                //!< default value
+      const uint8_t LOCK      = 0xA5;          //!< default value
+      const uint8_t CRCCFG[2] = {0x00, 0x00};  //!< default value
+    } DEFAULT;
+
+    config0_t config0  = DEFAULT.CONFIG0;  //!< register setting
+    config1_t config1  = DEFAULT.CONFIG1;  //!< register setting
+    config2_t config2  = DEFAULT.CONFIG2;  //!< register setting
+    config3_t config3  = DEFAULT.CONFIG3;  //!< register setting
+    irq_t irq          = DEFAULT.IRQ;      //!< register setting
+    mux_t mux          = DEFAULT.MUX;      //!< register setting
+    scan_t scan        = DEFAULT.SCAN;     //!< register setting
+    timer_t timer      = DEFAULT.TIMER;    //!< register setting
+    offset_t offsetcal = DEFAULT.OFFSET;   //!< register setting
+    gain_t gaincal     = DEFAULT.GAIN;     //!< register setting
+    //    const uint8_t reserverd1[3] = _DEFAULT.RESERVED1;  //!< register setting
+    //    const uint8_t reserverd2    = _DEFAULT.RESERVED2;   //!< register setting
+    uint16_t id;                       //!< register setting
+    lock_t lock     = DEFAULT.LOCK;    //!< register setting
+    crccfg_t crccfg = DEFAULT.CRCCFG;  //!< register setting
+
+    Settings(const uint16_t MCP3x6x_DEVICE_TYPE) : id(MCP3x6x_DEVICE_TYPE) {}
+
+    friend MCP3x6x;
   } settings;
 
   /**
@@ -651,7 +689,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t reset() {
-    //    memcpy(settings, _DEFAULTS, 27);
+    // todo: reset settings values;
     return _fastcmd(MCP3x6x_CMD_RESET);
   }
 

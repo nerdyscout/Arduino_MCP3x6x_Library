@@ -20,46 +20,16 @@
 // #endif
 
 MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
-                 const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK) {
-  switch (MCP3x6x_DEVICE_TYPE) {
-    case MCP3461_DEVICE_TYPE:
-      _resolution_max = 16;
-      _channels_max   = 2;
-      break;
-    case MCP3462_DEVICE_TYPE:
-      _resolution_max = 16;
-      _channels_max   = 4;
-      break;
-    case MCP3464_DEVICE_TYPE:
-      _resolution_max = 16;
-      _channels_max   = 8;
-      break;
-    case MCP3561_DEVICE_TYPE:
-      _resolution_max = 24;
-      _channels_max   = 2;
-      break;
-    case MCP3562_DEVICE_TYPE:
-      _resolution_max = 24;
-      _channels_max   = 4;
-      break;
-    case MCP3564_DEVICE_TYPE:
-      _resolution_max = 24;
-      _channels_max   = 8;
-      break;
-    default:
-      break;
-  }
-
-  //  settings.id = MCP3x6x_DEVICE_TYPE;
-
+                 const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK)
+    : settings(MCP3x6x_DEVICE_TYPE) {
   _spi        = theSPI;
   _pinMISO    = pinMISO;
   _pinMOSI    = pinMOSI;
   _pinCLK     = pinCLK;
   _pinCS      = pinCS;
 
-  _resolution = _resolution_max;
-  _channel_mask |= 0xff << _channels_max;  // todo use this one
+  _resolution = settings.getMaxResolution();
+  _channel_mask |= 0xff << settings.getChannelCount();  // todo use this one
 }
 
 MCP3x6x::MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint16_t MCP3x6x_DEVICE_TYPE,
@@ -123,7 +93,7 @@ bool MCP3x6x::begin(uint16_t channelmask, float vref) {
 MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
   size_t s = 0;
 
-  switch (_resolution_max) {
+  switch (settings.getMaxResolution()) {
     case 16:
       s = settings.config3.data_format == data_format::SGN_DATA ? 2 : 4;
       break;
@@ -170,7 +140,7 @@ void MCP3x6x::lock(uint8_t key) {
 }
 
 void MCP3x6x::unlock() {
-  settings.lock.raw = _DEFAULT_LOCK;
+  settings.lock.raw = settings.DEFAULT.LOCK;
   _status           = write(settings.lock);
 }
 
@@ -249,7 +219,7 @@ float MCP3x6x::getReference() { return _reference; }
 
 // returns signed ADC value from raw data
 int32_t MCP3x6x::_getValue(uint32_t raw) {
-  switch (_resolution_max) {
+  switch (settings.getMaxResolution()) {
     case 16:
       switch (settings.config3.data_format) {
         case (data_format::SGN_DATA_ZERO):
@@ -338,7 +308,7 @@ int32_t MCP3x6x::analogReadDifferential(mux pinP, mux pinN) {
 }
 
 void MCP3x6x::analogReadResolution(size_t bits) {
-  if (bits <= _resolution_max) {
+  if (bits <= settings.getMaxResolution()) {
     _resolution = bits;
   }
 }
