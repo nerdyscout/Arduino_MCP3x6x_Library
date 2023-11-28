@@ -140,7 +140,7 @@ void MCP3x6x::lock(uint8_t key) {
 }
 
 void MCP3x6x::unlock() {
-  settings.lock.raw = settings.DEFAULT.LOCK;
+  settings.lock.raw = settings.DEFAULTS.LOCK;
   _status           = write(settings.lock);
 }
 

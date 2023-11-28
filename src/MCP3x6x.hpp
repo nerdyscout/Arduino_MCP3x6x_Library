@@ -525,38 +525,38 @@ class MCP3x6x {
     }
 
    public:
-    struct {
-      const uint8_t CONFIG0   = 0xC0;                //!< default value
-      const uint8_t CONFIG1   = 0x0C;                //!< default value
-      const uint8_t CONFIG2   = 0x8B;                //!< default value
-      const uint8_t CONFIG3   = 0x00;                //!< default value
-      const uint8_t IRQ       = 0x73;                //!< default value
-      const uint8_t MUX       = 0x01;                //!< default value
-      const uint8_t SCAN[3]   = {0x00, 0x00, 0x00};  //!< default value
-      const uint8_t TIMER[3]  = {0x00, 0x00, 0x00};  //!< default value
-      const uint8_t OFFSET[3] = {0x00, 0x00, 0x00};  //!< default value
-      const uint8_t GAIN[3]   = {0x80, 0x00, 0x00};  //!< default value
-      //      const uint8_t RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
-      //      const uint8_t RESERVED2    = 0x50;                //!< default value
-      const uint8_t LOCK      = 0xA5;          //!< default value
-      const uint8_t CRCCFG[2] = {0x00, 0x00};  //!< default value
-    } DEFAULT;
+    const struct {
+      const uint8_t CONFIG0      = 0xC0;                //!< default value
+      const uint8_t CONFIG1      = 0x0C;                //!< default value
+      const uint8_t CONFIG2      = 0x8B;                //!< default value
+      const uint8_t CONFIG3      = 0x00;                //!< default value
+      const uint8_t IRQ          = 0x73;                //!< default value
+      const uint8_t MUX          = 0x01;                //!< default value
+      const uint8_t SCAN[3]      = {0x00, 0x00, 0x00};  //!< default value
+      const uint8_t TIMER[3]     = {0x00, 0x00, 0x00};  //!< default value
+      const uint8_t OFFSET[3]    = {0x00, 0x00, 0x00};  //!< default value
+      const uint8_t GAIN[3]      = {0x80, 0x00, 0x00};  //!< default value
+      const uint8_t RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
+      const uint8_t RESERVED2    = 0x50;                //!< default value
+      const uint8_t LOCK         = 0xA5;                //!< default value
+      const uint8_t CRCCFG[2]    = {0x00, 0x00};        //!< default value
+    } DEFAULTS;
 
-    config0_t config0  = DEFAULT.CONFIG0;  //!< register setting
-    config1_t config1  = DEFAULT.CONFIG1;  //!< register setting
-    config2_t config2  = DEFAULT.CONFIG2;  //!< register setting
-    config3_t config3  = DEFAULT.CONFIG3;  //!< register setting
-    irq_t irq          = DEFAULT.IRQ;      //!< register setting
-    mux_t mux          = DEFAULT.MUX;      //!< register setting
-    scan_t scan        = DEFAULT.SCAN;     //!< register setting
-    timer_t timer      = DEFAULT.TIMER;    //!< register setting
-    offset_t offsetcal = DEFAULT.OFFSET;   //!< register setting
-    gain_t gaincal     = DEFAULT.GAIN;     //!< register setting
-    //    const uint8_t reserverd1[3] = _DEFAULT.RESERVED1;  //!< register setting
-    //    const uint8_t reserverd2    = _DEFAULT.RESERVED2;   //!< register setting
-    uint16_t id;                       //!< register setting
-    lock_t lock     = DEFAULT.LOCK;    //!< register setting
-    crccfg_t crccfg = DEFAULT.CRCCFG;  //!< register setting
+    config0_t config0           = DEFAULTS.CONFIG0;    //!< register setting
+    config1_t config1           = DEFAULTS.CONFIG1;    //!< register setting
+    config2_t config2           = DEFAULTS.CONFIG2;    //!< register setting
+    config3_t config3           = DEFAULTS.CONFIG3;    //!< register setting
+    irq_t irq                   = DEFAULTS.IRQ;        //!< register setting
+    mux_t mux                   = DEFAULTS.MUX;        //!< register setting
+    scan_t scan                 = DEFAULTS.SCAN;       //!< register setting
+    timer_t timer               = DEFAULTS.TIMER;      //!< register setting
+    offset_t offsetcal          = DEFAULTS.OFFSET;     //!< register setting
+    gain_t gaincal              = DEFAULTS.GAIN;       //!< register setting
+    const uint8_t reserverd1[3] = {0x90, 0x00, 0x00};  //!< register setting // todo
+    const uint8_t reserverd2    = DEFAULTS.RESERVED2;  //!< register setting
+    lock_t lock                 = DEFAULTS.LOCK;       //!< register setting
+    crccfg_t crccfg             = DEFAULTS.CRCCFG;     //!< register setting
+    uint16_t id;                                       //!< register setting
 
     Settings(const uint16_t MCP3x6x_DEVICE_TYPE) : id(MCP3x6x_DEVICE_TYPE) {}
 
