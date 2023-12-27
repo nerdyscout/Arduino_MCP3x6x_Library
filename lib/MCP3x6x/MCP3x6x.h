@@ -977,14 +977,14 @@ class MCP3x6x {
    * @param rate
    */
   void setAveraging(osr rate);
-
+    
   /**
    * @brief set gain
    *
    * @param gain
    */
   void setGain(gain gain);
-
+    
   /**
    * @brief set gain
    *
