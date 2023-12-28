@@ -2,6 +2,8 @@
 
 Supports Microchip 16bit [MCP3461R/MCP3462R/MCP3464R](https://www.microchip.com/en-us/product/MCP3461r) and 24bit [MCP3561R/MCP3562R/MCP3564R](https://www.microchip.com/en-us/product/MCP3561r) Analog Digital Converters.
 
+Without the `R` in the name seems to be early hardware versions which are [not recommended for designs] anymore. (https://www.microchip.com/en-us/product/MCP3464) anymore. As they do have a subset of features this lib should mostly work as well.
+
 ## Supported Boards
 
 This project is set up to be build with different MCUs, but I am not able the test each of them.

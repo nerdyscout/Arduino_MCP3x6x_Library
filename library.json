@@ -1,8 +1,8 @@
 {
-    "name": "MCP3x6x",
+    "name": "MCP3x6xR",
     "version": "0.0.2",
     "description": "Library to support Microchip MPC3x6x/R 16/24bit analog to digital converters.",
-    "keywords": "MCP3461/R, MCP3462/R, MCP3464/R, MCP3561/R, MCP3562/R, MCP3564/R",
+    "keywords": "MCP3461R, MCP3462R, MCP3464R, MCP3561R, MCP3562R, MCP3564R, MCP3461, MCP3462, MCP3464, MCP3561, MCP3562, MCP3564",
     "repository": {
         "type": "git",
         "url": "https://github.com/nerdyscout/Arduino_MCP3x6x_Library.git"
