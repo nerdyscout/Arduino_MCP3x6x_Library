@@ -12,7 +12,7 @@ jobs:
       uses: fsfe/reuse-action@v1
 
   Arduino:
-    name: ${{ matrix.example }}
+    name: ${{ matrix.examples }}
     runs-on: ubuntu-latest
     strategy:
       matrix:

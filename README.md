@@ -1,6 +1,6 @@
-# Arduino MCP3x6x Library [![build](https://github.com/nerdyscout/Arduino_MCP3x6x_Library/workflows/build/badge.svg)](https://github.com/nerdyscout/Arduino_MCP3x6x_Library/actions/workflows/build.yml)
+# Arduino MCP3x6x/R Library [![build](https://github.com/nerdyscout/Arduino_MCP3x6x_Library/workflows/build/badge.svg)](https://github.com/nerdyscout/Arduino_MCP3x6x_Library/actions/workflows/build.yml)
 
-Supports Microchip 16bit [MCP3461/MCP3462/MCP3464/](https://www.microchip.com/en-us/product/MCP3461r) and 24bit [MCP3561/MCP3562/MCP3564/](https://www.microchip.com/en-us/product/MCP3561r) Analog Digital Converters.
+Supports Microchip 16bit [MCP3461R/MCP3462R/MCP3464R](https://www.microchip.com/en-us/product/MCP3461r) and 24bit [MCP3561R/MCP3562R/MCP3564R](https://www.microchip.com/en-us/product/MCP3561r) Analog Digital Converters.
 
 ## Supported Boards
 

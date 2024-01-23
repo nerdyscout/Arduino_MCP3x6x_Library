@@ -1,3 +1,6 @@
 .pio
 .vscode/*
 docs/**
+
+# kicad
+*-backup*

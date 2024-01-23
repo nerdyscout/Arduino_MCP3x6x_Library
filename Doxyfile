@@ -44,7 +44,7 @@ PROJECT_NAME           = "Arduino MCP3x6x Library"
 # for a project that appears at the top of each page and should give viewer a
 # quick idea about the purpose of the project. Keep the description short.
 
-PROJECT_BRIEF          = "Library to support Microchip MPC3x6x 16/24bit analog to digital converters"
+PROJECT_BRIEF          = "Library to support Microchip MPC3x6xR 16/24bit analog to digital converters"
 
 # With the PROJECT_LOGO tag one can specify a logo or an icon that is included
 # in the documentation. The maximum height of the logo should not exceed 55

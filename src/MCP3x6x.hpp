@@ -1,26 +1,20 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * @file MCP3x6x.h
+ * @file MCP3x6x.hpp
  * @author Stefan Herold (stefan.herold@posteo.de)
  * @brief
- * @version 0.0.1
- * @date 2022-10-30
+ * @version 0.0.2
+ * @date 2023-10-10
  *
- * @copyright Copyright (c) 2022
+ * @copyright Copyright (c) 2023
  *
  */
 
-#ifndef MCP3x6x_H
-#define MCP3x6x_H
+#ifndef SRC_MCP3X6X_HPP_
+#define SRC_MCP3X6X_HPP_
 
 #define MCP3x6x_DEBUG DEBUG  //!< sets debug active
-
-#if ARDUINO >= 100
-#  include "Arduino.h"
-#else
-#  include "WProgram.h"
-#endif
 
 #include <SPI.h>
 
@@ -41,18 +35,26 @@
 #define MCP_CH1    (0x18)  //!< corresponding mux setting
 #define MCP_CH0    (0x08)  //!< corresponding mux setting
 
-#define MCP3461_DEVICE_TYPE    (0x0008)  //!< MCP3461 device ID
-#define MCP3462_DEVICE_TYPE    (0x0009)  //!< MCP3462 device ID
-#define MCP3464_DEVICE_TYPE    (0x000B)  //!< MCP3464 device ID
-#define MCP3561_DEVICE_TYPE    (0x000C)  //!< MCP3561 device ID
-#define MCP3562_DEVICE_TYPE    (0x000D)  //!< MCP3562 device ID
-#define MCP3564_DEVICE_TYPE    (0x000F)  //!< MCP3564 device ID
-#define MCP3x6x_DEVICE_ADDRESS (0x01)    //!< todo
+#define MCP3461_DEVICE_TYPE (0x0008)  //!< MCP3461 device ID
+#define MCP3462_DEVICE_TYPE (0x0009)  //!< MCP3462 device ID
+#define MCP3464_DEVICE_TYPE (0x000B)  //!< MCP3464 device ID
+#define MCP3561_DEVICE_TYPE (0x000C)  //!< MCP3561 device ID
+#define MCP3562_DEVICE_TYPE (0x000D)  //!< MCP3562 device ID
+#define MCP3564_DEVICE_TYPE (0x000F)  //!< MCP3564 device ID
+
+#ifndef MCP3x6x_DEVICE_ADDRESS
+#  define MCP3x6x_DEVICE_ADDRESS (0x01)  //!< DEVICE ADDRESS
+#endif
+#ifndef MCP3x6x_SPI_SPEED
+#  define MCP3x6x_SPI_SPEED (20000000)  //!< SPI SPEED Value
+#endif
+#if MCP3x6x_SPI_SPEED > 20000000
+#  error "MCP3x6x_SPI_SPEED above limit (20MHz)!"
+#endif
 
 #define MCP3x6x_SPI_ORDER MSBFIRST                       //!< SPI ORDER
 #define MCP3x6x_SPI_MODE  SPI_MODE0                      //!< SPI MODE
 #define MCP3x6x_SPI_ADR   (MCP3x6x_DEVICE_ADDRESS << 6)  //!< SPI ADDRESS
-#define MCP3x6x_SPI_SPEED (200000)                       //!< SPI SPEED Value
 
 #define MCP3x6x_CMD_CONVERSION    (MCP3x6x_SPI_ADR | 0b101000)  //!< fast command
 #define MCP3x6x_CMD_STANDBY       (MCP3x6x_SPI_ADR | 0b101100)  //!< fast command
@@ -85,32 +87,19 @@
  *
  */
 class MCP3x6x {
-  const uint8_t _DEFAULT_CONFIG0      = 0xC0;                //!< default value
-  const uint8_t _DEFAULT_CONFIG1      = 0x0C;                //!< default value
-  const uint8_t _DEFAULT_CONFIG2      = 0x8B;                //!< default value
-  const uint8_t _DEFAULT_CONFIG3      = 0x00;                //!< default value
-  const uint8_t _DEFAULT_IRQ          = 0x73;                //!< default value
-  const uint8_t _DEFAULT_MUX          = 0x01;                //!< default value
-  const uint8_t _DEFAULT_SCAN[3]      = {0x00, 0x00, 0x00};  //!< default value
-  const uint8_t _DEFAULT_TIMER[3]     = {0x00, 0x00, 0x00};  //!< default value
-  const uint8_t _DEFAULT_OFFSET[3]    = {0x00, 0x00, 0x00};  //!< default value
-  const uint8_t _DEFAULT_GAIN[3]      = {0x80, 0x00, 0x00};  //!< default value
-  const uint8_t _DEFAULT_RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
-  const uint8_t _DEFAULT_RESERVED2    = 0x50;                //!< default value
-  const uint8_t _DEFAULT_LOCK         = 0xA5;                //!< default value
-  const uint8_t _DEFAULT_CRCCFG[2]    = {0x00, 0x00};        //!< default value
-  const uint8_t _DEFAULTS[27]         = {_DEFAULT_CONFIG0, _DEFAULT_CONFIG1,    _DEFAULT_CONFIG2,
-                                         _DEFAULT_CONFIG3, _DEFAULT_IRQ,        _DEFAULT_MUX,
-                                         *_DEFAULT_SCAN,   *_DEFAULT_TIMER,     *_DEFAULT_OFFSET,
-                                         *_DEFAULT_GAIN,   *_DEFAULT_RESERVED1, _DEFAULT_RESERVED2,
-                                         _DEFAULT_LOCK,    (uint16_t)0x0000,    *_DEFAULT_CRCCFG};
-
-  typedef union {
+  typedef union __attribute__((__packed__)) {
     struct {
+<<<<<<< HEAD:lib/MCP3x6x/MCP3x6x.h
       struct __attribute__((__packed__)) {
         bool por   : 1;  //!< status: power on reset
         bool crccfg: 1;  //!< status: crc
         bool dr    : 1;  //!< status: data ready
+=======
+      struct {
+        bool por;     //!< status: power on reset
+        bool crccfg;  //!< status: crc
+        bool dr;      //!< status: data ready
+>>>>>>> 27c2ec5dab48bdf627a1fd1746bbecc70a4f000c:src/MCP3x6x.hpp
       };
       uint8_t      : 1;  //!< !addr[0]
       uint8_t addr : 2;  //!< addresse
@@ -132,8 +121,7 @@ class MCP3x6x {
 
   bool _differential = false;
   float _reference   = 3.3;
-  size_t _resolution, _resolution_max;
-  size_t _channels_max;
+  size_t _resolution;
   uint16_t _channel_mask;
   const uint8_t _channelID[16] = {MCP_CH0,  MCP_CH1,  MCP_CH2,   MCP_CH3,   MCP_CH4,   MCP_CH5,
                                   MCP_CH6,  MCP_CH7,  MCP_DIFFA, MCP_DIFFB, MCP_DIFFC, MCP_DIFFD,
@@ -144,7 +132,7 @@ class MCP3x6x {
    * @brief ADC Operating Mode Selection
    *
    */
-  enum class __attribute__((packed)) adc_mode : uint8_t {
+  enum __attribute__((packed)) adc_mode {
     CONVERSION = 3,  //!< ADC Conversion mode
     STANDBY    = 2,  //!< ADC Standby mode
     SHUTDOWN   = 0   //!< ADC shutdown mode (default)
@@ -154,7 +142,7 @@ class MCP3x6x {
    * @brief Current Source/Sink Selection Bits for Sensor Bias.
    *
    */
-  enum class __attribute__((packed)) cs_sel : uint8_t {
+  enum __attribute__((packed)) cs_sel {
     BIAS_15UA = 3,  //!< 15 μA is applied to the ADC inputs
     BIAS_37UA = 2,  //!< 3.7 μA is applied to the ADC inputs
     BIAS_09UA = 1,  //!< 0.9 μA is applied to the ADC inputs
@@ -165,7 +153,7 @@ class MCP3x6x {
    * @brief clock selection
    *
    */
-  enum class __attribute__((packed)) clk_sel : uint8_t {
+  enum __attribute__((packed)) clk_sel {
     INTERN_OUTPUT = 3,  //!< Internal clock is selected and AMCLK is present on the analog master
                         //!< clock output pin
     INTERN = 2,  //!< Internal clock is selected and no clock output is present on the CLK pin
@@ -176,7 +164,7 @@ class MCP3x6x {
    * @brief Oversampling Ratio for Delta-Sigma A/D Conversion
    *
    */
-  enum class __attribute__((packed)) osr : uint8_t {
+  enum __attribute__((packed)) osr {
     OSR_98304 = 15,  //!< OSR: 98304
     OSR_81920 = 14,  //!< OSR: 81920
     OSR_49152 = 13,  //!< OSR: 49152
@@ -199,7 +187,7 @@ class MCP3x6x {
    * @brief Prescaler Value Selection for AMCLK
    *
    */
-  enum class __attribute__((packed)) pre : uint8_t {
+  enum __attribute__((packed)) pre {
     MCLK_8 = 3,  //!< AMCLK = MCLK/8
     MCLK_4 = 2,  //!< AMCLK = MCLK/4
     MCLK_2 = 1,  //!< AMCLK = MCLK/2
@@ -210,7 +198,7 @@ class MCP3x6x {
    * @brief ADC Bias Current Selection
    *
    */
-  enum class __attribute__((packed)) boost : uint8_t {
+  enum __attribute__((packed)) boost {
     BOOST_3   = 3,  //!< ADC channel has current x2
     BOOST_2   = 2,  //!< ADC channel has current x1 (default)
     BOOST_066 = 1,  //!< ADC channel has current x2/3
@@ -221,7 +209,7 @@ class MCP3x6x {
    * @brief ADC Gain Selection
    *
    */
-  enum class __attribute__((packed)) gain : uint8_t {
+  enum __attribute__((packed)) gain {
     GAIN_64  = 7,  //!< Gain is x64 (x16 analog, x4 digital)
     GAIN_32  = 6,  //!< Gain is x32 (x16 analog, x2 digital)
     GAIN_16  = 5,  //!< Gain is x16
@@ -236,7 +224,7 @@ class MCP3x6x {
    * @brief Conversion Mode Selection
    *
    */
-  enum class __attribute__((packed)) conv_mode : uint8_t {
+  enum __attribute__((packed)) conv_mode {
     CONTINUOUS = 3,  //!< Continuous Conversion mode or continuous conversion cycle in SCAN mode
     ONESHOT_STANDBY = 2,  //!< One-shot conversion or one-shot cycle in SCAN mode. It sets
                           //!< ADC_MODE[1:0] to ‘10’ (standby) at the end of the conversion or at
@@ -250,7 +238,7 @@ class MCP3x6x {
    * @brief ADC Output Data Format Selection
    *
    */
-  enum class __attribute__((packed)) data_format : uint8_t {
+  enum __attribute__((packed)) data_format {
     ID_SGNEXT_DATA =
         3,  //!< 32-bit (25-bit right justified data + Channel ID): CHID[3:0] + SGN extension (4
             //!< bits) + 24-bit ADC data. It allows overrange with the SGN extension.
@@ -266,7 +254,7 @@ class MCP3x6x {
    * @brief CRC Checksum Format Selection on Read Communications
    *
    */
-  enum class __attribute__((packed)) crc_format : uint8_t {
+  enum __attribute__((packed)) crc_format {
     CRC_32 = 1,  //!< 32-bit wide (CRC-16 followed by 16 zeros)
     CRC_16 = 0   //!< 16-bit wide (CRC-16 only) (default)
   };
@@ -275,7 +263,7 @@ class MCP3x6x {
    * @brief MUX_VIN Input Selection
    *
    */
-  enum class __attribute__((packed)) mux : uint8_t {
+  enum __attribute__((packed)) mux {
     MUX_VCM          = 15,  //!< Internal VCM
     MUX_TemperatureM = 14,  //!< Internal Temperature Sensor Diode M (Temp Diode M)
     MUX_TemperatureP = 13,  //!< Internal Temperature Sensor Diode P (Temp Diode P)
@@ -297,7 +285,7 @@ class MCP3x6x {
    * @brief Delay Time Between Each Conversion During a Scan Cycle
    *
    */
-  enum class __attribute__((packed)) delay : uint8_t {
+  enum __attribute__((packed)) delay {
     DLY_512 = 7,  //!< 512 * DMCLK
     DLY_256 = 6,  //!< 256 * DMCLK
     DLY_128 = 5,  //!< 128 * DMCLK
@@ -324,6 +312,7 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1576710>MCP346x.pdf</a>
    */
   typedef union Config0 {
+    Config0(uint8_t data) : raw(data) {}
     struct {
       enum adc_mode adc : 2;  //!< ADC Operating Mode Selection
       enum cs_sel bias  : 2;  //!< Current Source/Sink Selection Bits for Sensor Bias
@@ -340,7 +329,8 @@ class MCP3x6x {
    * <a
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269089>MCP346x.pdf</a>
    */
-  typedef union config1 {
+  typedef union Config1 {
+    Config1(uint8_t data) : raw(data) {}
     struct {
       uint8_t      : 2;  //!< reserved
       enum osr osr : 4;  //!< Oversampling Ratio for Delta-Sigma A/D Conversion
@@ -356,6 +346,7 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269283>MCP346x.pdf</a>
    */
   typedef union Config2 {
+    Config2(uint8_t data) : raw(data) {}
     struct {
       uint8_t          : 2;  //!< reserved // Should always be equal to ‘11’
       bool az_mu       : 1;  //!< Auto-Zeroing MUX Setting
@@ -372,6 +363,7 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269504>MCP346x.pdf</a>
    */
   typedef union Config3 {
+    Config3(uint8_t data) : raw(data) {}
     struct {
       bool en_gaincal              : 1;  //!< Enable Digital Gain Calibration
       bool en_offcal               : 1;  //!< Enable Digital Offset Calibration
@@ -390,6 +382,7 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269747>MCP346x.pdf</a>
    */
   typedef union Irq {
+    Irq(uint8_t data) : raw(data) {}
     struct {
       bool en_stp        : 1;  //!< Enable Conversion Start Interrupt Output
       bool en_fastcmd    : 1;  //!< Enable Fast Commands in the COMMAND Byte
@@ -409,12 +402,7 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1273028>MCP346x.pdf</a>
    */
   typedef union Mux {
-    /**
-     * @brief Construct a new Mux object
-     *
-     * @param data
-     */
-    Mux(uint8_t data) : raw(data){};
+    Mux(uint8_t data) : raw(data) {}
     struct {
       enum mux vin_minus : 4;  //!< MUX_VIN- Input Selection
       enum mux vin_plus  : 4;  //!< MUX_VIN+ Input Selection
@@ -429,6 +417,7 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270252>MCP346x.pdf</a>
    */
   typedef union Scan {
+    Scan(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
     struct {
       union {
         struct {
@@ -455,6 +444,7 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270583>MCP346x.pdf</a>
    */
   typedef union Timer {
+    Timer(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
     uint8_t raw[3];  //!< Selection Bits for the Time Interval Between Two Consecutive Scan Cycles
   } timer_t;
 
@@ -465,6 +455,7 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270742>MCP346x.pdf</a>
    */
   typedef union Offset {
+    Offset(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
     uint8_t raw[3];  //!< Offset Error Digital Calibration Code (two’s complement, MSb first coding)
   } offset_t;
 
@@ -475,6 +466,7 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270900>MCP346x.pdf</a>
    */
   typedef union Gain {
+    Gain(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
     uint8_t raw[3];  //!< Gain Error Digital Calibration Code (unsigned, MSb first coding)
   } gain_t;
 
@@ -485,6 +477,7 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1271641>MCP346x.pdf</a>
    */
   typedef union Lock {
+    Lock(uint8_t data) : raw(data) {}
     uint8_t raw;  //!< Write Access Password Entry Code
   } lock_t;
 
@@ -495,31 +488,87 @@ class MCP3x6x {
    * href=https://nerdyscout.github.io/Arduino_MCP3x6x_Library/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1272118>MCP346x.pdf</a>
    */
   typedef union Crccfg {
-    uint8_t raw[2];  //!< CRC-16 Checksum Value
+    Crccfg(const uint8_t data[2]) : raw{data[0], data[1]} {}
+    union {
+      //      uint16_t val;
+      uint8_t raw[2];  //!< CRC-16 Checksum Value
+    };
   } crccfg_t;
 
   /**
    * @brief settings
    *
    */
-  struct Settings {
-    config0_t config0;      //!< register setting
-    config1_t config1;      //!< register setting
-    config2_t config2;      //!< register setting
-    config3_t config3;      //!< register setting
-    irq_t irq;              //!< register setting
-    mux_t mux;              //!< register setting
-    scan_t scan;            //!< register setting
-    timer_t timer;          //!< register setting
-    offset_t offsetcal;     //!< register setting
-    gain_t gaincal;         //!< register setting
-    uint8_t reserverd1[3];  //!< register setting
-    uint8_t reserverd2;     //!< register setting
-    lock_t lock;            //!< register setting
-    uint16_t id;            //!< register setting
-    crccfg_t crccfg;        //!< register setting
-    Settings() : mux(0x01){};
-  } settings;  //!< todo
+  class Settings {
+    size_t getMaxResolution() {
+      switch (id) {
+        case MCP3461_DEVICE_TYPE:
+        case MCP3462_DEVICE_TYPE:
+        case MCP3464_DEVICE_TYPE:
+          return 16;
+        case MCP3561_DEVICE_TYPE:
+        case MCP3562_DEVICE_TYPE:
+        case MCP3564_DEVICE_TYPE:
+          return 24;
+        default:
+          return 0;
+      }
+    }
+
+    size_t getChannelCount() {
+      switch (id) {
+        case MCP3461_DEVICE_TYPE:
+        case MCP3561_DEVICE_TYPE:
+          return 2;
+        case MCP3462_DEVICE_TYPE:
+        case MCP3562_DEVICE_TYPE:
+          return 4;
+        case MCP3464_DEVICE_TYPE:
+        case MCP3564_DEVICE_TYPE:
+          return 8;
+        default:
+          return 0;
+      }
+    }
+
+   public:
+    const struct {
+      const uint8_t CONFIG0      = 0xC0;                //!< default value
+      const uint8_t CONFIG1      = 0x0C;                //!< default value
+      const uint8_t CONFIG2      = 0x8B;                //!< default value
+      const uint8_t CONFIG3      = 0x00;                //!< default value
+      const uint8_t IRQ          = 0x73;                //!< default value
+      const uint8_t MUX          = 0x01;                //!< default value
+      const uint8_t SCAN[3]      = {0x00, 0x00, 0x00};  //!< default value
+      const uint8_t TIMER[3]     = {0x00, 0x00, 0x00};  //!< default value
+      const uint8_t OFFSET[3]    = {0x00, 0x00, 0x00};  //!< default value
+      const uint8_t GAIN[3]      = {0x80, 0x00, 0x00};  //!< default value
+      const uint8_t RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
+      const uint8_t RESERVED2    = 0x50;                //!< default value
+      const uint8_t LOCK         = 0xA5;                //!< default value
+      const uint8_t CRCCFG[2]    = {0x00, 0x00};        //!< default value
+    } DEFAULTS;
+
+    config0_t config0           = DEFAULTS.CONFIG0;    //!< register setting
+    config1_t config1           = DEFAULTS.CONFIG1;    //!< register setting
+    config2_t config2           = DEFAULTS.CONFIG2;    //!< register setting
+    config3_t config3           = DEFAULTS.CONFIG3;    //!< register setting
+    irq_t irq                   = DEFAULTS.IRQ;        //!< register setting
+    mux_t mux                   = DEFAULTS.MUX;        //!< register setting
+    scan_t scan                 = DEFAULTS.SCAN;       //!< register setting
+    timer_t timer               = DEFAULTS.TIMER;      //!< register setting
+    offset_t offsetcal          = DEFAULTS.OFFSET;     //!< register setting
+    gain_t gaincal              = DEFAULTS.GAIN;       //!< register setting
+    const uint8_t reserverd1[3] = {0x90, 0x00, 0x00};  //!< register setting // todo
+    const uint8_t reserverd2    = DEFAULTS.RESERVED2;  //!< register setting
+    lock_t lock                 = DEFAULTS.LOCK;       //!< register setting
+    crccfg_t crccfg             = DEFAULTS.CRCCFG;     //!< register setting
+    uint16_t id;                                       //!< register setting
+
+    Settings(const uint16_t MCP3x6x_DEVICE_TYPE) : id(MCP3x6x_DEVICE_TYPE) {}
+
+    friend MCP3x6x;
+  } settings;
 
   /**
    * @brief structure with latest value per channel
@@ -571,7 +620,7 @@ class MCP3x6x {
    * @brief Destroy the MCP3x6x object
    *
    */
-  ~MCP3x6x() { end(); };
+  ~MCP3x6x() { end(); }
 
   /**
    * @brief begin communication
@@ -647,7 +696,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t reset() {
-    //    memcpy(settings, _DEFAULTS, 27);
+    // todo: reset settings values;
     return _fastcmd(MCP3x6x_CMD_RESET);
   }
 
@@ -1124,7 +1173,7 @@ class MCP3461 : public MCP3x6x {
    */
   MCP3461(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3461_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3461_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3461 object
    *
@@ -1139,7 +1188,7 @@ class MCP3461 : public MCP3x6x {
   MCP3461(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3461_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3461_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1159,7 +1208,7 @@ class MCP3462 : public MCP3x6x {
    */
   MCP3462(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3462_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3462_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3462 object
    *
@@ -1174,7 +1223,7 @@ class MCP3462 : public MCP3x6x {
   MCP3462(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3462_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3462_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1194,7 +1243,7 @@ class MCP3464 : public MCP3x6x {
    */
   MCP3464(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3464_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3464_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3464 object
    *
@@ -1209,7 +1258,7 @@ class MCP3464 : public MCP3x6x {
   MCP3464(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3464_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3464_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1229,7 +1278,7 @@ class MCP3561 : public MCP3x6x {
    */
   MCP3561(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3561_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3561_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3561 object
    *
@@ -1244,7 +1293,7 @@ class MCP3561 : public MCP3x6x {
   MCP3561(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3561_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3561_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1264,7 +1313,7 @@ class MCP3562 : public MCP3x6x {
    */
   MCP3562(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3562_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3562_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3562 object
    *
@@ -1279,7 +1328,7 @@ class MCP3562 : public MCP3x6x {
   MCP3562(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3562_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3562_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1299,7 +1348,7 @@ class MCP3564 : public MCP3x6x {
    */
   MCP3564(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI,
           const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3564_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(MCP3564_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
   /**
    * @brief Construct a new MCP3564 object
    *
@@ -1314,7 +1363,7 @@ class MCP3564 : public MCP3x6x {
   MCP3564(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint8_t pinCS = SS,
           SPIClass *theSPI = &SPI, const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
           const uint8_t pinCLK = SCK)
-      : MCP3x6x(pinIRQ, pinMCLK, MCP3564_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK){};
+      : MCP3x6x(pinIRQ, pinMCLK, MCP3564_DEVICE_TYPE, pinCS, theSPI, pinMOSI, pinMISO, pinCLK) {}
 };
 
 /**
@@ -1323,4 +1372,4 @@ class MCP3564 : public MCP3x6x {
  */
 extern void mcp_wrapper();
 
-#endif  // MCP3x6x_H
+#endif  // SRC_MCP3X6X_HPP_

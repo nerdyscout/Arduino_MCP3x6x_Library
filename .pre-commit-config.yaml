@@ -1,20 +1,19 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.3.0
+    rev: v4.5.0
     hooks:
     - id: trailing-whitespace
     - id: end-of-file-fixer
     - id: check-yaml
-#    - id: check-added-large-files
-  - repo: https://github.com/pocc/pre-commit-hooks
-    rev: v1.3.5
+    - id: check-json
+
+  - repo: https://github.com/bmorcos/pre-commit-hooks-cpp
+    rev: 9a5aa38207bf557961110d6a4f7e3a9d352911f9
     hooks:
-    - id: clang-format
-#    - id: clang-tidy
-#    - id: oclint
-#    - id: uncrustify
-#    - id: cppcheck
-#    - id: cpplint
-#    - id: include-what-you-use
+#    -   id: clang-format
+#        args: ["-style=file"]
+#    -   id: cpplint
+    -   id: cppcheck
