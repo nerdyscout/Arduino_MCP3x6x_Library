@@ -4,60 +4,33 @@
  * @file MCP3x6x.cpp
  * @author Stefan Herold (stefan.herold@posteo.de)
  * @brief
- * @version 0.0.1
- * @date 2022-10-30
+ * @version 0.0.2
+ * @date 2023-10-10
  *
- * @copyright Copyright (c) 2022
+ * @copyright Copyright (c) 2023
  *
  */
 
-#include "MCP3x6x.h"
+#include "MCP3x6x.hpp"
 
-#include <wiring_private.h>
+#include <Arduino.h>
+
+// #ifdef ARDUINO_ARCH_SAMD
+// #  include <wiring_private.h>
+// #endif
 
 MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
-                 const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK) {
-  switch (MCP3x6x_DEVICE_TYPE) {
-    case MCP3461_DEVICE_TYPE:
-      _resolution_max = 16;
-      _channels_max   = 2;
-      break;
-    case MCP3462_DEVICE_TYPE:
-      _resolution_max = 16;
-      _channels_max   = 4;
-      break;
-    case MCP3464_DEVICE_TYPE:
-      _resolution_max = 16;
-      _channels_max   = 8;
-      break;
-    case MCP3561_DEVICE_TYPE:
-      _resolution_max = 24;
-      _channels_max   = 2;
-      break;
-    case MCP3562_DEVICE_TYPE:
-      _resolution_max = 24;
-      _channels_max   = 4;
-      break;
-    case MCP3564_DEVICE_TYPE:
-      _resolution_max = 24;
-      _channels_max   = 8;
-      break;
-    default:
-#warning "undefined MCP3x6x_DEVICE_TYPE"
-      break;
-  }
-
-  //  settings.id = MCP3x6x_DEVICE_TYPE;
-
+                 const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK)
+    : settings(MCP3x6x_DEVICE_TYPE) {
   _spi        = theSPI;
   _pinMISO    = pinMISO;
   _pinMOSI    = pinMOSI;
   _pinCLK     = pinCLK;
   _pinCS      = pinCS;
 
-  _resolution = _resolution_max;
-  _channel_mask |= 0xff << _channels_max;  // todo use this one
-};
+  _resolution = settings.getMaxResolution();
+  _channel_mask |= 0xff << settings.getChannelCount();  // todo use this one
+}
 
 MCP3x6x::MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint16_t MCP3x6x_DEVICE_TYPE,
                  const uint8_t pinCS, SPIClass *theSPI, const uint8_t pinMOSI,
@@ -94,12 +67,12 @@ bool MCP3x6x::begin(uint16_t channelmask, float vref) {
   digitalWrite(_pinCS, HIGH);
 
   _spi->begin();
-#if ARDUINO_ARCH_SAMD
-  // todo figure out how to get dynamicaly sercom index
-  pinPeripheral(_pinMISO, PIO_SERCOM);
-  pinPeripheral(_pinMOSI, PIO_SERCOM);
-  pinPeripheral(_pinCLK, PIO_SERCOM);
-#endif
+  // #if ARDUINO_ARCH_SAMD
+  //   // todo figure out how to get dynamicaly sercom index
+  //   pinPeripheral(_pinMISO, PIO_SERCOM);
+  //   pinPeripheral(_pinMOSI, PIO_SERCOM);
+  //   pinPeripheral(_pinCLK, PIO_SERCOM);
+  // #endif
 
   _status = reset();
   setClockSelection(clk_sel::INTERN);          // todo make configurable by function parameter
@@ -120,7 +93,7 @@ bool MCP3x6x::begin(uint16_t channelmask, float vref) {
 MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
   size_t s = 0;
 
-  switch (_resolution_max) {
+  switch (settings.getMaxResolution()) {
     case 16:
       s = settings.config3.data_format == data_format::SGN_DATA ? 2 : 4;
       break;
@@ -167,7 +140,7 @@ void MCP3x6x::lock(uint8_t key) {
 }
 
 void MCP3x6x::unlock() {
-  settings.lock.raw = _DEFAULT_LOCK;
+  settings.lock.raw = settings.DEFAULTS.LOCK;
   _status           = write(settings.lock);
 }
 
@@ -246,7 +219,7 @@ float MCP3x6x::getReference() { return _reference; }
 
 // returns signed ADC value from raw data
 int32_t MCP3x6x::_getValue(uint32_t raw) {
-  switch (_resolution_max) {
+  switch (settings.getMaxResolution()) {
     case 16:
       switch (settings.config3.data_format) {
         case (data_format::SGN_DATA_ZERO):
@@ -259,7 +232,7 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
         case (data_format::ID_SGNEXT_DATA):
           bitWrite(raw, 31, bitRead(raw, 17));
           return raw & 0x8000FFFF;
-      };
+      }
       break;
 
     case 24:
@@ -274,7 +247,7 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
         case (data_format::ID_SGNEXT_DATA):
           bitWrite(raw, 31, bitRead(raw, 25));
           return raw & 0x80FFFFFF;
-      };
+      }
       break;
   }
 
@@ -297,21 +270,18 @@ uint8_t MCP3x6x::_getChannel(uint32_t raw) {
 int32_t MCP3x6x::analogRead(mux_t ch) {
   // MuxMode
   if (settings.scan.channel.raw == 0) {
-#ifdef MCP3x6x_DEBUG
-    Serial.println("mux");
-#endif
+    //Serial.println("mux");
     settings.mux = ch;
     _status      = write(settings.mux);
     _status      = conversion();
-    while (!_status.dr) {
-      _status = read(&adcdata);
-    }
+//    while (!_status.dr) {
+//      _status = read(&adcdata);
+//    }
+    _status = read(&adcdata);
     return result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
   }
 
-#ifdef MCP3x6x_DEBUG
   Serial.println("scan");
-#endif
   // ScanMode
   for (size_t i = 0; i < sizeof(_channelID); i++) {
     if (_channelID[i] == ch.raw) {
@@ -335,7 +305,7 @@ int32_t MCP3x6x::analogReadDifferential(mux pinP, mux pinN) {
 }
 
 void MCP3x6x::analogReadResolution(size_t bits) {
-  if (bits <= _resolution_max) {
+  if (bits <= settings.getMaxResolution()) {
     _resolution = bits;
   }
 }
@@ -377,6 +347,16 @@ bool MCP3x6x::isContinuous() {
 void MCP3x6x::setAveraging(osr rate) {
   settings.config1.osr = rate;
   _status              = write(settings.config1);
+}
+
+void MCP3x6x::setGain(gain gain) {
+  settings.config2.gain = gain;
+  _status               = write(settings.config2);
+}
+
+void MCP3x6x::setBoost(boost boost) {
+  settings.config2.boost = boost;
+  _status               = write(settings.config2);
 }
 
 int32_t MCP3x6x::analogReadContinuous(mux_t ch) {
