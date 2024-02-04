@@ -9,8 +9,6 @@
 
 #include "MCP3x6x.h"
 
-#define MCP3x6x_DEBUG 1
-
 #if defined ARDUINO_AVR_PROMICRO8
 MCP3561 mcp(2, 3, 10);
 #elif defined ARDUINO_GRAND_CENTRAL_M4

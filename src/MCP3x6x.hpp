@@ -14,7 +14,11 @@
 #ifndef SRC_MCP3X6X_HPP_
 #define SRC_MCP3X6X_HPP_
 
-#define MCP3x6x_DEBUG DEBUG  //!< sets debug active
+#ifdef MCP3x6x_DEBUG
+#  ifndef MCP3x6x_DEBUG_INTERFACE
+#    define MCP3x6x_DEBUG_INTERFACE Serial  //!< define debug interface
+#  endif
+#endif
 
 #include <SPI.h>
 

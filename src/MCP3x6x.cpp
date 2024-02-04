@@ -15,9 +15,9 @@
 
 #include <Arduino.h>
 
-// #ifdef ARDUINO_ARCH_SAMD
-// #  include <wiring_private.h>
-// #endif
+#ifdef ARDUINO_ARCH_SAMD
+#  include <wiring_private.h>
+#endif
 
 MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
                  const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK)
@@ -67,12 +67,13 @@ bool MCP3x6x::begin(uint16_t channelmask, float vref) {
   digitalWrite(_pinCS, HIGH);
 
   _spi->begin();
-  // #if ARDUINO_ARCH_SAMD
-  //   // todo figure out how to get dynamicaly sercom index
-  //   pinPeripheral(_pinMISO, PIO_SERCOM);
-  //   pinPeripheral(_pinMOSI, PIO_SERCOM);
-  //   pinPeripheral(_pinCLK, PIO_SERCOM);
-  // #endif
+#if ARDUINO_ARCH_SAMD
+  // todo figure out how to get dynamicaly sercom index
+  uint index = _spi->getSercomIndex();
+  pinPeripheral(_pinMISO, PIO_SERCOM);
+  pinPeripheral(_pinMOSI, PIO_SERCOM);
+  pinPeripheral(_pinCLK, PIO_SERCOM);
+#endif
 
   _status = reset();
   setClockSelection(clk_sel::INTERN);          // todo make configurable by function parameter
@@ -106,12 +107,12 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
   _status = _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
   _reverse_array(buffer, s);
 
-#if MCP3x6x_DEBUG
-  Serial.print("buffer: 0x");
-  Serial.print(buffer[3], HEX);
-  Serial.print(buffer[2], HEX);
-  Serial.print(buffer[1], HEX);
-  Serial.println(buffer[0], HEX);
+#ifdef MCP3x6x_DEBUG
+  MCP3x6x_DEBUG_INTERFACE.print("buffer: 0x");
+  MCP3x6x_DEBUG_INTERFACE.print(buffer[3], HEX);
+  MCP3x6x_DEBUG_INTERFACE.print(buffer[2], HEX);
+  MCP3x6x_DEBUG_INTERFACE.print(buffer[1], HEX);
+  MCP3x6x_DEBUG_INTERFACE.println(buffer[0], HEX);
 #endif
 
   data->channelid = _getChannel((uint32_t &)buffer);
@@ -126,11 +127,11 @@ void MCP3x6x::IRQ_handler() {
   }
   result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
 
-#if MCP3x6x_DEBUG
-  Serial.print("channel: ");
-  Serial.println((uint8_t)adcdata.channelid);
-  Serial.print("value: ");
-  Serial.println(adcdata.value);
+#ifdef MCP3x6x_DEBUG
+  MCP3x6x_DEBUG_INTERFACE.print("channel: ");
+  MCP3x6x_DEBUG_INTERFACE.println((uint8_t)adcdata.channelid);
+  MCP3x6x_DEBUG_INTERFACE.print("value: ");
+  MCP3x6x_DEBUG_INTERFACE.println(adcdata.value);
 #endif
 }
 
@@ -160,9 +161,9 @@ void MCP3x6x::setDataFormat(data_format format) {
       _resolution = -1;
       break;
   }
-#if MCP3x6x_DEBUG
-  Serial.print("resolution");
-  Serial.println(_resolution);
+#ifdef MCP3x6x_DEBUG
+  MCP3x6x_DEBUG_INTERFACE.print("resolution");
+  MCP3x6x_DEBUG_INTERFACE.println(_resolution);
 #endif
 }
 
@@ -186,9 +187,9 @@ void MCP3x6x::enableScanChannel(mux_t ch) {
     if (_channelID[i] == ch.raw) {
       bitSet(settings.scan.channel.raw, i);
 #ifdef MCP3x6x_DEBUG
-      Serial.println(i);
-      Serial.println(ch.raw, HEX);
-      Serial.println(settings.scan.channel.raw, HEX);
+      MCP3x6x_DEBUG_INTERFACE.println(i);
+      MCP3x6x_DEBUG_INTERFACE.println(ch.raw, HEX);
+      MCP3x6x_DEBUG_INTERFACE.println(settings.scan.channel.raw, HEX);
 #endif
       break;
     }
@@ -270,21 +271,23 @@ uint8_t MCP3x6x::_getChannel(uint32_t raw) {
 int32_t MCP3x6x::analogRead(mux_t ch) {
   // MuxMode
   if (settings.scan.channel.raw == 0) {
-#ifdef MCP3x6x_DEBUG
-    Serial.println("mux");
-#endif
     settings.mux = ch;
-    _status      = write(settings.mux);
-    _status      = conversion();
+    write(settings.mux);
+    _status = conversion();
     while (!_status.dr) {
       _status = read(&adcdata);
     }
+
+#ifdef MCP3x6x_DEBUG
+    MCP3x6x_DEBUG_INTERFACE.print("mux[");
+    MCP3x6x_DEBUG_INTERFACE.print(ch.raw);
+    MCP3x6x_DEBUG_INTERFACE.print("]:\t");
+    MCP3x6x_DEBUG_INTERFACE.println(adcdata.value);
+#endif
+
     return result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
   }
 
-#ifdef MCP3x6x_DEBUG
-  Serial.println("scan");
-#endif
   // ScanMode
   for (size_t i = 0; i < sizeof(_channelID); i++) {
     if (_channelID[i] == ch.raw) {
@@ -292,6 +295,14 @@ int32_t MCP3x6x::analogRead(mux_t ch) {
       while (!_status.dr) {
         _status = read(&adcdata);
       }
+
+#ifdef MCP3x6x_DEBUG
+      MCP3x6x_DEBUG_INTERFACE.print("scan[");
+      MCP3x6x_DEBUG_INTERFACE.print(adcdata.channelid);
+      MCP3x6x_DEBUG_INTERFACE.print("]:\t");
+      MCP3x6x_DEBUG_INTERFACE.println(adcdata.value);
+#endif
+
       return adcdata.value;
     }
   }
