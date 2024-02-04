@@ -7,6 +7,7 @@
 
 */
 
+#include "Arduino.h"
 #include "MCP3x6x.h"
 
 #if defined ARDUINO_AVR_PROMICRO8
