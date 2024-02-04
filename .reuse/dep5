@@ -19,7 +19,7 @@ Files: .github/* .gitignore .pre-commit-config.yaml Doxyfile
 Copyright: 2023, Stefan Herold <stefan.herold@posteo.de>
 License: CC0-1.0
 
-Files: library.json library.properties platformio.ini keywords.txt
+Files: library.json library.properties platformio*.ini keywords.txt
 Copyright: 2023, Stefan Herold <stefan.herold@posteo.de>
 License: CC0-1.0
 
