@@ -497,39 +497,9 @@ class MCP3x6x {
    *
    */
   class Settings {
-    size_t getMaxResolution() {
-      switch (id) {
-        case MCP3461_DEVICE_TYPE:
-        case MCP3462_DEVICE_TYPE:
-        case MCP3464_DEVICE_TYPE:
-          return 16;
-        case MCP3561_DEVICE_TYPE:
-        case MCP3562_DEVICE_TYPE:
-        case MCP3564_DEVICE_TYPE:
-          return 24;
-        default:
-          return 0;
-      }
-    }
+    friend MCP3x6x;
 
-    size_t getChannelCount() {
-      switch (id) {
-        case MCP3461_DEVICE_TYPE:
-        case MCP3561_DEVICE_TYPE:
-          return 2;
-        case MCP3462_DEVICE_TYPE:
-        case MCP3562_DEVICE_TYPE:
-          return 4;
-        case MCP3464_DEVICE_TYPE:
-        case MCP3564_DEVICE_TYPE:
-          return 8;
-        default:
-          return 0;
-      }
-    }
-
-   public:
-    const struct {
+    static const struct {
       const uint8_t CONFIG0      = 0xC0;                //!< default value
       const uint8_t CONFIG1      = 0x0C;                //!< default value
       const uint8_t CONFIG2      = 0x8B;                //!< default value
@@ -544,28 +514,60 @@ class MCP3x6x {
       const uint8_t RESERVED2    = 0x50;                //!< default value
       const uint8_t LOCK         = 0xA5;                //!< default value
       const uint8_t CRCCFG[2]    = {0x00, 0x00};        //!< default value
-    } DEFAULTS;
+    } _defaults;
 
-    config0_t config0           = DEFAULTS.CONFIG0;    //!< register setting
-    config1_t config1           = DEFAULTS.CONFIG1;    //!< register setting
-    config2_t config2           = DEFAULTS.CONFIG2;    //!< register setting
-    config3_t config3           = DEFAULTS.CONFIG3;    //!< register setting
-    irq_t irq                   = DEFAULTS.IRQ;        //!< register setting
-    mux_t mux                   = DEFAULTS.MUX;        //!< register setting
-    scan_t scan                 = DEFAULTS.SCAN;       //!< register setting
-    timer_t timer               = DEFAULTS.TIMER;      //!< register setting
-    offset_t offsetcal          = DEFAULTS.OFFSET;     //!< register setting
-    gain_t gaincal              = DEFAULTS.GAIN;       //!< register setting
-    const uint8_t reserverd1[3] = {0x90, 0x00, 0x00};  //!< register setting // todo
-    const uint8_t reserverd2    = DEFAULTS.RESERVED2;  //!< register setting
-    lock_t lock                 = DEFAULTS.LOCK;       //!< register setting
-    crccfg_t crccfg             = DEFAULTS.CRCCFG;     //!< register setting
-    uint16_t id;                                       //!< register setting
+    config0_t config0           = _defaults.CONFIG0;    //!< register setting
+    config1_t config1           = _defaults.CONFIG1;    //!< register setting
+    config2_t config2           = _defaults.CONFIG2;    //!< register setting
+    config3_t config3           = _defaults.CONFIG3;    //!< register setting
+    irq_t irq                   = _defaults.IRQ;        //!< register setting
+    mux_t mux                   = _defaults.MUX;        //!< register setting
+    scan_t scan                 = _defaults.SCAN;       //!< register setting
+    timer_t timer               = _defaults.TIMER;      //!< register setting
+    offset_t offsetcal          = _defaults.OFFSET;     //!< register setting
+    gain_t gaincal              = _defaults.GAIN;       //!< register setting
+    const uint8_t reserverd1[3] = {0x90, 0x00, 0x00};   //!< register setting
+    const uint8_t reserverd2    = _defaults.RESERVED2;  //!< register setting
+    lock_t lock                 = _defaults.LOCK;       //!< register setting
+    crccfg_t crccfg             = _defaults.CRCCFG;     //!< register setting
+    uint16_t id;                                        //!< register setting
 
     Settings(const uint16_t MCP3x6x_DEVICE_TYPE) : id(MCP3x6x_DEVICE_TYPE) {}
+  } _settings;
 
-    friend MCP3x6x;
-  } settings;
+ public:
+  //    void reset() { this = _defaults; }
+
+  constexpr size_t getMaxResolution() {
+    switch (_settings.id) {
+      case MCP3461_DEVICE_TYPE:
+      case MCP3462_DEVICE_TYPE:
+      case MCP3464_DEVICE_TYPE:
+        return 16;
+      case MCP3561_DEVICE_TYPE:
+      case MCP3562_DEVICE_TYPE:
+      case MCP3564_DEVICE_TYPE:
+        return 24;
+      default:
+        return 0;
+    }
+  }
+
+  constexpr size_t getChannelCount() {
+    switch (_settings.id) {
+      case MCP3461_DEVICE_TYPE:
+      case MCP3561_DEVICE_TYPE:
+        return 2;
+      case MCP3462_DEVICE_TYPE:
+      case MCP3562_DEVICE_TYPE:
+        return 4;
+      case MCP3464_DEVICE_TYPE:
+      case MCP3564_DEVICE_TYPE:
+        return 8;
+      default:
+        return 0;
+    }
+  }
 
   /**
    * @brief structure with latest value per channel
@@ -619,6 +621,8 @@ class MCP3x6x {
    */
   ~MCP3x6x() { end(); }
 
+  bool begin(MCP3x6x::Settings settings);  // default to default
+
   /**
    * @brief begin communication
    *
@@ -641,7 +645,7 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  inline bool status_dr() { return _status.dr; }
+  inline bool status_dr() { return !_status.dr; }
 
   /**
    * @brief crccfg status of latest communication
@@ -649,7 +653,7 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  inline bool status_crccfg() { return _status.crccfg; }
+  inline bool status_crccfg() { return !_status.crccfg; }
 
   /**
    * @brief power on reset status of latest communication
@@ -657,7 +661,7 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  inline bool status_por() { return _status.por; }
+  inline bool status_por() { return !_status.por; }
 
   /**
    * @brief Fast Command
@@ -704,6 +708,9 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(config0_t data) {
+#ifdef MCP3x6x_DEBUG_INTERFACE
+    MCP3x6x_DEBUG_INTERFACE.print("config0:");
+#endif
     return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0);
   }
 
@@ -754,6 +761,9 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(mux_t data) {
+#ifdef MCP3x6x_DEBUG_INTERFACE
+    MCP3x6x_DEBUG_INTERFACE.print("mux:");
+#endif
     return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX);
   }
 
@@ -816,18 +826,19 @@ class MCP3x6x {
   inline status_t write(crccfg_t data) {
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CRCCFG, 2);
   }
+
   /*
   inline status_t write(Settings data) {
     return _transfer((uint8_t)data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
   }
-  */
+  * /
 
-  /**
-   * @brief read register ADCDATA from ADC
-   *
-   * @param data
-   * @return status_t
-   */
+      /**
+       * @brief read register ADCDATA from ADC
+       *
+       * @param data
+       * @return status_t
+       */
   status_t read(Adcdata *data);
 
   /**
@@ -949,10 +960,11 @@ class MCP3x6x {
   inline status_t read(crccfg_t data) {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CRCCFG, 2);
   }
+
   /*
-  inline status_t read(Settings data) {
-    return _transfer((uint8_t)data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 27);
-  }
+    inline status_t read(Settings data) {
+      return _transfer((uint8_t)data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 27);
+    }
   */
 
   /**

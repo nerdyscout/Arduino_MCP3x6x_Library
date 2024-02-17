@@ -20,9 +20,9 @@
 #include <unity.h>
 
 #include "MCP3x6x.hpp"
-#include "test_MCP3462.h"
+#include "test_Settings.h"
 
-MCP3462 mcp;
+MCP3x6x::Settings settings(0x00);
 
 void setup(void) {
   // Wait ~2 seconds before the Unity test runner
@@ -37,7 +37,8 @@ void loop(void) {}
 int runUnityTests(void) {
   UNITY_BEGIN();
 
-  RUN_TEST(test_Resolution);
+  // Settings
+  RUN_TEST(test_Settings);
 
   return UNITY_END();
 }
@@ -63,10 +64,21 @@ void suiteSetUp(void) {
 
 void suiteTearDown(void) {}
 
-void setUp(void) { mcp.reset(); }
+void setUp(void) {
+  // TODO reset settings
+}
 
 void tearDown(void) {}
 
 // actual test cases
 
-void test_Resolution(void) { TEST_ASSERT_EQUAL_INT(16, mcp.settings.getMaxResolution()); }
+void test_Settings(void) {
+  // checks if Settings class is initialized with correct default values.
+  TEST_ASSERT_EQUAL_CHAR(0xC0, settings.config0.raw);
+  TEST_ASSERT_EQUAL_CHAR(0x0C, settings.config1.raw);
+  TEST_ASSERT_EQUAL_CHAR(0x8B, settings.config2.raw);
+  TEST_ASSERT_EQUAL_CHAR(0x00, settings.config3.raw);
+  TEST_ASSERT_EQUAL_CHAR(0x73, settings.irq.raw);
+  TEST_ASSERT_EQUAL_CHAR(0x01, settings.mux.raw);
+  TEST_ASSERT_EQUAL_CHAR(0xA5, settings.lock.raw);
+}
