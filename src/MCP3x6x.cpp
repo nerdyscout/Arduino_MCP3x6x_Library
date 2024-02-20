@@ -55,7 +55,11 @@ MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
   noInterrupts();
   digitalWrite(_pinCS, LOW);
   _status.raw = _spi->transfer(addr);
+#ifdef ARDUINO_ARCH_ESP32
+  _spi->writeBytes(data, size);
+#else
   _spi->transfer(data, size);
+#endif
   digitalWrite(_pinCS, HIGH);
   interrupts();
   _spi->endTransaction();
@@ -64,7 +68,7 @@ MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
 }
 
 bool MCP3x6x::begin(MCP3x6x::Settings settings) {
-  //  _settings = settings;
+  memccpy(&_settings, &settings, 0, sizeof(MCP3x6x::Settings::_defaults));
 
   pinMode(_pinCS, OUTPUT);
   digitalWrite(_pinCS, HIGH);
@@ -80,36 +84,7 @@ bool MCP3x6x::begin(MCP3x6x::Settings settings) {
 #endif
 
   reset();
-}
-
-bool MCP3x6x::begin(uint16_t channelmask, float vref) {
-  pinMode(_pinCS, OUTPUT);
-  digitalWrite(_pinCS, HIGH);
-
-  _spi->begin();
-
-#if ARDUINO_ARCH_SAMD
-  // todo figure out how to get dynamicaly sercom index
-  //  uint index = _spi->getSercomIndex();
-  pinPeripheral(_pinMISO, PIO_SERCOM);
-  pinPeripheral(_pinMOSI, PIO_SERCOM);
-  pinPeripheral(_pinCLK, PIO_SERCOM);
-#endif
-
-  reset();
-  setClockSelection(clk_sel::INTERN);          // todo make configurable by function parameter
-  setDataFormat(data_format::ID_SGNEXT_DATA);  // todo make configurable by function parameter
-
-  // scanmode
-  if (channelmask != 0) {
-    _settings.scan.channel.raw = channelmask;  // todo apply _channel_mask
-    write(_settings.scan);
-  }
-
-  setReference(vref);
-  standby();
-
-  return true;
+  return status_por();
 }
 
 MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
@@ -125,7 +100,11 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
   }
 
   uint8_t buffer[s];
-  _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
+
+  while (status_dr()) {
+    _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
+  }
+
   _reverse_array(buffer, s);
 
   data->channelid = _getChannel((uint32_t &)buffer);
@@ -145,7 +124,7 @@ void MCP3x6x::lock(uint8_t key) {
 }
 
 void MCP3x6x::unlock() {
-  _settings.lock.raw = _settings._defaults.LOCK;
+  // _settings.lock.raw = _settings._defaults.LOCK;
   write(_settings.lock);
 }
 
@@ -269,9 +248,7 @@ int32_t MCP3x6x::analogRead(mux_t ch) {
     _settings.mux = ch;
     write(_settings.mux);
     conversion();
-    while (status_dr()) {
-      read(&adcdata);
-    }
+    read(&adcdata);
 
     return result.raw[(uint8_t)adcdata.channelid] = adcdata.value;
   }
@@ -306,12 +283,6 @@ void MCP3x6x::analogReadResolution(size_t bits) {
 }
 
 void MCP3x6x::setResolution(size_t bits) { analogReadResolution(bits); }
-
-void MCP3x6x::singleEndedMode() { _differential = false; }
-
-void MCP3x6x::differentialMode() { _differential = true; }
-
-bool MCP3x6x::isDifferential() { return _differential; }
 
 uint32_t MCP3x6x::getMaxValue() { return pow(2, _resolution); }
 

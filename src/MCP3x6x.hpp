@@ -624,16 +624,6 @@ class MCP3x6x {
   bool begin(MCP3x6x::Settings settings);  // default to default
 
   /**
-   * @brief begin communication
-   *
-   * @param channelmask
-   * @param vref
-   * @return true
-   * @return false
-   */
-  bool begin(uint16_t channelmask = 0, float vref = 0.0);
-
-  /**
    * @brief end communication
    *
    */
