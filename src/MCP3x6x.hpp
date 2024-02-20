@@ -14,12 +14,6 @@
 #ifndef SRC_MCP3X6X_HPP_
 #define SRC_MCP3X6X_HPP_
 
-#ifdef MCP3x6x_DEBUG
-#  ifndef MCP3x6x_DEBUG_INTERFACE
-#    define MCP3x6x_DEBUG_INTERFACE Serial  //!< define debug interface
-#  endif
-#endif
-
 #include <SPI.h>
 
 #define MCP_OFFSET (0x88)  //!< corresponding mux setting
@@ -698,9 +692,6 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(config0_t data) {
-#ifdef MCP3x6x_DEBUG_INTERFACE
-    MCP3x6x_DEBUG_INTERFACE.print("config0:");
-#endif
     return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0);
   }
 
@@ -751,9 +742,6 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(mux_t data) {
-#ifdef MCP3x6x_DEBUG_INTERFACE
-    MCP3x6x_DEBUG_INTERFACE.print("mux:");
-#endif
     return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX);
   }
 
