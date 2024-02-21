@@ -5,7 +5,7 @@
   (paper "A4")
 
   (title_block
-    (title "Arduino MCP3x6x Breakout ")
+    (title "Arduino Uno MCP3x6x Breakout ")
     (date "2022-12-29")
     (rev "0.1")
     (company "Stefan Herold")
@@ -345,7 +345,7 @@
         )
       )
     )
-    (symbol "MCP3x6x:MCP3x64{slash}ST" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
+    (symbol "MCP3x6x:MCP3x64/ST" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "U" (at -11.43 22.86 0)
         (effects (font (size 1.27 1.27)) (justify left))
       )
@@ -367,13 +367,13 @@
       (property "ki_fp_filters" "TSSOP*4.4x6.5mm*P0.65mm*" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide)
       )
-      (symbol "MCP3x64{slash}ST_0_1"
+      (symbol "MCP3x64/ST_0_1"
         (rectangle (start -11.43 21.59) (end 10.16 -21.59)
           (stroke (width 0.254) (type default))
           (fill (type background))
         )
       )
-      (symbol "MCP3x64{slash}ST_1_1"
+      (symbol "MCP3x64/ST_1_1"
         (pin power_in line (at -2.54 25.4 270) (length 3.81)
           (name "AVDD" (effects (font (size 1.27 1.27))))
           (number "1" (effects (font (size 1.27 1.27))))
@@ -1771,7 +1771,7 @@
     )
   )
 
-  (symbol (lib_id "MCP3x6x:MCP3x64{slash}ST") (at 177.8 127 0) (unit 1)
+  (symbol (lib_id "MCP3x6x:MCP3x64/ST") (at 177.8 127 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 0ff6e55c-1af9-4427-93cd-abfb05b3556c)
     (property "Reference" "U2" (at 182.3594 100.33 0)

@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "pcb")(type "KiCad")(uri "/home/stefan/Projects/Arduino_MCP3x6x_Library/pcb")(options "")(descr ""))
+)
