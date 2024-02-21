@@ -81,7 +81,7 @@
 #define MCP3x6x_ADR_CRCCFG    (MCP3x6x_SPI_ADR | (0xF << 2))  //!< Register CRCCFG address
 
 /**
- * @brief base class
+ * @brief base class MCP3x6x
  *
  */
 class MCP3x6x {
@@ -110,8 +110,7 @@ class MCP3x6x {
   uint8_t _pinMISO, _pinMOSI, _pinCLK, _pinCS;
   uint8_t _pinMCLK, _pinIRQ;
 
-  bool _differential = false;
-  float _reference   = 3.3;
+  float _reference = 3.3;
   size_t _resolution;
   uint16_t _channel_mask;
   const uint8_t _channelID[16] = {MCP_CH0,  MCP_CH1,  MCP_CH2,   MCP_CH3,   MCP_CH4,   MCP_CH5,
@@ -490,10 +489,10 @@ class MCP3x6x {
    * @brief settings
    *
    */
-  class Settings {
+  class MCPSettings {
     friend MCP3x6x;
 
-    static const struct {
+    const struct {
       const uint8_t CONFIG0      = 0xC0;                //!< default value
       const uint8_t CONFIG1      = 0x0C;                //!< default value
       const uint8_t CONFIG2      = 0x8B;                //!< default value
@@ -508,32 +507,31 @@ class MCP3x6x {
       const uint8_t RESERVED2    = 0x50;                //!< default value
       const uint8_t LOCK         = 0xA5;                //!< default value
       const uint8_t CRCCFG[2]    = {0x00, 0x00};        //!< default value
-    } _defaults;
+    } DEFAULTS;
 
-    config0_t config0           = _defaults.CONFIG0;    //!< register setting
-    config1_t config1           = _defaults.CONFIG1;    //!< register setting
-    config2_t config2           = _defaults.CONFIG2;    //!< register setting
-    config3_t config3           = _defaults.CONFIG3;    //!< register setting
-    irq_t irq                   = _defaults.IRQ;        //!< register setting
-    mux_t mux                   = _defaults.MUX;        //!< register setting
-    scan_t scan                 = _defaults.SCAN;       //!< register setting
-    timer_t timer               = _defaults.TIMER;      //!< register setting
-    offset_t offsetcal          = _defaults.OFFSET;     //!< register setting
-    gain_t gaincal              = _defaults.GAIN;       //!< register setting
-    const uint8_t reserverd1[3] = {0x90, 0x00, 0x00};   //!< register setting
-    const uint8_t reserverd2    = _defaults.RESERVED2;  //!< register setting
-    lock_t lock                 = _defaults.LOCK;       //!< register setting
-    crccfg_t crccfg             = _defaults.CRCCFG;     //!< register setting
-    uint16_t id;                                        //!< register setting
+   public:
+    config0_t config0           = DEFAULTS.CONFIG0;    //!< register setting
+    config1_t config1           = DEFAULTS.CONFIG1;    //!< register setting
+    config2_t config2           = DEFAULTS.CONFIG2;    //!< register setting
+    config3_t config3           = DEFAULTS.CONFIG3;    //!< register setting
+    irq_t irq                   = DEFAULTS.IRQ;        //!< register setting
+    mux_t mux                   = DEFAULTS.MUX;        //!< register setting
+    scan_t scan                 = DEFAULTS.SCAN;       //!< register setting
+    timer_t timer               = DEFAULTS.TIMER;      //!< register setting
+    offset_t offsetcal          = DEFAULTS.OFFSET;     //!< register setting
+    gain_t gaincal              = DEFAULTS.GAIN;       //!< register setting
+    const uint8_t reserverd1[3] = {0x90, 0x00, 0x00};  //!< register setting // todo
+    const uint8_t reserverd2    = DEFAULTS.RESERVED2;  //!< register setting
+    lock_t lock                 = DEFAULTS.LOCK;       //!< register setting
+    crccfg_t crccfg             = DEFAULTS.CRCCFG;     //!< register setting
+    uint16_t id;                                       //!< register setting
 
-    Settings(const uint16_t MCP3x6x_DEVICE_TYPE) : id(MCP3x6x_DEVICE_TYPE) {}
-  } _settings;
+    MCPSettings(const uint16_t MCP3x6x_DEVICE_TYPE) : id(MCP3x6x_DEVICE_TYPE) {}
 
- public:
-  //    void reset() { this = _defaults; }
+  } settings;
 
-  constexpr size_t getMaxResolution() {
-    switch (_settings.id) {
+  size_t getMaxResolution() {
+    switch (settings.id) {
       case MCP3461_DEVICE_TYPE:
       case MCP3462_DEVICE_TYPE:
       case MCP3464_DEVICE_TYPE:
@@ -547,8 +545,8 @@ class MCP3x6x {
     }
   }
 
-  constexpr size_t getChannelCount() {
-    switch (_settings.id) {
+  size_t getChannelCount() {
+    switch (settings.id) {
       case MCP3461_DEVICE_TYPE:
       case MCP3561_DEVICE_TYPE:
         return 2;
@@ -615,7 +613,7 @@ class MCP3x6x {
    */
   ~MCP3x6x() { end(); }
 
-  bool begin(MCP3x6x::Settings settings);  // default to default
+  bool begin(MCPSettings settings);  // default to default
 
   /**
    * @brief end communication
@@ -675,13 +673,15 @@ class MCP3x6x {
    */
   inline status_t full_shutdown() { return _fastcmd(MCP3x6x_CMD_FULL_SHUTDOWN); }
 
+  //    void reset() { this = _defaults; }
+
   /**
    * @brief Fast Command
    *
    * @return status_t
    */
   inline status_t reset() {
-    // todo: reset settings values;
+    //    memcpy(settings, settings._defaults, sizeof(settings));
     return _fastcmd(MCP3x6x_CMD_RESET);
   }
 
@@ -806,17 +806,17 @@ class MCP3x6x {
   }
 
   /*
-  inline status_t write(Settings data) {
-    return _transfer((uint8_t)data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
-  }
-  * /
+inline status_t write(Settings data) {
+return _transfer((uint8_t)data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
+}
+* /
 
-      /**
-       * @brief read register ADCDATA from ADC
-       *
-       * @param data
-       * @return status_t
-       */
+/**
+ * @brief read register ADCDATA from ADC
+ *
+ * @param data
+ * @return status_t
+ */
   status_t read(Adcdata *data);
 
   /**
@@ -1109,7 +1109,7 @@ class MCP3x6x {
    * @param ch
    * @return int32_t analog value
    */
-  int32_t analogRead(mux_t ch);
+  int32_t analogRead(mux_t ch = MCP_CH0);
 
   /**
    * @brief read
@@ -1117,7 +1117,7 @@ class MCP3x6x {
    * @param ch
    * @return int32_t
    */
-  int32_t analogReadContinuous(mux_t ch);
+  int32_t analogReadContinuous(mux_t ch = MCP_CH0);
 
   /**
    * @brief mux

@@ -21,7 +21,7 @@
 
 MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
                  const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK)
-    : _settings(MCP3x6x_DEVICE_TYPE) {
+    : settings(MCP3x6x_DEVICE_TYPE) {
   _spi        = theSPI;
   _pinMISO    = pinMISO;
   _pinMOSI    = pinMOSI;
@@ -67,8 +67,8 @@ MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
   return _status;
 }
 
-bool MCP3x6x::begin(MCP3x6x::Settings settings) {
-  memccpy(&_settings, &settings, 0, sizeof(MCP3x6x::Settings::_defaults));
+bool MCP3x6x::begin(MCP3x6x::MCPSettings settings) {
+  //  memccpy(&settings, &settings, 0, sizeof(MCP3x6x::MCPSettings::DEFAULTS));
 
   pinMode(_pinCS, OUTPUT);
   digitalWrite(_pinCS, HIGH);
@@ -92,10 +92,10 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
 
   switch (getMaxResolution()) {
     case 16:
-      s = _settings.config3.data_format == data_format::SGN_DATA ? 2 : 4;
+      s = settings.config3.data_format == data_format::SGN_DATA ? 2 : 4;
       break;
     case 24:
-      s = _settings.config3.data_format == data_format::SGN_DATA ? 3 : 4;
+      s = settings.config3.data_format == data_format::SGN_DATA ? 3 : 4;
       break;
   }
 
@@ -119,18 +119,18 @@ void MCP3x6x::IRQ_handler() {
 }
 
 void MCP3x6x::lock(uint8_t key) {
-  _settings.lock.raw = key;
-  write(_settings.lock);
+  settings.lock.raw = key;
+  write(settings.lock);
 }
 
 void MCP3x6x::unlock() {
-  // _settings.lock.raw = _settings._defaults.LOCK;
-  write(_settings.lock);
+  // settings.lock.raw = settings._defaults.LOCK;
+  write(settings.lock);
 }
 
 void MCP3x6x::setDataFormat(data_format format) {
-  _settings.config3.data_format = format;
-  write(_settings.config3);
+  settings.config3.data_format = format;
+  write(settings.config3);
 
   switch (format) {
     case data_format::SGN_DATA:
@@ -147,45 +147,45 @@ void MCP3x6x::setDataFormat(data_format format) {
 }
 
 void MCP3x6x::setConversionMode(conv_mode mode) {
-  _settings.config3.conv_mode = mode;
-  write(_settings.config3);
+  settings.config3.conv_mode = mode;
+  write(settings.config3);
 }
 
 void MCP3x6x::setAdcMode(adc_mode mode) {
-  _settings.config0.adc = mode;
-  write(_settings.config0);
+  settings.config0.adc = mode;
+  write(settings.config0);
 }
 
 void MCP3x6x::setClockSelection(clk_sel clk) {
-  _settings.config0.clk = clk;
-  write(_settings.config0);
+  settings.config0.clk = clk;
+  write(settings.config0);
 }
 
 void MCP3x6x::enableScanChannel(mux_t ch) {
   for (size_t i = 0; i < sizeof(_channelID); i++) {
     if (_channelID[i] == ch.raw) {
-      bitSet(_settings.scan.channel.raw, i);
+      bitSet(settings.scan.channel.raw, i);
       break;
     }
   }
-  write(_settings.scan);
+  write(settings.scan);
 }
 
 void MCP3x6x::disableScanChannel(mux_t ch) {
   for (size_t i = 0; i < sizeof(_channelID); i++) {
     if (_channelID[i] == ch.raw) {
-      bitClear(_settings.scan.channel.raw, i);
+      bitClear(settings.scan.channel.raw, i);
       break;
     }
   }
-  write(_settings.scan);
+  write(settings.scan);
 }
 
 void MCP3x6x::setReference(float vref) {
   if (vref == 0.0) {
-    vref                       = 2.4;
-    _settings.config0.vref_sel = 1;
-    write(_settings.config0);
+    vref                      = 2.4;
+    settings.config0.vref_sel = 1;
+    write(settings.config0);
   }
   _reference = vref;
 }
@@ -196,7 +196,7 @@ float MCP3x6x::getReference() { return _reference; }
 int32_t MCP3x6x::_getValue(uint32_t raw) {
   switch (getMaxResolution()) {
     case 16:
-      switch (_settings.config3.data_format) {
+      switch (settings.config3.data_format) {
         case (data_format::SGN_DATA_ZERO):
           return raw >> 16;
         case (data_format::SGN_DATA):
@@ -211,7 +211,7 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
       break;
 
     case 24:
-      switch (_settings.config3.data_format) {
+      switch (settings.config3.data_format) {
         case (data_format::SGN_DATA_ZERO):
           return raw >> 8;
         case (data_format::SGN_DATA):
@@ -230,11 +230,11 @@ int32_t MCP3x6x::_getValue(uint32_t raw) {
 }
 
 uint8_t MCP3x6x::_getChannel(uint32_t raw) {
-  if (_settings.config3.data_format == data_format::ID_SGNEXT_DATA) {
+  if (settings.config3.data_format == data_format::ID_SGNEXT_DATA) {
     return ((raw >> 28) & 0x0F);
   } else {
     for (size_t i = 0; i < sizeof(_channelID); i++) {
-      if (_channelID[i] == _settings.mux.raw) {
+      if (_channelID[i] == settings.mux.raw) {
         return i;
       }
     }
@@ -244,9 +244,9 @@ uint8_t MCP3x6x::_getChannel(uint32_t raw) {
 
 int32_t MCP3x6x::analogRead(mux_t ch) {
   // MuxMode
-  if (_settings.scan.channel.raw == 0) {
-    _settings.mux = ch;
-    write(_settings.mux);
+  if (settings.scan.channel.raw == 0) {
+    settings.mux = ch;
+    write(settings.mux);
     conversion();
     read(&adcdata);
 
@@ -268,8 +268,8 @@ int32_t MCP3x6x::analogRead(mux_t ch) {
 }
 
 int32_t MCP3x6x::analogReadDifferential(mux pinP, mux pinN) {
-  _settings.mux = ((uint8_t)pinP << 4) | (uint8_t)pinN;
-  write(_settings.mux);
+  settings.mux = ((uint8_t)pinP << 4) | (uint8_t)pinN;
+  write(settings.mux);
 
   conversion();
   read(&adcdata);
@@ -304,15 +304,15 @@ void MCP3x6x::startContinuousDifferential() {
 }
 
 bool MCP3x6x::isContinuous() {
-  if (_settings.config3.conv_mode == conv_mode::CONTINUOUS) {
+  if (settings.config3.conv_mode == conv_mode::CONTINUOUS) {
     return true;
   }
   return false;
 }
 
 void MCP3x6x::setAveraging(osr rate) {
-  _settings.config1.osr = rate;
-  write(_settings.config1);
+  settings.config1.osr = rate;
+  write(settings.config1);
 }
 
 int32_t MCP3x6x::analogReadContinuous(mux_t ch) {
