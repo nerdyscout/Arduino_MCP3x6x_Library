@@ -22,14 +22,41 @@
 MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
                  const uint8_t pinMOSI, const uint8_t pinMISO, const uint8_t pinCLK)
     : settings(MCP3x6x_DEVICE_TYPE) {
-  _spi        = theSPI;
-  _pinMISO    = pinMISO;
-  _pinMOSI    = pinMOSI;
-  _pinCLK     = pinCLK;
-  _pinCS      = pinCS;
+  _spi     = theSPI;
+  _pinMISO = pinMISO;
+  _pinMOSI = pinMOSI;
+  _pinCLK  = pinCLK;
+  _pinCS   = pinCS;
 
-  _resolution = getMaxResolution();
-  _channel_mask |= 0xff << getChannelCount();  // todo use this one
+  switch (MCP3x6x_DEVICE_TYPE) {
+    case MCP3461_DEVICE_TYPE:
+    case MCP3462_DEVICE_TYPE:
+    case MCP3464_DEVICE_TYPE:
+      _resolution = 16;
+      break;
+    case MCP3561_DEVICE_TYPE:
+    case MCP3562_DEVICE_TYPE:
+    case MCP3564_DEVICE_TYPE:
+      _resolution = 24;
+      break;
+  }
+
+  switch (MCP3x6x_DEVICE_TYPE) {
+    case MCP3461_DEVICE_TYPE:
+    case MCP3561_DEVICE_TYPE:
+      _channel_count = 1;
+      break;
+    case MCP3462_DEVICE_TYPE:
+    case MCP3562_DEVICE_TYPE:
+      _channel_count = 2;
+      break;
+    case MCP3564_DEVICE_TYPE:
+    case MCP3464_DEVICE_TYPE:
+      _channel_count = 4;
+      break;
+  }
+
+  _channel_mask |= 0xff << _channel_count;  // todo use this one
 }
 
 MCP3x6x::MCP3x6x(const uint8_t pinIRQ, const uint8_t pinMCLK, const uint16_t MCP3x6x_DEVICE_TYPE,
@@ -55,11 +82,7 @@ MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
   noInterrupts();
   digitalWrite(_pinCS, LOW);
   _status.raw = _spi->transfer(addr);
-#ifdef ARDUINO_ARCH_ESP32
-  _spi->writeBytes(data, size);
-#else
   _spi->transfer(data, size);
-#endif
   digitalWrite(_pinCS, HIGH);
   interrupts();
   _spi->endTransaction();
@@ -67,8 +90,8 @@ MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
   return _status;
 }
 
-bool MCP3x6x::begin(MCP3x6x::MCPSettings settings) {
-  //  memccpy(&settings, &settings, 0, sizeof(MCP3x6x::MCPSettings::DEFAULTS));
+bool MCP3x6x::begin(MCP3x6x::MCPSettings set) {
+  memccpy(&settings, &set, 0, sizeof(MCP3x6x::MCPSettings));
 
   pinMode(_pinCS, OUTPUT);
   digitalWrite(_pinCS, HIGH);
@@ -84,26 +107,27 @@ bool MCP3x6x::begin(MCP3x6x::MCPSettings settings) {
 #endif
 
   reset();
+  //  write(settings);
   return status_por();
 }
 
 MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
-  size_t s = 0;
-
-  switch (getMaxResolution()) {
-    case 16:
-      s = settings.registers.config3.data_format == data_format::SGN_DATA ? 2 : 4;
-      break;
-    case 24:
-      s = settings.registers.config3.data_format == data_format::SGN_DATA ? 3 : 4;
-      break;
-  }
-
+  size_t s = 4;
+  /*
+    switch (_resolution) {
+      case 16:
+        s = settings.registers.config3.data_format == data_format::SGN_DATA ? 2 : 4;
+        break;
+      case 24:
+        s = settings.registers.config3.data_format == data_format::SGN_DATA ? 3 : 4;
+        break;
+    }
+  */
   uint8_t buffer[s];
 
-  while (status_dr()) {
-    _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
-  }
+  //  while (status_dr()) {
+  _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
+  //  }
 
   _reverse_array(buffer, s);
 
@@ -141,7 +165,7 @@ void MCP3x6x::setDataFormat(data_format format) {
     case data_format::ID_SGNEXT_DATA:
       break;
     default:
-      _resolution = -1;
+      //      _resolution = -1;
       break;
   }
 }
@@ -194,7 +218,7 @@ float MCP3x6x::getReference() { return _reference; }
 
 // returns signed ADC value from raw data
 int32_t MCP3x6x::_getValue(uint32_t raw) {
-  switch (getMaxResolution()) {
+  switch (_resolution) {
     case 16:
       switch (settings.registers.config3.data_format) {
         case (data_format::SGN_DATA_ZERO):
@@ -277,7 +301,7 @@ int32_t MCP3x6x::analogReadDifferential(mux pinP, mux pinN) {
 }
 
 void MCP3x6x::analogReadResolution(size_t bits) {
-  if (bits <= getMaxResolution()) {
+  if (bits <= _resolution) {
     _resolution = bits;
   }
 }

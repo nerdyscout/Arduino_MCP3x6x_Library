@@ -126,7 +126,7 @@ class MCP3x6x {
   uint8_t _pinMCLK, _pinIRQ;
 
   float _reference = 3.3;
-  size_t _resolution;
+  size_t _resolution, _channel_count;
   uint16_t _channel_mask;
   const uint8_t _channelID[16] = {MCP_CH0,  MCP_CH1,  MCP_CH2,   MCP_CH3,   MCP_CH4,   MCP_CH5,
                                   MCP_CH6,  MCP_CH7,  MCP_DIFFA, MCP_DIFFB, MCP_DIFFC, MCP_DIFFD,
@@ -518,43 +518,12 @@ class MCP3x6x {
       offset_t offset;
       gain_t gain;
       uint8_t reserved1;
-      uint8_t id;
       lock_t lock;
+      uint16_t id;
       uint8_t crccfg;
     } registers;
     uint8_t raw[27];
   } settings;
-
-  size_t getMaxResolution() {
-    switch (settings.registers.id) {
-      case MCP3461_DEVICE_TYPE:
-      case MCP3462_DEVICE_TYPE:
-      case MCP3464_DEVICE_TYPE:
-        return 16;
-      case MCP3561_DEVICE_TYPE:
-      case MCP3562_DEVICE_TYPE:
-      case MCP3564_DEVICE_TYPE:
-        return 24;
-      default:
-        return 0;
-    }
-  }
-
-  size_t getChannelCount() {
-    switch (settings.registers.id) {
-      case MCP3461_DEVICE_TYPE:
-      case MCP3561_DEVICE_TYPE:
-        return 2;
-      case MCP3462_DEVICE_TYPE:
-      case MCP3562_DEVICE_TYPE:
-        return 4;
-      case MCP3464_DEVICE_TYPE:
-      case MCP3564_DEVICE_TYPE:
-        return 8;
-      default:
-        return 0;
-    }
-  }
 
   /**
    * @brief structure with latest value per channel
@@ -800,18 +769,22 @@ class MCP3x6x {
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CRCCFG, 2);
   }
 
-  /*
-  inline status_t write(Settings data) {
-  return _transfer((uint8_t)data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
+  /**
+   * @brief write all settings register to ADC
+   *
+   * @param data
+   * @return status_t
+   */
+  inline status_t write(MCPSettings data) {
+    return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
   }
-  * /
 
   /**
-  * @brief read register ADCDATA from ADC
-  *
-  * @param data
-  * @return status_t
-  */
+   * @brief read register ADCDATA from ADC
+   *
+   * @param data
+   * @return status_t
+   */
   status_t read(Adcdata *data);
 
   /**
@@ -934,11 +907,15 @@ class MCP3x6x {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CRCCFG, 2);
   }
 
-  /*
-    inline status_t read(Settings data) {
-      return _transfer((uint8_t)data, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 27);
-    }
-  */
+  /**
+   * @brief read all settings register from ADC
+   *
+   * @param data
+   * @return status_t
+   */
+  inline status_t read(MCPSettings data) {
+    return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 27);
+  }
 
   /**
    * @brief handler

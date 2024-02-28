@@ -37,8 +37,6 @@ void loop(void) {}
 int runUnityTests(void) {
   UNITY_BEGIN();
 
-  RUN_TEST(test_Resolution);
-
   return UNITY_END();
 }
 
@@ -68,5 +66,3 @@ void setUp(void) { mcp.reset(); }
 void tearDown(void) {}
 
 // actual test cases
-
-void test_Resolution(void) { TEST_ASSERT_EQUAL_INT(16, mcp.settings.getMaxResolution()); }
