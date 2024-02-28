@@ -80,6 +80,21 @@
 #define MCP3x6x_ADR_RESERVED3 (MCP3x6x_SPI_ADR | (0xE << 2))  //!< Register
 #define MCP3x6x_ADR_CRCCFG    (MCP3x6x_SPI_ADR | (0xF << 2))  //!< Register CRCCFG address
 
+const uint8_t CONFIG0      = 0xC0;                //!< default value
+const uint8_t CONFIG1      = 0x0C;                //!< default value
+const uint8_t CONFIG2      = 0x8B;                //!< default value
+const uint8_t CONFIG3      = 0x00;                //!< default value
+const uint8_t IRQ          = 0x73;                //!< default value
+const uint8_t MUX          = 0x01;                //!< default value
+const uint8_t SCAN[3]      = {0x00, 0x00, 0x00};  //!< default value
+const uint8_t TIMER[3]     = {0x00, 0x00, 0x00};  //!< default value
+const uint8_t OFFSET[3]    = {0x00, 0x00, 0x00};  //!< default value
+const uint8_t GAIN[3]      = {0x80, 0x00, 0x00};  //!< default value
+const uint8_t RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
+const uint8_t RESERVED2    = 0x50;                //!< default value
+const uint8_t LOCK         = 0xA5;                //!< default value
+const uint8_t CRCCFG[2]    = {0x00, 0x00};        //!< default value
+
 /**
  * @brief base class MCP3x6x
  *
@@ -302,7 +317,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1576710>MCP346x.pdf</a>
    */
   typedef union Config0 {
-    Config0(uint8_t data) : raw(data) {}
+    Config0(const uint8_t data = CONFIG0) : raw(data) {}
     struct {
       enum adc_mode adc : 2;  //!< ADC Operating Mode Selection
       enum cs_sel bias  : 2;  //!< Current Source/Sink Selection Bits for Sensor Bias
@@ -320,7 +335,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269089>MCP346x.pdf</a>
    */
   typedef union Config1 {
-    Config1(uint8_t data) : raw(data) {}
+    Config1(const uint8_t data = CONFIG1) : raw(data) {}
     struct {
       uint8_t      : 2;  //!< reserved
       enum osr osr : 4;  //!< Oversampling Ratio for Delta-Sigma A/D Conversion
@@ -336,7 +351,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269283>MCP346x.pdf</a>
    */
   typedef union Config2 {
-    Config2(uint8_t data) : raw(data) {}
+    Config2(const uint8_t data = CONFIG2) : raw(data) {}
     struct {
       uint8_t          : 2;  //!< reserved // Should always be equal to ‘11’
       bool az_mu       : 1;  //!< Auto-Zeroing MUX Setting
@@ -353,7 +368,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269504>MCP346x.pdf</a>
    */
   typedef union Config3 {
-    Config3(uint8_t data) : raw(data) {}
+    Config3(const uint8_t data = CONFIG3) : raw(data) {}
     struct {
       bool en_gaincal              : 1;  //!< Enable Digital Gain Calibration
       bool en_offcal               : 1;  //!< Enable Digital Offset Calibration
@@ -372,7 +387,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269747>MCP346x.pdf</a>
    */
   typedef union Irq {
-    Irq(uint8_t data) : raw(data) {}
+    Irq(const uint8_t data = IRQ) : raw(data) {}
     struct {
       bool en_stp        : 1;  //!< Enable Conversion Start Interrupt Output
       bool en_fastcmd    : 1;  //!< Enable Fast Commands in the COMMAND Byte
@@ -392,7 +407,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1273028>MCP346x.pdf</a>
    */
   typedef union Mux {
-    Mux(uint8_t data) : raw(data) {}
+    Mux(const uint8_t data = MUX) : raw(data) {}
     struct {
       enum mux vin_minus : 4;  //!< MUX_VIN- Input Selection
       enum mux vin_plus  : 4;  //!< MUX_VIN+ Input Selection
@@ -407,7 +422,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270252>MCP346x.pdf</a>
    */
   typedef union Scan {
-    Scan(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
+    Scan(const uint8_t data[3] = SCAN) : raw{data[0], data[1], data[2]} {}
     struct {
       union {
         struct {
@@ -434,7 +449,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270583>MCP346x.pdf</a>
    */
   typedef union Timer {
-    Timer(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
+    Timer(const uint8_t data[3] = TIMER) : raw{data[0], data[1], data[2]} {}
     uint8_t raw[3];  //!< Selection Bits for the Time Interval Between Two Consecutive Scan Cycles
   } timer_t;
 
@@ -445,7 +460,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270742>MCP346x.pdf</a>
    */
   typedef union Offset {
-    Offset(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
+    Offset(const uint8_t data[3] = OFFSET) : raw{data[0], data[1], data[2]} {}
     uint8_t raw[3];  //!< Offset Error Digital Calibration Code (two’s complement, MSb first coding)
   } offset_t;
 
@@ -456,7 +471,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270900>MCP346x.pdf</a>
    */
   typedef union Gain {
-    Gain(const uint8_t data[3]) : raw{data[0], data[1], data[2]} {}
+    Gain(const uint8_t data[3] = GAIN) : raw{data[0], data[1], data[2]} {}
     uint8_t raw[3];  //!< Gain Error Digital Calibration Code (unsigned, MSb first coding)
   } gain_t;
 
@@ -467,7 +482,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1271641>MCP346x.pdf</a>
    */
   typedef union Lock {
-    Lock(uint8_t data) : raw(data) {}
+    Lock(const uint8_t data = LOCK) : raw(data) {}
     uint8_t raw;  //!< Write Access Password Entry Code
   } lock_t;
 
@@ -478,9 +493,9 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1272118>MCP346x.pdf</a>
    */
   typedef union Crccfg {
-    Crccfg(const uint8_t data[2]) : raw{data[0], data[1]} {}
+    Crccfg(const uint8_t data[2] = CRCCFG) : raw{data[0], data[1]} {}
     union {
-      //      uint16_t val;
+      uint16_t value;
       uint8_t raw[2];  //!< CRC-16 Checksum Value
     };
   } crccfg_t;
@@ -489,49 +504,29 @@ class MCP3x6x {
    * @brief settings
    *
    */
-  class MCPSettings {
-    friend MCP3x6x;
-
-    const struct {
-      const uint8_t CONFIG0      = 0xC0;                //!< default value
-      const uint8_t CONFIG1      = 0x0C;                //!< default value
-      const uint8_t CONFIG2      = 0x8B;                //!< default value
-      const uint8_t CONFIG3      = 0x00;                //!< default value
-      const uint8_t IRQ          = 0x73;                //!< default value
-      const uint8_t MUX          = 0x01;                //!< default value
-      const uint8_t SCAN[3]      = {0x00, 0x00, 0x00};  //!< default value
-      const uint8_t TIMER[3]     = {0x00, 0x00, 0x00};  //!< default value
-      const uint8_t OFFSET[3]    = {0x00, 0x00, 0x00};  //!< default value
-      const uint8_t GAIN[3]      = {0x80, 0x00, 0x00};  //!< default value
-      const uint8_t RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
-      const uint8_t RESERVED2    = 0x50;                //!< default value
-      const uint8_t LOCK         = 0xA5;                //!< default value
-      const uint8_t CRCCFG[2]    = {0x00, 0x00};        //!< default value
-    } DEFAULTS;
-
-   public:
-    config0_t config0           = DEFAULTS.CONFIG0;    //!< register setting
-    config1_t config1           = DEFAULTS.CONFIG1;    //!< register setting
-    config2_t config2           = DEFAULTS.CONFIG2;    //!< register setting
-    config3_t config3           = DEFAULTS.CONFIG3;    //!< register setting
-    irq_t irq                   = DEFAULTS.IRQ;        //!< register setting
-    mux_t mux                   = DEFAULTS.MUX;        //!< register setting
-    scan_t scan                 = DEFAULTS.SCAN;       //!< register setting
-    timer_t timer               = DEFAULTS.TIMER;      //!< register setting
-    offset_t offsetcal          = DEFAULTS.OFFSET;     //!< register setting
-    gain_t gaincal              = DEFAULTS.GAIN;       //!< register setting
-    const uint8_t reserverd1[3] = {0x90, 0x00, 0x00};  //!< register setting // todo
-    const uint8_t reserverd2    = DEFAULTS.RESERVED2;  //!< register setting
-    lock_t lock                 = DEFAULTS.LOCK;       //!< register setting
-    crccfg_t crccfg             = DEFAULTS.CRCCFG;     //!< register setting
-    uint16_t id;                                       //!< register setting
-
-    MCPSettings(const uint16_t MCP3x6x_DEVICE_TYPE) : id(MCP3x6x_DEVICE_TYPE) {}
-
+  union MCPSettings {
+    MCPSettings(const uint16_t MCP3x6x_DEVICE_TYPE) { registers.id = MCP3x6x_DEVICE_TYPE; }
+    struct {
+      config0_t config0;
+      config1_t config1;
+      config2_t config2;
+      config3_t config3;
+      irq_t irq;
+      mux_t mux;
+      scan_t scan;
+      timer_t timer;
+      offset_t offset;
+      gain_t gain;
+      uint8_t reserved1;
+      uint8_t id;
+      lock_t lock;
+      uint8_t crccfg;
+    } registers;
+    uint8_t raw[27];
   } settings;
 
   size_t getMaxResolution() {
-    switch (settings.id) {
+    switch (settings.registers.id) {
       case MCP3461_DEVICE_TYPE:
       case MCP3462_DEVICE_TYPE:
       case MCP3464_DEVICE_TYPE:
@@ -546,7 +541,7 @@ class MCP3x6x {
   }
 
   size_t getChannelCount() {
-    switch (settings.id) {
+    switch (settings.registers.id) {
       case MCP3461_DEVICE_TYPE:
       case MCP3561_DEVICE_TYPE:
         return 2;
@@ -806,17 +801,17 @@ class MCP3x6x {
   }
 
   /*
-inline status_t write(Settings data) {
-return _transfer((uint8_t)data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
-}
-* /
+  inline status_t write(Settings data) {
+  return _transfer((uint8_t)data, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 27);
+  }
+  * /
 
-/**
- * @brief read register ADCDATA from ADC
- *
- * @param data
- * @return status_t
- */
+  /**
+  * @brief read register ADCDATA from ADC
+  *
+  * @param data
+  * @return status_t
+  */
   status_t read(Adcdata *data);
 
   /**
