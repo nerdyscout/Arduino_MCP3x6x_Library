@@ -124,6 +124,7 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
     }
   */
   uint8_t buffer[s];
+  memset(buffer, 0, s);
 
   //  while (status_dr()) {
   _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
