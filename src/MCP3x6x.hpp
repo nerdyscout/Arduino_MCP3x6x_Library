@@ -446,7 +446,7 @@ class MCP3x6x {
    */
   union Scan {
     Scan(const uint8_t data[3] = MCP3x6x_CFG_SCAN) : raw{data[0], data[1], data[2]} {}
-    struct {
+    struct __attribute__((packed)) {
       union {
         struct {
           uint8_t single_ended : 8;  //!< Single-Ended Channel CH0-CH7
@@ -458,9 +458,9 @@ class MCP3x6x {
         };
         uint16_t raw;  //!< raw access to register
       } channel;
-      uint8_t        : 4;  //!< unimplemented: read as ‘0’
-      bool           : 1;  //!< reserved: should be set to ‘0‘
-      enum delay dly : 3;  //!< delay time between each conversion during a scan cycle
+      uint8_t unimplemented : 4;  //!< unimplemented: read as ‘0’
+      bool reserved         : 1;  //!< reserved: should be set to ‘0‘
+      enum delay dly        : 3;  //!< delay time between each conversion during a scan cycle
     };
     uint8_t raw[3];  //!< raw access to register
   } _scan;
