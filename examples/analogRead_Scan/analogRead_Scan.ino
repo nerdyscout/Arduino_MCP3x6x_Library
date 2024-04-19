@@ -10,14 +10,14 @@
 #include "Arduino.h"
 #include "MCP3x6x.h"
 
-#if defined ARDUINO_AVR_PROMICRO8
+#if defined ARDUINO_ARCH_AVR
 MCP3561 mcp(2, 3, 10);
 #elif defined ARDUINO_GRAND_CENTRAL_M4
 SPIClass mySPI = SPIClass(&sercom5, 125, 126, 99, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
 MCP3561 mcp(84, 81, 98, &mySPI);
 #elif defined ADAFRUIT_METRO_M0_EXPRESS
 SPIClass mySPI(&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);
-MCP3561 mcp(8, 7, 10, &mySPI, 11, 12, 13);
+MCP3561 mcp(8, 7, 10, &mySPI, SPISettings(), 11, 12, 13);
 #elif defined ARDUINO_ARCH_ESP8266
 MCP3561 mcp(D1, D2, SS);
 // #elif
@@ -34,20 +34,18 @@ void setup() {
     ;
   Serial.println(__FILE__);
 
-  if (!mcp.begin()) {
-    Serial.println("failed to initialize MCP");
-    while (1)
-      ;
-  }
-  mcp.enableScanChannel(MCP_CH0);
-  mcp.enableScanChannel(MCP_CH1);
+  mcp.begin();
+  mcp.attachIRQ(0, mcp_wrapper);
+
+  mcp.enableScanChannel(MCP3x6x_CH0);
+  mcp.enableScanChannel(MCP3x6x_CH1);
 }
 
 // the loop routine runs over and over again forever:
 void loop() {
   // read the input on default analog channel:
-  int32_t adcdata0 = mcp.analogRead(MCP_CH0);
-  int32_t adcdata1 = mcp.analogRead(MCP_CH1);
+  int32_t adcdata0 = mcp.analogRead(MCP3x6x_CH0);
+  int32_t adcdata1 = mcp.analogRead(MCP3x6x_CH1);
 
   // Convert the analog reading
   double voltage0 = adcdata0 * mcp.getReference() / mcp.getMaxValue();

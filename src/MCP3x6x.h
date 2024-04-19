@@ -4,10 +4,10 @@
  * @file MCP3x6x.h
  * @author Stefan Herold (stefan.herold@posteo.de)
  * @brief
- * @version 0.0.2
- * @date 2023-10-10
+ * @version 0.0.3
+ * @date 2024-04-10
  *
- * @copyright Copyright (c) 2023
+ * @copyright Copyright (c) 2024
  *
  */
 

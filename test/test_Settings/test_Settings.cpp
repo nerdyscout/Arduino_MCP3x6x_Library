@@ -22,8 +22,6 @@
 #include "MCP3x6x.hpp"
 #include "test_Settings.h"
 
-MCP3x6x::Settings settings(0x00);
-
 void setup(void) {
   // Wait ~2 seconds before the Unity test runner
   // establishes connection with a board Serial interface
@@ -73,12 +71,14 @@ void tearDown(void) {}
 // actual test cases
 
 void test_Settings(void) {
+  MCP3464 mcp;
+
   // checks if Settings class is initialized with correct default values.
-  TEST_ASSERT_EQUAL_CHAR(0xC0, settings.config0.raw);
-  TEST_ASSERT_EQUAL_CHAR(0x0C, settings.config1.raw);
-  TEST_ASSERT_EQUAL_CHAR(0x8B, settings.config2.raw);
-  TEST_ASSERT_EQUAL_CHAR(0x00, settings.config3.raw);
-  TEST_ASSERT_EQUAL_CHAR(0x73, settings.irq.raw);
-  TEST_ASSERT_EQUAL_CHAR(0x01, settings.mux.raw);
-  TEST_ASSERT_EQUAL_CHAR(0xA5, settings.lock.raw);
+  TEST_ASSERT_EQUAL_CHAR(0xC0, mcp.config0.raw);
+  TEST_ASSERT_EQUAL_CHAR(0x0C, mcp.config1.raw);
+  TEST_ASSERT_EQUAL_CHAR(0x8B, mcp.config2.raw);
+  TEST_ASSERT_EQUAL_CHAR(0x00, mcp.config3.raw);
+  TEST_ASSERT_EQUAL_CHAR(0x73, mcp.irq.raw);
+  TEST_ASSERT_EQUAL_CHAR(0x01, mcp.mux.raw);
+  TEST_ASSERT_EQUAL_CHAR(0xA5, mcp.lock.raw);
 }

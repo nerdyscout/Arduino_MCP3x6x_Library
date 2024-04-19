@@ -10,14 +10,14 @@
 #include "Arduino.h"
 #include "MCP3x6x.h"
 
-#if defined ARDUINO_AVR_PROMICRO8
+#if defined ARDUINO_ARCH_AVR
 MCP3561 mcp(10);
 #elif defined ARDUINO_GRAND_CENTRAL_M4
 SPIClass mySPI = SPIClass(&sercom5, 125, 126, 99, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
 MCP3561 mcp(98, &mySPI);
 #elif defined ADAFRUIT_METRO_M0_EXPRESS
 SPIClass mySPI(&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);
-MCP3561 mcp(10, &mySPI, 11, 12, 13);
+MCP::MCP3561 mcp(10, &mySPI, SPISettings(), 11, 12, 13);
 // #elif
 // todo: might need further cases, didn't check for all boards
 #else
@@ -35,12 +35,15 @@ void setup() {
     while (1)
       ;
   }
+
+  using namespace MCP;
+  mcp.config0(STANDBY);
 }
 
 // the loop routine runs over and over again forever:
 void loop() {
   // read the input on default analog channel:
-  int32_t adcdata = mcp.analogRead(MCP_CH0);
+  int32_t adcdata = mcp.analogRead(MCP3x6x_CH0);
 
   // Convert the analog reading
   double voltage = adcdata * mcp.getReference() / mcp.getMaxValue();
