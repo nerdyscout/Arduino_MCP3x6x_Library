@@ -15,21 +15,21 @@
 
 #include <Arduino.h>
 
-//#include <cstring>
+// #include <cstring>
 #ifdef ARDUINO_ARCH_SAMD
 #  include <wiring_private.h>
 #endif
 
-MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
-                 SPISettings theSPISettings, const uint8_t pinMOSI, const uint8_t pinMISO,
-                 const uint8_t pinCLK) {
-  _spi         = theSPI;
-  _spiSettings = theSPISettings;
-  _pinMISO     = pinMISO;
-  _pinMOSI     = pinMOSI;
-  _pinCLK      = pinCLK;
-  _pinCS       = pinCS;
-
+MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS = SS,
+                 SPIClass *theSPI = &SPI, SPISettings theSPISettings = SPISettings(),
+                 const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
+                 const uint8_t pinCLK = SCK)
+    : _spi(theSPI),
+      _spiSettings(theSPISettings),
+      _pinMISO(pinMISO),
+      _pinMOSI(pinMOSI),
+      _pinCLK(pinCLK),
+      _pinCS(pinCS) {
   switch (MCP3x6x_DEVICE_TYPE) {
     case MCP3461_DEVICE_TYPE:
     case MCP3462_DEVICE_TYPE:
@@ -129,10 +129,15 @@ bool MCP3x6x::begin() {
   return s;
 }
 
-void MCP3x6x::configure(const Config0 config0, const Config1 config1, const Config2 config2,
-                        const Config3 config3, const Irq irq, const Mux mux, const Scan scan,
-                        const Timer timer, const Offset offset, const Gain gain, const Lock lock,
-                        const Crccfg crccfg) {
+void MCP3x6x::configure(const Config0 config0 = MCP3x6x_CFG_CONFIG0,
+                        const Config1 config1 = MCP3x6x_CFG_CONFIG1,
+                        const Config2 config2 = MCP3x6x_CFG_CONFIG2,
+                        const Config3 config3 = MCP3x6x_CFG_CONFIG3,
+                        const Irq irq = MCP3x6x_CFG_IRQ, const Mux mux = MCP3x6x_CFG_MUX,
+                        const Scan scan = MCP3x6x_CFG_SCAN, const Timer timer = MCP3x6x_CFG_TIMER,
+                        const Offset offset = MCP3x6x_CFG_OFFSET,
+                        const Gain gain = MCP3x6x_CFG_GAIN, const Lock lock = MCP3x6x_CFG_LOCK,
+                        const Crccfg crccfg = MCP3x6x_CFG_CRCCFG) {
   if (_config0.raw != config0.raw) write(_config0 = config0);
   if (_config1.raw != config1.raw) write(_config1 = config1);
   if (_config2.raw != config2.raw) write(_config2 = config2);
@@ -174,7 +179,8 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
   return _status;
 }
 
-void MCP3x6x::config0(enum adc_mode adc, enum cs_sel bias, enum clk_sel clk, bool vref_sel) {
+void MCP3x6x::config0(enum adc_mode adc = SHUTDOWN, enum cs_sel bias = BIAS_0UA,
+                      enum clk_sel clk = EXTERN, bool vref_sel = 0) {
   _config0.adc      = adc;
   _config0.bias     = bias;
   _config0.clk      = clk;
@@ -183,21 +189,22 @@ void MCP3x6x::config0(enum adc_mode adc, enum cs_sel bias, enum clk_sel clk, boo
   write(_config0);
 }
 
-void MCP3x6x::config1(enum osr osr, enum pre pre) {
+void MCP3x6x::config1(enum osr osr = OSR_256, enum pre pre = MCLK_0) {
   _config1.osr = osr;
   _config1.pre = pre;
   write(_config1);
 }
 
-void MCP3x6x::config2(bool az_mux, enum gain gain, enum boost boost) {
+void MCP3x6x::config2(bool az_mux = false, enum gain gain = GAIN_1, enum boost boost = BOOST_2) {
   _config2.az_mux = az_mux;
   _config2.gain   = gain;
   _config2.boost  = boost;
   write(_config2);
 }
 
-void MCP3x6x::config3(bool gaincal, bool offcal, bool crccom, enum data_format data_format,
-                      enum conv_mode conv_mode) {
+void MCP3x6x::config3(bool gaincal = false, bool offcal = false, bool crccom = false,
+                      enum data_format data_format = SGN_DATA,
+                      enum conv_mode conv_mode     = ONESHOT_SHUTDOWN) {
   _config3.en_gaincal  = gaincal;
   _config3.en_offcal   = offcal;
   _config3.en_crccom   = crccom;
@@ -206,7 +213,7 @@ void MCP3x6x::config3(bool gaincal, bool offcal, bool crccom, enum data_format d
   write(_config3);
 }
 
-void MCP3x6x::irq(bool stp, bool fastcmd, uint8_t irq_mode) {
+void MCP3x6x::irq(bool stp = true, bool fastcmd = true, uint8_t irq_mode = false) {
   _irq.en_stp     = stp;
   _irq.en_fastcmd = fastcmd;
   _irq.irq_mode   = irq_mode;
@@ -479,7 +486,7 @@ void MCP3x6x::attachMCLK(const uint8_t pinMCLK) {
   _pinMCLK = pinMCLK;
 
 #if ((F_CPU / 2) < 4915200)
-//#  error "MCLK frequency is too low"
+// #  error "MCLK frequency is too low"
 #else
   tone(_pinMCLK, 4915200);
 #endif

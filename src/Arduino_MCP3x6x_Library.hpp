@@ -296,7 +296,7 @@ class MCP3x6x {
 
   status_t _fastcmd(uint8_t cmd) { return _transfer(0x00, cmd, 0); }
   void _reverse_array(uint8_t *array, size_t size);
-  status_t _transfer(uint8_t *data, uint8_t addr, size_t size = 1);
+  status_t _transfer(uint8_t *data, uint8_t addr, size_t size);
   //  status_t _transfer16(uint8_t *data, uint8_t addr);
   int32_t _getValue(int32_t raw);
   uint8_t _getChannel(uint32_t raw);
@@ -539,9 +539,8 @@ class MCP3x6x {
    * @param pinMISO
    * @param pinCLK
    */
-  MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
-          SPISettings theSPISettings, const uint8_t pinMOSI, const uint8_t pinMISO,
-          const uint8_t pinCLK);
+  MCP3x6x(uint16_t MCP3x6x_DEVICE_TYPE, uint8_t pinCS, SPIClass *theSPI, SPISettings theSPISettings,
+          uint8_t pinMOSI, uint8_t pinMISO, uint8_t pinCLK);
 
   /**
    * @brief Destroy the MCP3x6x object
@@ -565,14 +564,9 @@ class MCP3x6x {
    */
   void end() { _spi->end(); }
 
-  void configure(const Config0 config0 = MCP3x6x_CFG_CONFIG0,
-                 const Config1 config1 = MCP3x6x_CFG_CONFIG1,
-                 const Config2 config2 = MCP3x6x_CFG_CONFIG2,
-                 const Config3 config3 = MCP3x6x_CFG_CONFIG3, const Irq irq = MCP3x6x_CFG_IRQ,
-                 const Mux mux = MCP3x6x_CFG_MUX, const Scan scan = MCP3x6x_CFG_SCAN,
-                 const Timer timer = MCP3x6x_CFG_TIMER, const Offset offset = MCP3x6x_CFG_OFFSET,
-                 const Gain gain = MCP3x6x_CFG_GAIN, const Lock lock = MCP3x6x_CFG_LOCK,
-                 const Crccfg crccfg = MCP3x6x_CFG_CRCCFG);
+  void configure(Config0 config0, Config1 config1, Config2 config2, Config3 config3, Irq irq,
+                 Mux mux, Scan scan, Timer timer, Offset offset, Gain gain, Lock lock,
+                 Crccfg crccfg);
 
   ///////////////////////////////////////////////////////////////////////////////
   // attach pins
@@ -605,8 +599,7 @@ class MCP3x6x {
    * @param clk
    * @param vref_sel
    */
-  void config0(enum adc_mode adc = SHUTDOWN, enum cs_sel bias = BIAS_0UA, enum clk_sel clk = EXTERN,
-               bool vref_sel = 0);
+  void config0(enum adc_mode adc, enum cs_sel bias, enum clk_sel clk, bool vref_sel);
 
   /**
    * @brief write register CONFIG1 to device
@@ -614,7 +607,7 @@ class MCP3x6x {
    * @param osr
    * @param pre
    */
-  void config1(enum osr osr = OSR_256, enum pre pre = MCLK_0);
+  void config1(enum osr osr, enum pre pre);
 
   /**
    * @brief write register CONFIG2 to device
@@ -623,7 +616,7 @@ class MCP3x6x {
    * @param gain
    * @param boost
    */
-  void config2(bool az_mux = false, enum gain gain = GAIN_1, enum boost boost = BOOST_2);
+  void config2(bool az_mux, enum gain gain, enum boost boost);
 
   /**
    * @brief write register CONFIG3 to device
@@ -634,9 +627,8 @@ class MCP3x6x {
    * @param data_format
    * @param conv_mode
    */
-  void config3(bool gaincal = false, bool offcal = false, bool crccom = false,
-               enum data_format data_format = SGN_DATA,
-               enum conv_mode conv_mode     = ONESHOT_SHUTDOWN);
+  void config3(bool gaincal, bool offcal, bool crccom, enum data_format data_format,
+               enum conv_mode conv_mode);
 
   /**
    * @brief write register IRQ to device
@@ -646,7 +638,7 @@ class MCP3x6x {
    * @param por_status
    * @param irq_mode
    */
-  void irq(bool stp = true, bool fastcmd = true, uint8_t irq_mode = false);
+  void irq(bool stp, bool fastcmd, uint8_t irq_mode);
 
   /**
    * @brief write register MUX to device
@@ -722,7 +714,7 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  inline bool status_dr() { return !_status.dr; }
+  inline const bool status_dr() { return !_status.dr; }
 
   /**
    * @brief crccfg status of latest communication
@@ -730,7 +722,7 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  inline bool status_crccfg() { return !_status.crccfg; }
+  inline const bool status_crccfg() { return !_status.crccfg; }
 
   /**
    * @brief power on reset status of latest communication
@@ -738,7 +730,7 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  inline bool status_por() { return !_status.por; }
+  inline const bool status_por() { return !_status.por; }
 
   ///////////////////////////////////////////////////////////////////////////////
   // fast commands
@@ -793,7 +785,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(Config0 data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0);
+    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, 1);
   }
 
   /**
@@ -803,7 +795,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(Config1 data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG1);
+    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG1, 1);
   }
 
   /**
@@ -813,7 +805,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(Config2 data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2);
+    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, 1);
   }
 
   /**
@@ -823,7 +815,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(Config3 data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3);
+    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, 1);
   }
 
   /**
@@ -833,7 +825,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(Irq data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ);
+    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, 1);
   }
 
   /**
@@ -843,7 +835,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(Mux data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX);
+    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, 1);
   }
 
   /**
@@ -893,7 +885,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t write(Lock data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK);
+    return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, 1);
   }
 
   /**
@@ -925,7 +917,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t read(Config0 data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0);
+    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 1);
   }
 
   /**
@@ -935,7 +927,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t read(Config1 data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG1);
+    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG1, 1);
   }
 
   /**
@@ -945,7 +937,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t read(Config2 data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG2);
+    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG2, 1);
   }
 
   /**
@@ -955,7 +947,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t read(Config3 data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG3);
+    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG3, 1);
   }
 
   /**
@@ -965,7 +957,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t read(Irq data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_IRQ);
+    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_IRQ, 1);
   }
 
   /**
@@ -975,7 +967,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t read(Mux data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_MUX);
+    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_MUX, 1);
   }
 
   /**
@@ -1025,7 +1017,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t read(Lock data) {
-    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_LOCK);
+    return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_LOCK, 1);
   }
 
   /**
@@ -1081,14 +1073,14 @@ class MCP3x6x {
    *
    * @param ch
    */
-  void enableScanChannel(Mux ch);
+  void enableScanChannel(Mux chan);
 
   /**
    * @brief disable scanning of given channel
    *
    * @param ch
    */
-  void disableScanChannel(Mux ch);
+  void disableScanChannel(Mux chan);
 
   /**
    * @brief set oversampling rate
@@ -1232,9 +1224,8 @@ class MCP3461 : public MCP3x6x {
    * @param pinMISO
    * @param pinCLK
    */
-  MCP3461(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI,
-          SPISettings theSPISettings = SPISettings(), const uint8_t pinMOSI = MOSI,
-          const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
+  MCP3461(uint8_t pinCS, SPIClass *theSPI, SPISettings theSPISettings, uint8_t pinMOSI,
+          uint8_t pinMISO, uint8_t pinCLK)
       : MCP3x6x(MCP3461_DEVICE_TYPE, pinCS, theSPI, theSPISettings, pinMOSI, pinMISO, pinCLK) {}
 };
 
@@ -1254,10 +1245,8 @@ class MCP3462 : public MCP3x6x {
    * @param pinMISO
    * @param pinCLK
    */
-  MCP3462(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI,
-          SPISettings theSPISettings = SPISettings(), const uint8_t pinMOSI = MOSI,
-          const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
-      : MCP3x6x(MCP3462_DEVICE_TYPE, pinCS, theSPI, theSPISettings, pinMOSI, pinMISO, pinCLK) {}
+  MCP3462(uint8_t pinCS, SPIClass *theSPI, SPISettings theSPISettings, uint8_t pinMOSI,
+          uint8_t pinMISO, uint8_t pinCLK);
 };
 
 /**
@@ -1276,9 +1265,8 @@ class MCP3464 : public MCP3x6x {
    * @param pinMISO
    * @param pinCLK
    */
-  MCP3464(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI,
-          SPISettings theSPISettings = SPISettings(), const uint8_t pinMOSI = MOSI,
-          const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
+  MCP3464(uint8_t pinCS, SPIClass *theSPI, SPISettings theSPISettings, uint8_t pinMOSI,
+          uint8_t pinMISO, uint8_t pinCLK)
       : MCP3x6x(MCP3464_DEVICE_TYPE, pinCS, theSPI, theSPISettings, pinMOSI, pinMISO, pinCLK) {}
 };
 
@@ -1298,9 +1286,8 @@ class MCP3561 : public MCP3x6x {
    * @param pinMISO
    * @param pinCLK
    */
-  MCP3561(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI,
-          SPISettings theSPISettings = SPISettings(), const uint8_t pinMOSI = MOSI,
-          const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
+  MCP3561(uint8_t pinCS, SPIClass *theSPI, SPISettings theSPISettings, uint8_t pinMOSI,
+          uint8_t pinMISO, uint8_t pinCLK)
       : MCP3x6x(MCP3561_DEVICE_TYPE, pinCS, theSPI, theSPISettings, pinMOSI, pinMISO, pinCLK) {}
 };
 
@@ -1320,9 +1307,8 @@ class MCP3562 : public MCP3x6x {
    * @param pinMISO
    * @param pinCLK
    */
-  MCP3562(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI,
-          SPISettings theSPISettings = SPISettings(), const uint8_t pinMOSI = MOSI,
-          const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
+  MCP3562(uint8_t pinCS, SPIClass *theSPI, SPISettings theSPISettings, uint8_t pinMOSI,
+          uint8_t pinMISO, uint8_t pinCLK)
       : MCP3x6x(MCP3562_DEVICE_TYPE, pinCS, theSPI, theSPISettings, pinMOSI, pinMISO, pinCLK) {}
 };
 
@@ -1342,9 +1328,8 @@ class MCP3564 : public MCP3x6x {
    * @param pinMISO
    * @param pinCLK
    */
-  MCP3564(const uint8_t pinCS = SS, SPIClass *theSPI = &SPI,
-          SPISettings theSPISettings = SPISettings(), const uint8_t pinMOSI = MOSI,
-          const uint8_t pinMISO = MISO, const uint8_t pinCLK = SCK)
+  MCP3564(uint8_t pinCS, SPIClass *theSPI, SPISettings theSPISettings, uint8_t pinMOSI,
+          uint8_t pinMISO, uint8_t pinCLK)
       : MCP3x6x(MCP3564_DEVICE_TYPE, pinCS, theSPI, theSPISettings, pinMOSI, pinMISO, pinCLK) {}
 };
 
