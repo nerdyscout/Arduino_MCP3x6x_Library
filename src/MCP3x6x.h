@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef SRC_MCP3X6X_H_
-#define SRC_MCP3X6X_H_
+#ifndef MCP3X6X_H
+#define MCP3X6X_H
 
 #ifdef __cplusplus
 extern "C" {

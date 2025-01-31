@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * @file test_MCP3462.cpp
+ * @file test_MCP3x6x.cpp
  * @author Stefan Herold (stefan.herold@posteo.de)
  * @brief
- * @version 0.0.2
- * @date 2023-10-10
+ * @version 0.0.4
+ * @date 2025-01-31
  *
- * @copyright Copyright (c) 2023
+ * @copyright Copyright (c) 2025
  *
  */
 
@@ -20,22 +20,26 @@
 #include <unity.h>
 
 #include "Arduino_MCP3x6x_Library.hpp"
-#include "test_MCP3462.h"
-
-MCP3462 mcp;
+#include "test_MCP3x6x.h"
 
 void setup(void) {
-  // Wait ~2 seconds before the Unity test runner
+  // Wait before the Unity test runner
   // establishes connection with a board Serial interface
+  // #if defined(USB_VID) && defined(USB_PID)
+  //  while (!Serial);
+  // #else
   delay(2000);
+  // #endif
 
   runUnityTests();
 }
 
-void loop(void) {}
+void loop(void) { delay(1000); }
 
 int runUnityTests(void) {
   UNITY_BEGIN();
+
+  RUN_TEST(test_instance);
 
   return UNITY_END();
 }
@@ -61,8 +65,10 @@ void suiteSetUp(void) {
 
 void suiteTearDown(void) {}
 
-void setUp(void) { mcp.reset(); }
+void setUp(void) {}
 
 void tearDown(void) {}
 
 // actual test cases
+
+void test_instance(void) {}

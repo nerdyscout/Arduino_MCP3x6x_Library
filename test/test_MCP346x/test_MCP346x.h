@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * @file test_MCP3461.h
+ * @file test_MCP346x.h
  * @author Stefan Herold (stefan.herold@posteo.de)
  * @brief
  * @version 0.0.2
@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef TEST_TEST_MCP3461_TEST_MCP3461_H_
-#define TEST_TEST_MCP3461_TEST_MCP3461_H_
+#ifndef TEST_TEST_MCP346x_TEST_MCP346x_H_
+#define TEST_TEST_MCP346x_TEST_MCP346x_H_
 
 int runUnityTests(void);
 

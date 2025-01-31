@@ -23,9 +23,13 @@
 #include "test_Settings.h"
 
 void setup(void) {
-  // Wait ~2 seconds before the Unity test runner
-  // establishes connection with a board Serial interface
+// Wait before the Unity test runner
+// establishes connection with a board Serial interface
+#if defined(USB_VID) && defined(USB_PID)
+  while (!Serial);
+#else
   delay(2000);
+#endif
 
   runUnityTests();
 }

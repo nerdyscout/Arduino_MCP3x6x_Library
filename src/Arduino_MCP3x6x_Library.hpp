@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef SRC_MCP3X6X_HPP_
-#define SRC_MCP3X6X_HPP_
+#ifndef ARDUINO_MCP3X6X_LIBRARY_HPP
+#define ARDUINO_MCP3X6X_LIBRARY_HPP
 
 #include <SPI.h>
 
