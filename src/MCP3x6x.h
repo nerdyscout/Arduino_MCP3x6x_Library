@@ -16,7 +16,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#  include "MCP3x6x.hpp"
+#  include "Arduino_MCP3x6x_Library.hpp"
 }
 #endif
 

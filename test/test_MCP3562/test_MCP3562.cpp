@@ -19,7 +19,7 @@
 
 #include <unity.h>
 
-#include "MCP3x6x.hpp"
+#include "Arduino_MCP3x6x_Library.hpp"
 #include "test_MCP3562.h"
 
 void setup(void) {

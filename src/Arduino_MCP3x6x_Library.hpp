@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * @file MCP3x6x.hpp
+ * @file Arduino_MCP3x6x_Library.hpp
  * @author Stefan Herold (stefan.herold@posteo.de)
  * @brief
  * @version 0.0.3

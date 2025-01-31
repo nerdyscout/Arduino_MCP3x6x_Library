@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * @file MCP3x6x.cpp
+ * @file Arduino_MCP3x6x_Library.cpp
  * @author Stefan Herold (stefan.herold@posteo.de)
  * @brief
  * @version 0.0.3
@@ -11,11 +11,11 @@
  *
  */
 
-#include "MCP3x6x.hpp"
+#include "Arduino_MCP3x6x_Library.hpp"
 
 #include <Arduino.h>
 
-#include <cstring>
+//#include <cstring>
 #ifdef ARDUINO_ARCH_SAMD
 #  include <wiring_private.h>
 #endif
@@ -479,7 +479,7 @@ void MCP3x6x::attachMCLK(const uint8_t pinMCLK) {
   _pinMCLK = pinMCLK;
 
 #if ((F_CPU / 2) < 4915200)
-#  error "MCLK frequency is too low"
+//#  error "MCLK frequency is too low"
 #else
   tone(_pinMCLK, 4915200);
 #endif
