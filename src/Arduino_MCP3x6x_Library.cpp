@@ -3,7 +3,7 @@
 /**
  * @file Arduino_MCP3x6x_Library.cpp
  * @author Stefan Herold (stefan.herold@posteo.de)
- * @brief
+ * @brief Library to support Microchip MPC3x6x/R 16/24bit analog to digital converters.
  * @version 0.0.3
  * @date 2024-04-10
  *
