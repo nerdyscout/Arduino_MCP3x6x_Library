@@ -25,11 +25,11 @@
 void setup(void) {
   // Wait before the Unity test runner
   // establishes connection with a board Serial interface
-  // #if defined(USB_VID) && defined(USB_PID)
-  //  while (!Serial);
-  // #else
+#if defined(USB_VID) && defined(USB_PID)
+  while (!Serial);
+#else
   delay(2000);
-  // #endif
+#endif
 
   runUnityTests();
 }

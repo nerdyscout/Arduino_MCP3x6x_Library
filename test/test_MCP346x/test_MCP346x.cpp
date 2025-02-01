@@ -25,11 +25,11 @@
 void setup(void) {
   // Wait before the Unity test runner
   // establishes connection with a board Serial interface
-  // #if defined(USB_VID) && defined(USB_PID)
-  //  while (!Serial);
-  // #else
+#if defined(USB_VID) && defined(USB_PID)
+  while (!Serial);
+#else
   delay(2000);
-  // #endif
+#endif
 
   runUnityTests();
 }
@@ -72,9 +72,7 @@ void tearDown(void) {}
 // actual test cases
 
 void test_instance(void) {
-  //  MCP3461 mcp1();
-  //  MCP3462 mcp2();
-  //  MCP3464 mcp4();
-
-  TEST_ASSERT_TRUE(1);
+  MCP3461 mcp1();
+  MCP3462 mcp2();
+  MCP3464 mcp4();
 }
