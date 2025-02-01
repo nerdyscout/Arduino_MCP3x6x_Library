@@ -20,16 +20,27 @@
 #  include <wiring_private.h>
 #endif
 
-MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS = SS,
-                 SPIClass *theSPI = &SPI, SPISettings theSPISettings = SPISettings(),
-                 const uint8_t pinMOSI = MOSI, const uint8_t pinMISO = MISO,
-                 const uint8_t pinCLK = SCK)
-    : _spi(theSPI),
+MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
+                 SPISettings theSPISettings, const uint8_t pinMOSI, const uint8_t pinMISO,
+                 const uint8_t pinCLK)
+    : _pinCS(pinCS),
+      _spi(theSPI),
       _spiSettings(theSPISettings),
-      _pinMISO(pinMISO),
       _pinMOSI(pinMOSI),
+      _pinMISO(pinMISO),
       _pinCLK(pinCLK),
-      _pinCS(pinCS) {
+      _config0(MCP3x6x_CFG_CONFIG0),
+      _config1(MCP3x6x_CFG_CONFIG1),
+      _config2(MCP3x6x_CFG_CONFIG2),
+      _config3(MCP3x6x_CFG_CONFIG3),
+      _irq(MCP3x6x_CFG_IRQ),
+      _mux(MCP3x6x_CFG_MUX),
+      _scan(MCP3x6x_CFG_SCAN),
+      _timer(MCP3x6x_CFG_TIMER),
+      _offset(MCP3x6x_CFG_OFFSET),
+      _gain(MCP3x6x_CFG_GAIN),
+      _lock(MCP3x6x_CFG_LOCK),
+      _crccfg(MCP3x6x_CFG_CRCCFG) {
   switch (MCP3x6x_DEVICE_TYPE) {
     case MCP3461_DEVICE_TYPE:
     case MCP3462_DEVICE_TYPE:
@@ -124,32 +135,51 @@ bool MCP3x6x::begin() {
 
   // reset ADC
   bool s = reset().por;
-  configure();
+  //  configure();
 
   return s;
 }
 
-void MCP3x6x::configure(const Config0 config0 = MCP3x6x_CFG_CONFIG0,
-                        const Config1 config1 = MCP3x6x_CFG_CONFIG1,
-                        const Config2 config2 = MCP3x6x_CFG_CONFIG2,
-                        const Config3 config3 = MCP3x6x_CFG_CONFIG3,
-                        const Irq irq = MCP3x6x_CFG_IRQ, const Mux mux = MCP3x6x_CFG_MUX,
-                        const Scan scan = MCP3x6x_CFG_SCAN, const Timer timer = MCP3x6x_CFG_TIMER,
-                        const Offset offset = MCP3x6x_CFG_OFFSET,
-                        const Gain gain = MCP3x6x_CFG_GAIN, const Lock lock = MCP3x6x_CFG_LOCK,
-                        const Crccfg crccfg = MCP3x6x_CFG_CRCCFG) {
-  if (_config0.raw != config0.raw) write(_config0 = config0);
-  if (_config1.raw != config1.raw) write(_config1 = config1);
-  if (_config2.raw != config2.raw) write(_config2 = config2);
-  if (_config3.raw != config3.raw) write(_config3 = config3);
-  if (_irq.raw != MCP3x6x_CFG_IRQ) write(irq);
-  if (_mux.raw != MCP3x6x_CFG_MUX) write(mux);
-  if (memcmp(_scan.raw, MCP3x6x_CFG_SCAN, sizeof(scan))) write(_scan = scan);
-  if (memcmp(_timer.raw, MCP3x6x_CFG_TIMER, sizeof(timer))) write(_timer = timer);
-  if (memcmp(_offset.raw, MCP3x6x_CFG_OFFSET, sizeof(offset))) write(_offset = offset);
-  if (memcmp(_gain.raw, MCP3x6x_CFG_GAIN, sizeof(gain))) write(_gain = gain);
-  if (_lock.raw != MCP3x6x_CFG_LOCK) write(_lock = lock);
-  if (memcmp(_crccfg.raw, MCP3x6x_CFG_CRCCFG, sizeof(crccfg))) write(_crccfg = crccfg);
+void MCP3x6x::configure(const Config0 config0, const Config1 config1, const Config2 config2,
+                        const Config3 config3, const Irq irq, const Mux mux, const Scan scan,
+                        const Timer timer, const Offset offset, const Gain gain, const Lock lock,
+                        const Crccfg crccfg) {
+  if (_config0.raw != config0.raw) {
+    write(_config0 = config0);
+  }
+  if (_config1.raw != config1.raw) {
+    write(_config1 = config1);
+  }
+  if (_config2.raw != config2.raw) {
+    write(_config2 = config2);
+  }
+  if (_config3.raw != config3.raw) {
+    write(_config3 = config3);
+  }
+  if (_irq.raw != MCP3x6x_CFG_IRQ) {
+    write(irq);
+  }
+  if (_mux.raw != MCP3x6x_CFG_MUX) {
+    write(mux);
+  }
+  if (memcmp(_scan.raw, MCP3x6x_CFG_SCAN, sizeof(scan))) {
+    write(_scan = scan);
+  }
+  if (memcmp(_timer.raw, MCP3x6x_CFG_TIMER, sizeof(timer))) {
+    write(_timer = timer);
+  }
+  if (memcmp(_offset.raw, MCP3x6x_CFG_OFFSET, sizeof(offset))) {
+    write(_offset = offset);
+  }
+  if (memcmp(_gain.raw, MCP3x6x_CFG_GAIN, sizeof(gain))) {
+    write(_gain = gain);
+  }
+  if (_lock.raw != MCP3x6x_CFG_LOCK) {
+    write(_lock = lock);
+  }
+  if (memcmp(_crccfg.raw, MCP3x6x_CFG_CRCCFG, sizeof(crccfg))) {
+    write(_crccfg = crccfg);
+  }
 }
 
 MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
@@ -179,8 +209,7 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
   return _status;
 }
 
-void MCP3x6x::config0(enum adc_mode adc = SHUTDOWN, enum cs_sel bias = BIAS_0UA,
-                      enum clk_sel clk = EXTERN, bool vref_sel = 0) {
+void MCP3x6x::config0(enum adc_mode adc, enum cs_sel bias, enum clk_sel clk, bool vref_sel) {
   _config0.adc      = adc;
   _config0.bias     = bias;
   _config0.clk      = clk;
@@ -189,22 +218,21 @@ void MCP3x6x::config0(enum adc_mode adc = SHUTDOWN, enum cs_sel bias = BIAS_0UA,
   write(_config0);
 }
 
-void MCP3x6x::config1(enum osr osr = OSR_256, enum pre pre = MCLK_0) {
+void MCP3x6x::config1(enum osr osr, enum pre pre) {
   _config1.osr = osr;
   _config1.pre = pre;
   write(_config1);
 }
 
-void MCP3x6x::config2(bool az_mux = false, enum gain gain = GAIN_1, enum boost boost = BOOST_2) {
+void MCP3x6x::config2(bool az_mux, enum gain gain, enum boost boost) {
   _config2.az_mux = az_mux;
   _config2.gain   = gain;
   _config2.boost  = boost;
   write(_config2);
 }
 
-void MCP3x6x::config3(bool gaincal = false, bool offcal = false, bool crccom = false,
-                      enum data_format data_format = SGN_DATA,
-                      enum conv_mode conv_mode     = ONESHOT_SHUTDOWN) {
+void MCP3x6x::config3(bool gaincal, bool offcal, bool crccom, enum data_format data_format,
+                      enum conv_mode conv_mode) {
   _config3.en_gaincal  = gaincal;
   _config3.en_offcal   = offcal;
   _config3.en_crccom   = crccom;
@@ -213,7 +241,7 @@ void MCP3x6x::config3(bool gaincal = false, bool offcal = false, bool crccom = f
   write(_config3);
 }
 
-void MCP3x6x::irq(bool stp = true, bool fastcmd = true, uint8_t irq_mode = false) {
+void MCP3x6x::irq(bool stp, bool fastcmd, uint8_t irq_mode) {
   _irq.en_stp     = stp;
   _irq.en_fastcmd = fastcmd;
   _irq.irq_mode   = irq_mode;
@@ -253,7 +281,7 @@ void MCP3x6x::gain(uint8_t *gain) {
   write(_gain);
 }
 
-void MCP3x6x::lock(uint8_t key = MCP3x6x_CFG_LOCK) {
+void MCP3x6x::lock(uint8_t key) {
   _lock.raw = key;
   write(_lock);
 }
@@ -392,10 +420,10 @@ uint8_t MCP3x6x::_getChannel(uint32_t raw) {
   return -1;
 }
 
-int32_t MCP3x6x::analogRead(Mux ch) {
+int32_t MCP3x6x::analogRead(Mux chan) {
   // MuxMode
   if (_scan.channel.raw == 0) {
-    _mux = ch;
+    _mux = chan;
     write(_mux);
     conversion();
     //    _read(&_adcdata, MCP3x6x_ADR_ADCDATA, 4);
@@ -405,7 +433,7 @@ int32_t MCP3x6x::analogRead(Mux ch) {
 
   // ScanMode
   for (size_t i = 0; i < sizeof(_channelID); i++) {
-    if (_channelID[i] == ch.raw) {
+    if (_channelID[i] == chan.raw) {
       conversion();
       while (status_dr()) {
         //        _read(&_adcdata.raw, MCP3x6x_ADR_ADCDATA, 4);

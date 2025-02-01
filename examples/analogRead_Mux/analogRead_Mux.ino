@@ -26,18 +26,16 @@ MCP3561 mcp;
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial)
-    ;
+  while (!Serial);
+
   Serial.println(__FILE__);
 
   if (!mcp.begin()) {
     Serial.println("failed to initialize MCP");
-    while (1)
-      ;
+    while (1);
   }
 
-  using namespace MCP;
-  mcp.config0(STANDBY);
+  mcp.config0(MCP3x6x::STANDBY);
 }
 
 // the loop routine runs over and over again forever:

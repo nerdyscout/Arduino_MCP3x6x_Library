@@ -16,59 +16,59 @@
 
 #include <SPI.h>
 
-#define MCP3x6x_OFFSET (0x88)  //!< corresponding mux setting
-#define MCP3x6x_VCM    (0xF8)  //!< corresponding mux setting
-#define MCP3x6x_AVDD   (0x98)  //!< corresponding mux setting
-#define MCP3x6x_TEMP   (0xDE)  //!< corresponding mux setting
-#define MCP3x6x_DIFFD  (0x67)  //!< corresponding mux setting
-#define MCP3x6x_DIFFC  (0x45)  //!< corresponding mux setting
-#define MCP3x6x_DIFFB  (0x23)  //!< corresponding mux setting
-#define MCP3x6x_DIFFA  (0x01)  //!< corresponding mux setting
-#define MCP3x6x_CH7    (0x78)  //!< corresponding mux setting
-#define MCP3x6x_CH6    (0x68)  //!< corresponding mux setting
-#define MCP3x6x_CH5    (0x58)  //!< corresponding mux setting
-#define MCP3x6x_CH4    (0x48)  //!< corresponding mux setting
-#define MCP3x6x_CH3    (0x38)  //!< corresponding mux setting
-#define MCP3x6x_CH2    (0x28)  //!< corresponding mux setting
-#define MCP3x6x_CH1    (0x18)  //!< corresponding mux setting
-#define MCP3x6x_CH0    (0x08)  //!< corresponding mux setting
+#define MCP3x6x_OFFSET (byte)(0x88)  //!< corresponding mux setting
+#define MCP3x6x_VCM    (byte)(0xF8)  //!< corresponding mux setting
+#define MCP3x6x_AVDD   (byte)(0x98)  //!< corresponding mux setting
+#define MCP3x6x_TEMP   (byte)(0xDE)  //!< corresponding mux setting
+#define MCP3x6x_DIFFD  (byte)(0x67)  //!< corresponding mux setting
+#define MCP3x6x_DIFFC  (byte)(0x45)  //!< corresponding mux setting
+#define MCP3x6x_DIFFB  (byte)(0x23)  //!< corresponding mux setting
+#define MCP3x6x_DIFFA  (byte)(0x01)  //!< corresponding mux setting
+#define MCP3x6x_CH7    (byte)(0x78)  //!< corresponding mux setting
+#define MCP3x6x_CH6    (byte)(0x68)  //!< corresponding mux setting
+#define MCP3x6x_CH5    (byte)(0x58)  //!< corresponding mux setting
+#define MCP3x6x_CH4    (byte)(0x48)  //!< corresponding mux setting
+#define MCP3x6x_CH3    (byte)(0x38)  //!< corresponding mux setting
+#define MCP3x6x_CH2    (byte)(0x28)  //!< corresponding mux setting
+#define MCP3x6x_CH1    (byte)(0x18)  //!< corresponding mux setting
+#define MCP3x6x_CH0    (byte)(0x08)  //!< corresponding mux setting
 
-#define MCP3461_DEVICE_TYPE (0x0008)  //!< MCP3461 device ID
-#define MCP3462_DEVICE_TYPE (0x0009)  //!< MCP3462 device ID
-#define MCP3464_DEVICE_TYPE (0x000B)  //!< MCP3464 device ID
-#define MCP3561_DEVICE_TYPE (0x000C)  //!< MCP3561 device ID
-#define MCP3562_DEVICE_TYPE (0x000D)  //!< MCP3562 device ID
-#define MCP3564_DEVICE_TYPE (0x000F)  //!< MCP3564 device ID
+#define MCP3461_DEVICE_TYPE (uint16_t)(0x0008)  //!< MCP3461 device ID
+#define MCP3462_DEVICE_TYPE (uint16_t)(0x0009)  //!< MCP3462 device ID
+#define MCP3464_DEVICE_TYPE (uint16_t)(0x000B)  //!< MCP3464 device ID
+#define MCP3561_DEVICE_TYPE (uint16_t)(0x000C)  //!< MCP3561 device ID
+#define MCP3562_DEVICE_TYPE (uint16_t)(0x000D)  //!< MCP3562 device ID
+#define MCP3564_DEVICE_TYPE (uint16_t)(0x000F)  //!< MCP3564 device ID
 
 #ifndef MCP3x6x_SPI_ADR
-#  define MCP3x6x_SPI_ADR (0x01000000)  //!< DEVICE ADDRESS
+#  define MCP3x6x_SPI_ADR (byte)(0x01000000)  //!< DEVICE ADDRESS
 #endif
 
-#define MCP3x6x_CMD_CONVERSION    (uint8_t)(MCP3x6x_SPI_ADR | 0b101000)  //!< fast command
-#define MCP3x6x_CMD_STANDBY       (uint8_t)(MCP3x6x_SPI_ADR | 0b101100)  //!< fast command
-#define MCP3x6x_CMD_SHUTDOWN      (uint8_t)(MCP3x6x_SPI_ADR | 0b110000)  //!< fast command
-#define MCP3x6x_CMD_FULL_SHUTDOWN (uint8_t)(MCP3x6x_SPI_ADR | 0b110100)  //!< fast command
-#define MCP3x6x_CMD_RESET         (uint8_t)(MCP3x6x_SPI_ADR | 0b111000)  //!< fast command
-#define MCP3x6x_CMD_SREAD         (uint8_t)(MCP3x6x_SPI_ADR | 0b000001)  //!< fast command
-#define MCP3x6x_CMD_IREAD         (uint8_t)(MCP3x6x_SPI_ADR | 0b000011)  //!< fast command
-#define MCP3x6x_CMD_IWRITE        (uint8_t)(MCP3x6x_SPI_ADR | 0b000010)  //!< fast command
+#define MCP3x6x_CMD_CONVERSION    (byte)(MCP3x6x_SPI_ADR | 0b101000)  //!< fast command
+#define MCP3x6x_CMD_STANDBY       (byte)(MCP3x6x_SPI_ADR | 0b101100)  //!< fast command
+#define MCP3x6x_CMD_SHUTDOWN      (byte)(MCP3x6x_SPI_ADR | 0b110000)  //!< fast command
+#define MCP3x6x_CMD_FULL_SHUTDOWN (byte)(MCP3x6x_SPI_ADR | 0b110100)  //!< fast command
+#define MCP3x6x_CMD_RESET         (byte)(MCP3x6x_SPI_ADR | 0b111000)  //!< fast command
+#define MCP3x6x_CMD_SREAD         (byte)(MCP3x6x_SPI_ADR | 0b000001)  //!< fast command
+#define MCP3x6x_CMD_IREAD         (byte)(MCP3x6x_SPI_ADR | 0b000011)  //!< fast command
+#define MCP3x6x_CMD_IWRITE        (byte)(MCP3x6x_SPI_ADR | 0b000010)  //!< fast command
 
-#define MCP3x6x_ADR_ADCDATA   (uint8_t)(MCP3x6x_SPI_ADR | (0x0 << 2))  //!< Register ADCDdata address
-#define MCP3x6x_ADR_CONFIG0   (uint8_t)(MCP3x6x_SPI_ADR | (0x1 << 2))  //!< Register Config0 address
-#define MCP3x6x_ADR_CONFIG1   (uint8_t)(MCP3x6x_SPI_ADR | (0x2 << 2))  //!< Register Config1 address
-#define MCP3x6x_ADR_CONFIG2   (uint8_t)(MCP3x6x_SPI_ADR | (0x3 << 2))  //!< Register Config2 address
-#define MCP3x6x_ADR_CONFIG3   (uint8_t)(MCP3x6x_SPI_ADR | (0x4 << 2))  //!< Register Config3 address
-#define MCP3x6x_ADR_IRQ       (uint8_t)(MCP3x6x_SPI_ADR | (0x5 << 2))  //!< Register IRQ address
-#define MCP3x6x_ADR_MUX       (uint8_t)(MCP3x6x_SPI_ADR | (0x6 << 2))  //!< Register MUX address
-#define MCP3x6x_ADR_SCAN      (uint8_t)(MCP3x6x_SPI_ADR | (0x7 << 2))  //!< Register SCAN address
-#define MCP3x6x_ADR_TIMER     (uint8_t)(MCP3x6x_SPI_ADR | (0x8 << 2))  //!< Register Timer address
-#define MCP3x6x_ADR_OFFSET    (uint8_t)(MCP3x6x_SPI_ADR | (0x9 << 2))  //!< Register OFFSET address
-#define MCP3x6x_ADR_GAIN      (uint8_t)(MCP3x6x_SPI_ADR | (0xA << 2))  //!< Register GAIN address
-#define MCP3x6x_ADR_RESERVED1 (uint8_t)(MCP3x6x_SPI_ADR | (0xB << 2))  //!< reserved register
-#define MCP3x6x_ADR_RESERVED2 (uint8_t)(MCP3x6x_SPI_ADR | (0xC << 2))  //!< reserved register
-#define MCP3x6x_ADR_LOCK      (uint8_t)(MCP3x6x_SPI_ADR | (0xD << 2))  //!< Register LOCK address
-#define MCP3x6x_ADR_RESERVED3 (uint8_t)(MCP3x6x_SPI_ADR | (0xE << 2))  //!< reserved register
-#define MCP3x6x_ADR_CRCCFG    (uint8_t)(MCP3x6x_SPI_ADR | (0xF << 2))  //!< Register CRCCFG address
+#define MCP3x6x_ADR_ADCDATA   (byte)(MCP3x6x_SPI_ADR | (0x0 << 2))  //!< Register ADCDdata address
+#define MCP3x6x_ADR_CONFIG0   (byte)(MCP3x6x_SPI_ADR | (0x1 << 2))  //!< Register Config0 address
+#define MCP3x6x_ADR_CONFIG1   (byte)(MCP3x6x_SPI_ADR | (0x2 << 2))  //!< Register Config1 address
+#define MCP3x6x_ADR_CONFIG2   (byte)(MCP3x6x_SPI_ADR | (0x3 << 2))  //!< Register Config2 address
+#define MCP3x6x_ADR_CONFIG3   (byte)(MCP3x6x_SPI_ADR | (0x4 << 2))  //!< Register Config3 address
+#define MCP3x6x_ADR_IRQ       (byte)(MCP3x6x_SPI_ADR | (0x5 << 2))  //!< Register IRQ address
+#define MCP3x6x_ADR_MUX       (byte)(MCP3x6x_SPI_ADR | (0x6 << 2))  //!< Register MUX address
+#define MCP3x6x_ADR_SCAN      (byte)(MCP3x6x_SPI_ADR | (0x7 << 2))  //!< Register SCAN address
+#define MCP3x6x_ADR_TIMER     (byte)(MCP3x6x_SPI_ADR | (0x8 << 2))  //!< Register Timer address
+#define MCP3x6x_ADR_OFFSET    (byte)(MCP3x6x_SPI_ADR | (0x9 << 2))  //!< Register OFFSET address
+#define MCP3x6x_ADR_GAIN      (byte)(MCP3x6x_SPI_ADR | (0xA << 2))  //!< Register GAIN address
+#define MCP3x6x_ADR_RESERVED1 (byte)(MCP3x6x_SPI_ADR | (0xB << 2))  //!< reserved register
+#define MCP3x6x_ADR_RESERVED2 (byte)(MCP3x6x_SPI_ADR | (0xC << 2))  //!< reserved register
+#define MCP3x6x_ADR_LOCK      (byte)(MCP3x6x_SPI_ADR | (0xD << 2))  //!< Register LOCK address
+#define MCP3x6x_ADR_RESERVED3 (byte)(MCP3x6x_SPI_ADR | (0xE << 2))  //!< reserved register
+#define MCP3x6x_ADR_CRCCFG    (byte)(MCP3x6x_SPI_ADR | (0xF << 2))  //!< Register CRCCFG address
 
 #ifndef MCP3x6x_CFG
 #  define MCP3x6x_CFG
@@ -340,7 +340,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1576710>MCP346x.pdf</a>
    */
   union Config0 {
-    Config0(const uint8_t data = MCP3x6x_CFG_CONFIG0) : raw(data) {}
+    Config0(const uint8_t data) : raw(data) {}
     struct {
       enum adc_mode adc : 2;  //!< ADC Operating Mode Selection
       enum cs_sel bias  : 2;  //!< Current Source/Sink Selection Bits for Sensor Bias
@@ -358,7 +358,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269089>MCP346x.pdf</a>
    */
   union Config1 {
-    Config1(const uint8_t data = MCP3x6x_CFG_CONFIG1) : raw(data) {}
+    Config1(const uint8_t data) : raw(data) {}
     struct {
       uint8_t      : 2;  //!< reserved
       enum osr osr : 4;  //!< Oversampling Ratio for Delta-Sigma A/D Conversion
@@ -374,7 +374,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269283>MCP346x.pdf</a>
    */
   union Config2 {
-    Config2(const uint8_t data = MCP3x6x_CFG_CONFIG2) : raw(data) {}
+    Config2(const uint8_t data) : raw(data) {}
     struct {
       uint8_t          : 2;  //!< reserved // Should always be equal to ‘11’
       bool az_mux      : 1;  //!< Auto-Zeroing MUX Setting
@@ -391,7 +391,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269504>MCP346x.pdf</a>
    */
   union Config3 {
-    Config3(const uint8_t data = MCP3x6x_CFG_CONFIG3) : raw(data) {}
+    Config3(const uint8_t data) : raw(data) {}
     struct {
       bool en_gaincal              : 1;  //!< Enable Digital Gain Calibration
       bool en_offcal               : 1;  //!< Enable Digital Offset Calibration
@@ -410,7 +410,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269747>MCP346x.pdf</a>
    */
   union Irq {
-    Irq(const uint8_t data = MCP3x6x_CFG_IRQ) : raw(data) {}
+    Irq(const uint8_t data) : raw(data) {}
     struct {
       bool en_stp        : 1;  //!< Enable Conversion Start Interrupt Output
       bool en_fastcmd    : 1;  //!< Enable Fast Commands in the COMMAND Byte
@@ -505,7 +505,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1271641>MCP346x.pdf</a>
    */
   union Lock {
-    Lock(const uint8_t data = MCP3x6x_CFG_LOCK) : raw(data) {}
+    Lock(const uint8_t data) : raw(data) {}
     uint8_t raw;  //!< Write Access Password Entry Code
   } _lock;
 
@@ -516,7 +516,7 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1272118>MCP346x.pdf</a>
    */
   union Crccfg {
-    Crccfg(const uint8_t data[2] = MCP3x6x_CFG_CRCCFG) : raw{data[0], data[1]} {}
+    Crccfg(const uint8_t data[2]) : raw{data[0], data[1]} {}
     union {
       uint16_t value;
       uint8_t raw[2];  //!< CRC-16 Checksum Value
@@ -714,7 +714,7 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  inline const bool status_dr() { return !_status.dr; }
+  inline constexpr bool status_dr() { return !_status.dr; }
 
   /**
    * @brief crccfg status of latest communication
@@ -722,7 +722,7 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  inline const bool status_crccfg() { return !_status.crccfg; }
+  inline constexpr bool status_crccfg() { return !_status.crccfg; }
 
   /**
    * @brief power on reset status of latest communication
@@ -730,7 +730,7 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  inline const bool status_por() { return !_status.por; }
+  inline constexpr bool status_por() { return !_status.por; }
 
   ///////////////////////////////////////////////////////////////////////////////
   // fast commands
@@ -770,7 +770,7 @@ class MCP3x6x {
    * @return status_t
    */
   inline status_t reset() {
-    configure();
+    //    configure();
     return _fastcmd(MCP3x6x_CMD_RESET);
   }
 
@@ -1184,7 +1184,7 @@ class MCP3x6x {
    * @param ch
    * @return int32_t analog value
    */
-  int32_t analogRead(Mux ch = MCP3x6x_CH0);
+  int32_t analogRead(Mux chan);
 
   /**
    * @brief read
@@ -1192,7 +1192,7 @@ class MCP3x6x {
    * @param ch
    * @return int32_t
    */
-  int32_t analogReadContinuous(Mux ch = MCP3x6x_CH0);
+  int32_t analogReadContinuous(Mux chan);
 
   /**
    * @brief mux
