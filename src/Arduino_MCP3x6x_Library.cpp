@@ -15,14 +15,15 @@
 
 #include <Arduino.h>
 
+using MCP;
+
 // #include <cstring>
 #ifdef ARDUINO_ARCH_SAMD
 #  include <wiring_private.h>
 #endif
 
-MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPIClass *theSPI,
-                 SPISettings theSPISettings, const uint8_t pinMOSI, const uint8_t pinMISO,
-                 const uint8_t pinCLK)
+MCP3x6x::MCP3x6x(const uint8_t pinCS, const uint8_t pinMISO, const uint8_t pinMOSI,
+                 const uint8_t pinCLK, SPIClass theSPI, SPISettings theSPISettings)
     : _pinCS(pinCS),
       _spi(theSPI),
       _spiSettings(theSPISettings),
@@ -41,7 +42,7 @@ MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPICla
       _gain(MCP3x6x_CFG_GAIN),
       _lock(MCP3x6x_CFG_LOCK),
       _crccfg(MCP3x6x_CFG_CRCCFG) {
-  switch (MCP3x6x_DEVICE_TYPE) {
+  switch (1) {
     case MCP3461_DEVICE_TYPE:
     case MCP3462_DEVICE_TYPE:
     case MCP3464_DEVICE_TYPE:
@@ -54,7 +55,7 @@ MCP3x6x::MCP3x6x(const uint16_t MCP3x6x_DEVICE_TYPE, const uint8_t pinCS, SPICla
       break;
   }
 
-  switch (MCP3x6x_DEVICE_TYPE) {
+  switch (1) {
     case MCP3461_DEVICE_TYPE:
     case MCP3561_DEVICE_TYPE:
       _channel_count = 1;
@@ -82,31 +83,31 @@ void MCP3x6x::_reverse_array(uint8_t *array, size_t size) {
 
 /*
 MCP3x6x::status_t MCP3x6x::_transfer16(uint8_t *data, uint8_t addr, size_t size = 2) {
-  _spi->beginTransaction(_spiSettings);
+  _spi.beginTransaction(_spiSettings);
   digitalWrite(_pinCS, LOW);
 
   if (bitRead(addr, 0)) {  // read
-    _spi->transfer16(addr << 8);
-    _spi->transfer16(*data);
+    _spi.transfer16(addr << 8);
+    _spi.transfer16(*data);
   } else {  // write
-    _spi->transfer16(addr << 8 | data[0]);
-    _spi->transfer16(data[1] << 8 | data[2]);
+    _spi.transfer16(addr << 8 | data[0]);
+    _spi.transfer16(data[1] << 8 | data[2]);
   }
 
   digitalWrite(_pinCS, HIGH);
-  _spi->endTransaction();
+  _spi.endTransaction();
 
   return _status;
 }
 */
 
 MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
-  _spi->beginTransaction(_spiSettings);
+  _spi.beginTransaction(_spiSettings);
   digitalWrite(_pinCS, LOW);
-  _status.raw = _spi->transfer(addr);
-  if (size) _spi->transfer(data, size);
+  _status.raw = _spi.transfer(addr);
+  if (size) _spi.transfer(data, size);
   digitalWrite(_pinCS, HIGH);
-  _spi->endTransaction();
+  _spi.endTransaction();
 
   return _status;
 }
@@ -115,16 +116,16 @@ bool MCP3x6x::begin() {
   // setup SPI
 #if defined(ARDUINO_ARCH_STM32)
   _spi = new SPIClass(_pinMOSI, _pinMISO, _pinCLK, _pinCS);
-  _spi->begin();
+  _spi.begin();
 
 #elif defined(ARDUINO_ARCH_ESP32)
-  _spi->begin(_pinCLK, _pinMISO, _pinMOSI, _pinCS);
+  _spi.begin(_pinCLK, _pinMISO, _pinMOSI, _pinCS);
 
 #else
   pinMode(_pinCS, OUTPUT);
   digitalWrite(_pinCS, HIGH);
 
-  _spi->begin();
+  _spi.begin();
 #  if ARDUINO_ARCH_SAMD
   pinPeripheral(_pinMISO, PIO_SERCOM);
   pinPeripheral(_pinMOSI, PIO_SERCOM);
@@ -147,36 +148,47 @@ void MCP3x6x::configure(const Config0 config0, const Config1 config1, const Conf
   if (_config0.raw != config0.raw) {
     write(_config0 = config0);
   }
+
   if (_config1.raw != config1.raw) {
     write(_config1 = config1);
   }
+
   if (_config2.raw != config2.raw) {
     write(_config2 = config2);
   }
+
   if (_config3.raw != config3.raw) {
     write(_config3 = config3);
   }
+
   if (_irq.raw != MCP3x6x_CFG_IRQ) {
     write(irq);
   }
+
   if (_mux.raw != MCP3x6x_CFG_MUX) {
     write(mux);
   }
+
   if (memcmp(_scan.raw, MCP3x6x_CFG_SCAN, sizeof(scan))) {
     write(_scan = scan);
   }
+
   if (memcmp(_timer.raw, MCP3x6x_CFG_TIMER, sizeof(timer))) {
     write(_timer = timer);
   }
+
   if (memcmp(_offset.raw, MCP3x6x_CFG_OFFSET, sizeof(offset))) {
     write(_offset = offset);
   }
+
   if (memcmp(_gain.raw, MCP3x6x_CFG_GAIN, sizeof(gain))) {
     write(_gain = gain);
   }
+
   if (_lock.raw != MCP3x6x_CFG_LOCK) {
     write(_lock = lock);
   }
+
   if (memcmp(_crccfg.raw, MCP3x6x_CFG_CRCCFG, sizeof(crccfg))) {
     write(_crccfg = crccfg);
   }
@@ -224,7 +236,7 @@ void MCP3x6x::config1(enum osr osr, enum pre pre) {
   write(_config1);
 }
 
-void MCP3x6x::config2(bool az_mux, enum gain gain, enum boost boost) {
+void MCP3x6x::config2(bool az_mux, enum MCP::gain gain, enum MCP::boost boost) {
   _config2.az_mux = az_mux;
   _config2.gain   = gain;
   _config2.boost  = boost;
