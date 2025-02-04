@@ -19,7 +19,7 @@ MCP3561 mcp(84, 81, 98, &mySPI);
 SPIClass mySPI(&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);
 MCP3561 mcp(8, 7, 10, &mySPI, SPISettings(), 11, 12, 13);
 #elif defined ARDUINO_ARCH_ESP8266
-MCP3561 mcp(D1, D2, SS);
+MCP3561 mcp(D2, SS);
 // #elif
 // todo: might need further cases, didn't check for all boards
 #else
@@ -30,12 +30,11 @@ void mcp_wrapper() { mcp.IRQ_handler(); }
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial)
-    ;
+  while (!Serial);
   Serial.println(__FILE__);
 
   mcp.begin();
-  mcp.attachIRQ(0, mcp_wrapper);
+  mcp.attachIRQ(D6, mcp_wrapper);
 
   mcp.enableScanChannel(MCP3x6x_CH0);
   mcp.enableScanChannel(MCP3x6x_CH1);

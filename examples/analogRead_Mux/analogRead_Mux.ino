@@ -34,8 +34,6 @@ void setup() {
     Serial.println("failed to initialize MCP");
     while (1);
   }
-
-  mcp.config0(MCP3x6x::STANDBY);
 }
 
 // the loop routine runs over and over again forever:

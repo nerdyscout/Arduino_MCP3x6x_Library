@@ -15,8 +15,6 @@
 
 #include <Arduino.h>
 
-using MCP;
-
 // #include <cstring>
 #ifdef ARDUINO_ARCH_SAMD
 #  include <wiring_private.h>
@@ -25,11 +23,11 @@ using MCP;
 MCP3x6x::MCP3x6x(const uint8_t pinCS, const uint8_t pinMISO, const uint8_t pinMOSI,
                  const uint8_t pinCLK, SPIClass theSPI, SPISettings theSPISettings)
     : _pinCS(pinCS),
+      _pinMISO(pinMISO),
+      _pinMOSI(pinMOSI),
+      _pinCLK(pinCLK),
       _spi(theSPI),
       _spiSettings(theSPISettings),
-      _pinMOSI(pinMOSI),
-      _pinMISO(pinMISO),
-      _pinCLK(pinCLK),
       _config0(MCP3x6x_CFG_CONFIG0),
       _config1(MCP3x6x_CFG_CONFIG1),
       _config2(MCP3x6x_CFG_CONFIG2),
@@ -115,11 +113,11 @@ MCP3x6x::status_t MCP3x6x::_transfer(uint8_t *data, uint8_t addr, size_t size) {
 bool MCP3x6x::begin() {
   // setup SPI
 #if defined(ARDUINO_ARCH_STM32)
-  _spi = new SPIClass(_pinMOSI, _pinMISO, _pinCLK, _pinCS);
+  _spi = new SPIClass(_pinCS, _pinMISO, _pinMOSI, _pinCLK);
   _spi.begin();
 
 #elif defined(ARDUINO_ARCH_ESP32)
-  _spi.begin(_pinCLK, _pinMISO, _pinMOSI, _pinCS);
+  _spi.begin(_pinCS, _pinMISO, _pinMOSI, _pinCLK);
 
 #else
   pinMode(_pinCS, OUTPUT);
@@ -199,10 +197,10 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
 
   switch (_resolution) {
     case 16:
-      s = _config3.data_format == data_format::SGN_DATA ? 2 : 4;
+      s = _config3.data_format == MCP::data_format::SGN_DATA ? 2 : 4;
       break;
     case 24:
-      s = _config3.data_format == data_format::SGN_DATA ? 3 : 4;
+      s = _config3.data_format == MCP::data_format::SGN_DATA ? 3 : 4;
       break;
   }
 
@@ -221,7 +219,8 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
   return _status;
 }
 
-void MCP3x6x::config0(enum adc_mode adc, enum cs_sel bias, enum clk_sel clk, bool vref_sel) {
+void MCP3x6x::config0(enum MCP::adc_mode adc, enum MCP::cs_sel bias, enum MCP::clk_sel clk,
+                      bool vref_sel) {
   _config0.adc      = adc;
   _config0.bias     = bias;
   _config0.clk      = clk;
@@ -230,7 +229,7 @@ void MCP3x6x::config0(enum adc_mode adc, enum cs_sel bias, enum clk_sel clk, boo
   write(_config0);
 }
 
-void MCP3x6x::config1(enum osr osr, enum pre pre) {
+void MCP3x6x::config1(enum MCP::osr osr, enum MCP::pre pre) {
   _config1.osr = osr;
   _config1.pre = pre;
   write(_config1);
@@ -243,8 +242,8 @@ void MCP3x6x::config2(bool az_mux, enum MCP::gain gain, enum MCP::boost boost) {
   write(_config2);
 }
 
-void MCP3x6x::config3(bool gaincal, bool offcal, bool crccom, enum data_format data_format,
-                      enum conv_mode conv_mode) {
+void MCP3x6x::config3(bool gaincal, bool offcal, bool crccom, enum MCP::data_format data_format,
+                      enum MCP::conv_mode conv_mode) {
   _config3.en_gaincal  = gaincal;
   _config3.en_offcal   = offcal;
   _config3.en_crccom   = crccom;
@@ -260,14 +259,14 @@ void MCP3x6x::irq(bool stp, bool fastcmd, uint8_t irq_mode) {
   write(_irq);
 }
 
-void MCP3x6x::mux(enum mux minus, enum mux plus) {
+void MCP3x6x::mux(enum MCP::mux minus, enum MCP::mux plus) {
   _mux.vin_minus = minus;
   _mux.vin_plus  = plus;
   write(_mux);
 }
 
 void MCP3x6x::scan(byte single_ended, byte differential, bool temp, bool avdd, bool vcm,
-                   bool offset, enum delay dly) {
+                   bool offset, enum MCP::delay dly) {
   _scan.channel.single_ended = single_ended;
   _scan.channel.differential = differential;
   _scan.channel.temp         = temp;
@@ -318,17 +317,17 @@ void MCP3x6x::IRQ_handler() {
   _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
 }
 
-void MCP3x6x::setDataFormat(data_format format) {
+void MCP3x6x::setDataFormat(MCP::data_format format) {
   _config3.data_format = format;
   write(_config3);
 
   switch (format) {
-    case data_format::SGN_DATA:
-    case data_format::SGN_DATA_ZERO:
+    case MCP::data_format::SGN_DATA:
+    case MCP::data_format::SGN_DATA_ZERO:
       _resolution--;
       break;
-    case data_format::SGNEXT_DATA:
-    case data_format::ID_SGNEXT_DATA:
+    case MCP::data_format::SGNEXT_DATA:
+    case MCP::data_format::ID_SGNEXT_DATA:
       break;
     default:
       //      _resolution = -1;
@@ -336,17 +335,17 @@ void MCP3x6x::setDataFormat(data_format format) {
   }
 }
 
-void MCP3x6x::setConversionMode(conv_mode mode) {
+void MCP3x6x::setConversionMode(MCP::conv_mode mode) {
   _config3.conv_mode = mode;
   write(_config3);
 }
 
-void MCP3x6x::setAdcMode(adc_mode mode) {
+void MCP3x6x::setAdcMode(MCP::adc_mode mode) {
   _config0.adc = mode;
   write(_config0);
 }
 
-void MCP3x6x::setClockSelection(clk_sel clk) {
+void MCP3x6x::setClockSelection(MCP::clk_sel clk) {
   _config0.clk = clk;
   write(_config0);
 }
@@ -387,14 +386,14 @@ int32_t MCP3x6x::_getValue(int32_t raw) {
   switch (_resolution) {
     case 16:
       switch (_config3.data_format) {
-        case (data_format::SGN_DATA_ZERO):
+        case (MCP::data_format::SGN_DATA_ZERO):
           return raw >> 16;
-        case (data_format::SGN_DATA):
+        case (MCP::data_format::SGN_DATA):
           bitWrite(raw, 31, bitRead(raw, 16));
           bitClear(raw, 16);
           return raw;
-        case (data_format::SGNEXT_DATA):
-        case (data_format::ID_SGNEXT_DATA):
+        case (MCP::data_format::SGNEXT_DATA):
+        case (MCP::data_format::ID_SGNEXT_DATA):
           bitWrite(raw, 31, bitRead(raw, 17));
           return raw & 0x8000FFFF;
       }
@@ -402,14 +401,14 @@ int32_t MCP3x6x::_getValue(int32_t raw) {
 
     case 24:
       switch (_config3.data_format) {
-        case (data_format::SGN_DATA_ZERO):
+        case (MCP::data_format::SGN_DATA_ZERO):
           return raw >> 8;
-        case (data_format::SGN_DATA):
+        case (MCP::data_format::SGN_DATA):
           bitWrite(raw, 31, bitRead(raw, 24));
           bitClear(raw, 24);
           return raw;
-        case (data_format::SGNEXT_DATA):
-        case (data_format::ID_SGNEXT_DATA):
+        case (MCP::data_format::SGNEXT_DATA):
+        case (MCP::data_format::ID_SGNEXT_DATA):
           bitWrite(raw, 31, bitRead(raw, 25));
           return raw & 0x80FFFFFF;
       }
@@ -420,7 +419,7 @@ int32_t MCP3x6x::_getValue(int32_t raw) {
 }
 
 uint8_t MCP3x6x::_getChannel(uint32_t raw) {
-  if (_config3.data_format == data_format::ID_SGNEXT_DATA) {
+  if (_config3.data_format == MCP::data_format::ID_SGNEXT_DATA) {
     return ((raw >> 28) & 0x0F);
   } else {
     for (size_t i = 0; i < sizeof(_channelID); i++) {
@@ -479,12 +478,12 @@ uint32_t MCP3x6x::getMaxValue() { return pow(2, _resolution); }
 bool MCP3x6x::isComplete() { return status_dr(); }
 
 void MCP3x6x::startContinuous() {
-  setConversionMode(conv_mode::CONTINUOUS);
+  setConversionMode(MCP::conv_mode::CONTINUOUS);
   conversion();
 }
 
 void MCP3x6x::stopContinuous() {
-  setConversionMode(conv_mode::ONESHOT_STANDBY);
+  setConversionMode(MCP::conv_mode::ONESHOT_STANDBY);
   standby();
 }
 
@@ -494,13 +493,13 @@ void MCP3x6x::startContinuousDifferential() {
 }
 
 bool MCP3x6x::isContinuous() {
-  if (_config3.conv_mode == conv_mode::CONTINUOUS) {
+  if (_config3.conv_mode == MCP::conv_mode::CONTINUOUS) {
     return true;
   }
   return false;
 }
 
-void MCP3x6x::setAveraging(osr rate) {
+void MCP3x6x::setAveraging(MCP::osr rate) {
   _config1.osr = rate;
   write(_config1);
 }
