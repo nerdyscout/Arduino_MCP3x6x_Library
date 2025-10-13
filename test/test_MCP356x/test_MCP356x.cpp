@@ -5,8 +5,8 @@
  * @file test_MCP356x.cpp
  * @author Stefan Herold (stefan.herold@posteo.de)
  * @brief
- * @version 0.0.2
- * @date 2023-10-10
+ * @version 0.1.0
+ * @date 2025-10-13
  *
  * @copyright Copyright (c) 2023
  *
