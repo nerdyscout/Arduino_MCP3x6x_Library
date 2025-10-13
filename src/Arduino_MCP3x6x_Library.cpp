@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2024 Stefan Herold
+// Copyright (c) 2025 Stefan Herold
 
 /**
  * @file Arduino_MCP3x6x_Library.cpp

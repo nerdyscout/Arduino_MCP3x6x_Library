@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Stefan Herold
 
 /**
  * @file test_MCP3x6x.cpp
@@ -56,10 +57,14 @@ void suiteSetUp(void) {
   When(Method(ArduinoFake(), attachInterrupt)).AlwaysReturn();
   When(OverloadedMethod(ArduinoFake(SPI), begin, void(void))).AlwaysReturn();
   When(OverloadedMethod(ArduinoFake(SPI), end, void(void))).AlwaysReturn();
-  When(OverloadedMethod(ArduinoFake(SPI), beginTransaction, void(SPISettings))).AlwaysReturn();
-  When(OverloadedMethod(ArduinoFake(SPI), endTransaction, void(void))).AlwaysReturn();
-  When(OverloadedMethod(ArduinoFake(SPI), transfer, byte(uint8_t))).AlwaysReturn();
-  When(OverloadedMethod(ArduinoFake(SPI), transfer, void(void *, size_t))).AlwaysReturn();
+  When(OverloadedMethod(ArduinoFake(SPI), beginTransaction, void(SPISettings)))
+      .AlwaysReturn();
+  When(OverloadedMethod(ArduinoFake(SPI), endTransaction, void(void)))
+      .AlwaysReturn();
+  When(OverloadedMethod(ArduinoFake(SPI), transfer, byte(uint8_t)))
+      .AlwaysReturn();
+  When(OverloadedMethod(ArduinoFake(SPI), transfer, void(void *, size_t)))
+      .AlwaysReturn();
 #endif
 }
 
