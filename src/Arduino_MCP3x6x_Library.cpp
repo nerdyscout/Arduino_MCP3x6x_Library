@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Stefan Herold
 
 /**
  * @file Arduino_MCP3x6x_Library.cpp
  * @author Stefan Herold (stefan.herold@posteo.de)
- * @brief Library to support Microchip MPC3x6x/R 16/24bit analog to digital converters.
+ * @brief Library to support Microchip MPC3x6x/R 16/24bit analog to digital
+ * converters.
  * @version 0.0.3
  * @date 2024-04-10
  *
@@ -20,14 +22,19 @@
 #  include <wiring_private.h>
 #endif
 
-MCP3x6x::MCP3x6x(const uint8_t pinCS, const uint8_t pinMISO, const uint8_t pinMOSI,
-                 const uint8_t pinCLK, SPIClass theSPI, SPISettings theSPISettings)
-    : _pinCS(pinCS),
+MCP3x6x::MCP3x6x(const size_t resolution, const size_t channels,
+                 const uint8_t pinCS, const uint8_t pinMISO,
+                 const uint8_t pinMOSI, const uint8_t pinCLK, SPIClass theSPI,
+                 SPISettings theSPISettings)
+    :  // pins
+      _pinCS(pinCS),
       _pinMISO(pinMISO),
       _pinMOSI(pinMOSI),
       _pinCLK(pinCLK),
+      // spi
       _spi(theSPI),
       _spiSettings(theSPISettings),
+      // registers
       _config0(MCP3x6x_CFG_CONFIG0),
       _config1(MCP3x6x_CFG_CONFIG1),
       _config2(MCP3x6x_CFG_CONFIG2),
@@ -39,50 +46,24 @@ MCP3x6x::MCP3x6x(const uint8_t pinCS, const uint8_t pinMISO, const uint8_t pinMO
       _offset(MCP3x6x_CFG_OFFSET),
       _gain(MCP3x6x_CFG_GAIN),
       _lock(MCP3x6x_CFG_LOCK),
-      _crccfg(MCP3x6x_CFG_CRCCFG) {
-  switch (1) {
-    case MCP3461_DEVICE_TYPE:
-    case MCP3462_DEVICE_TYPE:
-    case MCP3464_DEVICE_TYPE:
-      _resolution = 16;
-      break;
-    case MCP3561_DEVICE_TYPE:
-    case MCP3562_DEVICE_TYPE:
-    case MCP3564_DEVICE_TYPE:
-      _resolution = 24;
-      break;
-  }
-
-  switch (1) {
-    case MCP3461_DEVICE_TYPE:
-    case MCP3561_DEVICE_TYPE:
-      _channel_count = 1;
-      break;
-    case MCP3462_DEVICE_TYPE:
-    case MCP3562_DEVICE_TYPE:
-      _channel_count = 2;
-      break;
-    case MCP3564_DEVICE_TYPE:
-    case MCP3464_DEVICE_TYPE:
-      _channel_count = 4;
-      break;
-  }
-
-  _channel_mask |= 0xff << _channel_count;  // todo use this one
+      _crccfg(MCP3x6x_CFG_CRCCFG),
+      // settings
+      _resolution(resolution),
+      _channel_count(channels) {
+  _channel_mask |= 0xff << _channel_count;  // todo
 }
 
 void MCP3x6x::_reverse_array(uint8_t *array, size_t size) {
-  for (size_t i = 0, e = size; i <= e / 2; i++, e--) {
-    uint8_t temp = array[i];
-    array[i]     = array[e - 1];
-    array[e - 1] = temp;
+  for (size_t i = 0; i < size / 2; i++) {
+    uint8_t temp        = array[i];
+    array[i]            = array[size - 1 - i];
+    array[size - 1 - i] = temp;
   }
 }
 
 /*
-MCP3x6x::status_t MCP3x6x::_transfer16(uint8_t *data, uint8_t addr, size_t size = 2) {
-  _spi.beginTransaction(_spiSettings);
-  digitalWrite(_pinCS, LOW);
+MCP3x6x::status_t MCP3x6x::_transfer16(uint8_t *data, uint8_t addr, size_t size
+= 2) { _spi.beginTransaction(_spiSettings); digitalWrite(_pinCS, LOW);
 
   if (bitRead(addr, 0)) {  // read
     _spi.transfer16(addr << 8);
@@ -139,10 +120,11 @@ bool MCP3x6x::begin() {
   return s;
 }
 
-void MCP3x6x::configure(const Config0 config0, const Config1 config1, const Config2 config2,
-                        const Config3 config3, const Irq irq, const Mux mux, const Scan scan,
-                        const Timer timer, const Offset offset, const Gain gain, const Lock lock,
-                        const Crccfg crccfg) {
+void MCP3x6x::configure(const Config0 config0, const Config1 config1,
+                        const Config2 config2, const Config3 config3,
+                        const Irq irq, const Mux mux, const Scan scan,
+                        const Timer timer, const Offset offset, const Gain gain,
+                        const Lock lock, const Crccfg crccfg) {
   if (_config0.raw != config0.raw) {
     write(_config0 = config0);
   }
@@ -167,19 +149,19 @@ void MCP3x6x::configure(const Config0 config0, const Config1 config1, const Conf
     write(mux);
   }
 
-  if (memcmp(_scan.raw, MCP3x6x_CFG_SCAN, sizeof(scan))) {
+  if (memcmp(_scan.raw, MCP3x6x_CFG_SCAN, sizeof(scan.raw))) {
     write(_scan = scan);
   }
 
-  if (memcmp(_timer.raw, MCP3x6x_CFG_TIMER, sizeof(timer))) {
+  if (memcmp(_timer.raw, MCP3x6x_CFG_TIMER, sizeof(timer.raw))) {
     write(_timer = timer);
   }
 
-  if (memcmp(_offset.raw, MCP3x6x_CFG_OFFSET, sizeof(offset))) {
+  if (memcmp(_offset.raw, MCP3x6x_CFG_OFFSET, sizeof(offset.raw))) {
     write(_offset = offset);
   }
 
-  if (memcmp(_gain.raw, MCP3x6x_CFG_GAIN, sizeof(gain))) {
+  if (memcmp(_gain.raw, MCP3x6x_CFG_GAIN, sizeof(gain.raw))) {
     write(_gain = gain);
   }
 
@@ -204,8 +186,8 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
       break;
   }
 
-  uint8_t buffer[s];
-  memset(buffer, 0, s);
+  uint8_t buffer[4];
+  memset(buffer, 0, 4);
 
   //  while (status_dr()) {
   _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
@@ -219,8 +201,8 @@ MCP3x6x::status_t MCP3x6x::read(Adcdata *data) {
   return _status;
 }
 
-void MCP3x6x::config0(enum MCP::adc_mode adc, enum MCP::cs_sel bias, enum MCP::clk_sel clk,
-                      bool vref_sel) {
+void MCP3x6x::config0(enum MCP::adc_mode adc, enum MCP::cs_sel bias,
+                      enum MCP::clk_sel clk, bool vref_sel) {
   _config0.adc      = adc;
   _config0.bias     = bias;
   _config0.clk      = clk;
@@ -242,7 +224,8 @@ void MCP3x6x::config2(bool az_mux, enum MCP::gain gain, enum MCP::boost boost) {
   write(_config2);
 }
 
-void MCP3x6x::config3(bool gaincal, bool offcal, bool crccom, enum MCP::data_format data_format,
+void MCP3x6x::config3(bool gaincal, bool offcal, bool crccom,
+                      enum MCP::data_format data_format,
                       enum MCP::conv_mode conv_mode) {
   _config3.en_gaincal  = gaincal;
   _config3.en_offcal   = offcal;
@@ -265,8 +248,8 @@ void MCP3x6x::mux(enum MCP::mux minus, enum MCP::mux plus) {
   write(_mux);
 }
 
-void MCP3x6x::scan(byte single_ended, byte differential, bool temp, bool avdd, bool vcm,
-                   bool offset, enum MCP::delay dly) {
+void MCP3x6x::scan(byte single_ended, byte differential, bool temp, bool avdd,
+                   bool vcm, bool offset, enum MCP::delay dly) {
   _scan.channel.single_ended = single_ended;
   _scan.channel.differential = differential;
   _scan.channel.temp         = temp;

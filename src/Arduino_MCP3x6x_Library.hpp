@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Stefan Herold
 
 /**
  * @file Arduino_MCP3x6x_Library.hpp
  * @author Stefan Herold (stefan.herold@posteo.de)
- * @brief Library to support Microchip MPC3x6x/R 16/24bit analog to digital converters.
+ * @brief Library to support Microchip MPC3x6x/R 16/24bit analog to digital
+ * converters.
  * @version 0.0.3
  * @date 2024-04-10
  *
@@ -14,7 +16,15 @@
 #ifndef SRC_ARDUINO_MCP3X6X_LIBRARY_HPP_
 #define SRC_ARDUINO_MCP3X6X_LIBRARY_HPP_
 
+#include <Arduino.h>
 #include <SPI.h>
+
+#ifdef MCP3x6x_DEBUG
+#  ifndef MCP3x6x_DEBUG_INTERFACE
+#    define MCP3x6x_DEBUG_INTERFACE Serial.println
+#  endif
+#  define MCP3x6x_LOG(msg) MCP3x6x_DEBUG_INTERFACE(msg)
+#endif
 
 #define MCP3x6x_OFFSET (byte)(0x88)  //!< corresponding mux setting
 #define MCP3x6x_VCM    (byte)(0xF8)  //!< corresponding mux setting
@@ -44,31 +54,51 @@
 #  define MCP3x6x_SPI_ADR (byte)(0x01000000)  //!< DEVICE ADDRESS
 #endif
 
-#define MCP3x6x_CMD_CONVERSION    (byte)(MCP3x6x_SPI_ADR | 0b101000)  //!< fast command
-#define MCP3x6x_CMD_STANDBY       (byte)(MCP3x6x_SPI_ADR | 0b101100)  //!< fast command
-#define MCP3x6x_CMD_SHUTDOWN      (byte)(MCP3x6x_SPI_ADR | 0b110000)  //!< fast command
-#define MCP3x6x_CMD_FULL_SHUTDOWN (byte)(MCP3x6x_SPI_ADR | 0b110100)  //!< fast command
-#define MCP3x6x_CMD_RESET         (byte)(MCP3x6x_SPI_ADR | 0b111000)  //!< fast command
-#define MCP3x6x_CMD_SREAD         (byte)(MCP3x6x_SPI_ADR | 0b000001)  //!< fast command
-#define MCP3x6x_CMD_IREAD         (byte)(MCP3x6x_SPI_ADR | 0b000011)  //!< fast command
-#define MCP3x6x_CMD_IWRITE        (byte)(MCP3x6x_SPI_ADR | 0b000010)  //!< fast command
+#define MCP3x6x_CMD_CONVERSION \
+  (byte)(MCP3x6x_SPI_ADR | 0b101000)  //!< fast command
+#define MCP3x6x_CMD_STANDBY \
+  (byte)(MCP3x6x_SPI_ADR | 0b101100)  //!< fast command
+#define MCP3x6x_CMD_SHUTDOWN \
+  (byte)(MCP3x6x_SPI_ADR | 0b110000)  //!< fast command
+#define MCP3x6x_CMD_FULL_SHUTDOWN \
+  (byte)(MCP3x6x_SPI_ADR | 0b110100)                           //!< fast command
+#define MCP3x6x_CMD_RESET  (byte)(MCP3x6x_SPI_ADR | 0b111000)  //!< fast command
+#define MCP3x6x_CMD_SREAD  (byte)(MCP3x6x_SPI_ADR | 0b000001)  //!< fast command
+#define MCP3x6x_CMD_IREAD  (byte)(MCP3x6x_SPI_ADR | 0b000011)  //!< fast command
+#define MCP3x6x_CMD_IWRITE (byte)(MCP3x6x_SPI_ADR | 0b000010)  //!< fast command
 
-#define MCP3x6x_ADR_ADCDATA   (byte)(MCP3x6x_SPI_ADR | (0x0 << 2))  //!< Register ADCDdata address
-#define MCP3x6x_ADR_CONFIG0   (byte)(MCP3x6x_SPI_ADR | (0x1 << 2))  //!< Register Config0 address
-#define MCP3x6x_ADR_CONFIG1   (byte)(MCP3x6x_SPI_ADR | (0x2 << 2))  //!< Register Config1 address
-#define MCP3x6x_ADR_CONFIG2   (byte)(MCP3x6x_SPI_ADR | (0x3 << 2))  //!< Register Config2 address
-#define MCP3x6x_ADR_CONFIG3   (byte)(MCP3x6x_SPI_ADR | (0x4 << 2))  //!< Register Config3 address
-#define MCP3x6x_ADR_IRQ       (byte)(MCP3x6x_SPI_ADR | (0x5 << 2))  //!< Register IRQ address
-#define MCP3x6x_ADR_MUX       (byte)(MCP3x6x_SPI_ADR | (0x6 << 2))  //!< Register MUX address
-#define MCP3x6x_ADR_SCAN      (byte)(MCP3x6x_SPI_ADR | (0x7 << 2))  //!< Register SCAN address
-#define MCP3x6x_ADR_TIMER     (byte)(MCP3x6x_SPI_ADR | (0x8 << 2))  //!< Register Timer address
-#define MCP3x6x_ADR_OFFSET    (byte)(MCP3x6x_SPI_ADR | (0x9 << 2))  //!< Register OFFSET address
-#define MCP3x6x_ADR_GAIN      (byte)(MCP3x6x_SPI_ADR | (0xA << 2))  //!< Register GAIN address
-#define MCP3x6x_ADR_RESERVED1 (byte)(MCP3x6x_SPI_ADR | (0xB << 2))  //!< reserved register
-#define MCP3x6x_ADR_RESERVED2 (byte)(MCP3x6x_SPI_ADR | (0xC << 2))  //!< reserved register
-#define MCP3x6x_ADR_LOCK      (byte)(MCP3x6x_SPI_ADR | (0xD << 2))  //!< Register LOCK address
-#define MCP3x6x_ADR_RESERVED3 (byte)(MCP3x6x_SPI_ADR | (0xE << 2))  //!< reserved register
-#define MCP3x6x_ADR_CRCCFG    (byte)(MCP3x6x_SPI_ADR | (0xF << 2))  //!< Register CRCCFG address
+#define MCP3x6x_ADR_ADCDATA \
+  (byte)(MCP3x6x_SPI_ADR | (0x0 << 2))  //!< Register ADCDdata address
+#define MCP3x6x_ADR_CONFIG0 \
+  (byte)(MCP3x6x_SPI_ADR | (0x1 << 2))  //!< Register Config0 address
+#define MCP3x6x_ADR_CONFIG1 \
+  (byte)(MCP3x6x_SPI_ADR | (0x2 << 2))  //!< Register Config1 address
+#define MCP3x6x_ADR_CONFIG2 \
+  (byte)(MCP3x6x_SPI_ADR | (0x3 << 2))  //!< Register Config2 address
+#define MCP3x6x_ADR_CONFIG3 \
+  (byte)(MCP3x6x_SPI_ADR | (0x4 << 2))  //!< Register Config3 address
+#define MCP3x6x_ADR_IRQ \
+  (byte)(MCP3x6x_SPI_ADR | (0x5 << 2))  //!< Register IRQ address
+#define MCP3x6x_ADR_MUX \
+  (byte)(MCP3x6x_SPI_ADR | (0x6 << 2))  //!< Register MUX address
+#define MCP3x6x_ADR_SCAN \
+  (byte)(MCP3x6x_SPI_ADR | (0x7 << 2))  //!< Register SCAN address
+#define MCP3x6x_ADR_TIMER \
+  (byte)(MCP3x6x_SPI_ADR | (0x8 << 2))  //!< Register Timer address
+#define MCP3x6x_ADR_OFFSET \
+  (byte)(MCP3x6x_SPI_ADR | (0x9 << 2))  //!< Register OFFSET address
+#define MCP3x6x_ADR_GAIN \
+  (byte)(MCP3x6x_SPI_ADR | (0xA << 2))  //!< Register GAIN address
+#define MCP3x6x_ADR_RESERVED1 \
+  (byte)(MCP3x6x_SPI_ADR | (0xB << 2))  //!< reserved register
+#define MCP3x6x_ADR_RESERVED2 \
+  (byte)(MCP3x6x_SPI_ADR | (0xC << 2))  //!< reserved register
+#define MCP3x6x_ADR_LOCK \
+  (byte)(MCP3x6x_SPI_ADR | (0xD << 2))  //!< Register LOCK address
+#define MCP3x6x_ADR_RESERVED3 \
+  (byte)(MCP3x6x_SPI_ADR | (0xE << 2))  //!< reserved register
+#define MCP3x6x_ADR_CRCCFG \
+  (byte)(MCP3x6x_SPI_ADR | (0xF << 2))  //!< Register CRCCFG address
 
 #ifndef MCP3x6x_CFG
 #  define MCP3x6x_CFG
@@ -115,10 +145,11 @@ enum __attribute__((packed)) cs_sel {
  *
  */
 enum __attribute__((packed)) clk_sel {
-  INTERN_OUTPUT = 3,  //!< Internal clock is selected and AMCLK is present on the analog master
-                      //!< clock output pin
-  INTERN = 2,         //!< Internal clock is selected and no clock output is present on the CLK pin
-  EXTERN = 0          //!< External digital clock (default)
+  INTERN_OUTPUT = 3,  //!< Internal clock is selected and AMCLK is present on
+                      //!< the analog master clock output pin
+  INTERN = 2,  //!< Internal clock is selected and no clock output is present on
+               //!< the CLK pin
+  EXTERN = 0   //!< External digital clock (default)
 };
 
 /**
@@ -186,13 +217,16 @@ enum __attribute__((packed)) gain {
  *
  */
 enum __attribute__((packed)) conv_mode {
-  CONTINUOUS      = 3,  //!< Continuous Conversion mode or continuous conversion cycle in SCAN mode
-  ONESHOT_STANDBY = 2,  //!< One-shot conversion or one-shot cycle in SCAN mode. It sets
-                        //!< ADC_MODE[1:0] to ‘10’ (standby) at the end of the conversion or at
-                        //!< the end of the conversion cycle in SCAN mode.
-  ONESHOT_SHUTDOWN = 0  //!<  One-shot conversion or one-shot cycle in SCAN mode. It sets
-                        //!<  ADC_MODE[1:0] to ‘0x’ (ADC Shutdown) at the end of the conversion or
-                        //!<  at the end of the conversion cycle in SCAN mode (default).
+  CONTINUOUS = 3,  //!< Continuous Conversion mode or continuous conversion
+                   //!< cycle in SCAN mode
+  ONESHOT_STANDBY =
+      2,  //!< One-shot conversion or one-shot cycle in SCAN mode. It sets
+          //!< ADC_MODE[1:0] to ‘10’ (standby) at the end of the conversion or
+          //!< at the end of the conversion cycle in SCAN mode.
+  ONESHOT_SHUTDOWN =
+      0  //!<  One-shot conversion or one-shot cycle in SCAN mode. It sets
+         //!<  ADC_MODE[1:0] to ‘0x’ (ADC Shutdown) at the end of the conversion
+         //!<  or at the end of the conversion cycle in SCAN mode (default).
 };
 
 /**
@@ -200,15 +234,17 @@ enum __attribute__((packed)) conv_mode {
  *
  */
 enum __attribute__((packed)) data_format {
-  ID_SGNEXT_DATA =
-      3,  //!< 32-bit (25-bit right justified data + Channel ID): CHID[3:0] + SGN extension (4
-          //!< bits) + 24-bit ADC data. It allows overrange with the SGN extension.
-  SGNEXT_DATA = 2,    //!< 32-bit (25-bit right justified data): SGN extension (8-bit) + 24-bit ADC
-                      //!< data. It allows overrange with the SGN extension
-  SGN_DATA_ZERO = 1,  //!< 32-bit (24-bit left justified data): 24-bit ADC data + 0x00 (8-bit). It
-                      //!< does not allow overrange (ADC code locked to 0xFFFFFF or 0x800000).
-  SGN_DATA = 0        //!< 24-bit (default ADC coding): 24-bit ADC data. It does not allow overrange
-                      //!< (ADC code locked to 0xFFFFFF or 0x800000).
+  ID_SGNEXT_DATA = 3,  //!< 32-bit (25-bit right justified data + Channel ID):
+                       //!< CHID[3:0] + SGN extension (4 bits) + 24-bit ADC
+                       //!< data. It allows overrange with the SGN extension.
+  SGNEXT_DATA =
+      2,  //!< 32-bit (25-bit right justified data): SGN extension (8-bit) +
+          //!< 24-bit ADC data. It allows overrange with the SGN extension
+  SGN_DATA_ZERO = 1,  //!< 32-bit (24-bit left justified data): 24-bit ADC data
+                      //!< + 0x00 (8-bit). It does not allow overrange (ADC code
+                      //!< locked to 0xFFFFFF or 0x800000).
+  SGN_DATA = 0  //!< 24-bit (default ADC coding): 24-bit ADC data. It does not
+                //!< allow overrange (ADC code locked to 0xFFFFFF or 0x800000).
 };
 
 /**
@@ -307,33 +343,24 @@ class MCP3x6x {
   int32_t _getValue(int32_t raw);
   uint8_t _getChannel(uint32_t raw);
 
+  SPIClass _spi;                                // SPI interface
+  SPISettings _spiSettings;                     // SPI settings
+  uint8_t _pinCS, _pinMISO, _pinMOSI, _pinCLK;  // SPI pins
   uint8_t _pinIRQ, _pinMCLK;
-  uint8_t _pinCS, _pinMISO, _pinMOSI, _pinCLK;
-  SPIClass _spi;
-  SPISettings _spiSettings;
 
-  float _reference = 3.3;
+  float _reference = 2.4;
   size_t _resolution, _channel_count;
   uint16_t _channel_mask;
 
-  const uint8_t _channelID[16] = {MCP3x6x_CH0,   MCP3x6x_CH1,   MCP3x6x_CH2,   MCP3x6x_CH3,
-                                  MCP3x6x_CH4,   MCP3x6x_CH5,   MCP3x6x_CH6,   MCP3x6x_CH7,
-                                  MCP3x6x_DIFFA, MCP3x6x_DIFFB, MCP3x6x_DIFFC, MCP3x6x_DIFFD,
-                                  MCP3x6x_TEMP,  MCP3x6x_AVDD,  MCP3x6x_VCM,   MCP3x6x_OFFSET};
+  const uint8_t _channelID[16] = {
+      MCP3x6x_CH0,   MCP3x6x_CH1,   MCP3x6x_CH2,   MCP3x6x_CH3,
+      MCP3x6x_CH4,   MCP3x6x_CH5,   MCP3x6x_CH6,   MCP3x6x_CH7,
+      MCP3x6x_DIFFA, MCP3x6x_DIFFB, MCP3x6x_DIFFC, MCP3x6x_DIFFD,
+      MCP3x6x_TEMP,  MCP3x6x_AVDD,  MCP3x6x_VCM,   MCP3x6x_OFFSET};
 
   ///////////////////////////////////////////////////////////////////////////////
   // registers
   ////////////////////////////////////////////////////////////////////////////////
-
-  /**
-   * @brief latest ADC value and channel
-   *
-   */
-  struct Adcdata {
-    uint8_t channelid : 4;                              //!< channel ID
-    int32_t value     : 25;                             //!< actual value of conversion
-  } _adcdata = {.channelid = MCP3x6x_CH0, .value = 0};  //!< todo
-
   /**
    * @brief configuration register 0
    *
@@ -341,15 +368,16 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1576710>MCP346x.pdf</a>
    */
   union Config0 {
-    Config0(const uint8_t data) : raw(data) {}
     struct {
       enum MCP::adc_mode adc : 2;  //!< ADC Operating Mode Selection
-      enum MCP::cs_sel bias  : 2;  //!< Current Source/Sink Selection Bits for Sensor Bias
-      enum MCP::clk_sel clk  : 2;  //!< Clock Selection
-      bool vref_sel          : 1;  //!<
-      uint8_t cfg0           : 1;  //!< Full Shutdown Mode Enable
+      enum MCP::cs_sel
+          bias : 2;  //!< Current Source/Sink Selection Bits for Sensor Bias
+      enum MCP::clk_sel clk : 2;  //!< Clock Selection
+      bool vref_sel         : 1;  //!<
+      uint8_t cfg0          : 1;  //!< Full Shutdown Mode Enable
     };
     uint8_t raw;  //!< raw access to register
+    Config0(const uint8_t data) : raw(data) {}
   } _config0;
 
   /**
@@ -359,13 +387,14 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269089>MCP346x.pdf</a>
    */
   union Config1 {
-    Config1(const uint8_t data) : raw(data) {}
     struct {
-      uint8_t           : 2;  //!< reserved
-      enum MCP::osr osr : 4;  //!< Oversampling Ratio for Delta-Sigma A/D Conversion
+      uint8_t : 2;  //!< reserved
+      enum MCP::osr
+          osr : 4;  //!< Oversampling Ratio for Delta-Sigma A/D Conversion
       enum MCP::pre pre : 2;  //!< Prescaler Value Selection for AMCLK
     };
     uint8_t raw;  //!< raw access to register
+    Config1(const uint8_t data) : raw(data) {}
   } _config1;
 
   /**
@@ -375,14 +404,15 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269283>MCP346x.pdf</a>
    */
   union Config2 {
-    Config2(const uint8_t data) : raw(data) {}
     struct {
-      uint8_t               : 2;  //!< reserved // Should always be equal to ‘11’
+      uint8_t               : 2;  //!< reserved // Should always be equal to ‘1’
+      bool az_ref           : 1;  //!< Auto-Zeroing Reference Buffer Setting
       bool az_mux           : 1;  //!< Auto-Zeroing MUX Setting
       enum MCP::gain gain   : 3;  //!< ADC Gain Selection
       enum MCP::boost boost : 2;  //!< ADC Bias Current Selection
     };
     uint8_t raw;  //!< raw access to register
+    Config2(const uint8_t data) : raw(data) {}
   } _config2;
 
   /**
@@ -392,16 +422,18 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269504>MCP346x.pdf</a>
    */
   union Config3 {
-    Config3(const uint8_t data) : raw(data) {}
     struct {
       bool en_gaincal : 1;  //!< Enable Digital Gain Calibration
       bool en_offcal  : 1;  //!< Enable Digital Offset Calibration
       bool en_crccom  : 1;  //!< CRC Checksum Selection on Read Communications
-      bool crc_format : 1;  //!< CRC Checksum Format Selection on Read Communications
-      enum MCP::data_format data_format : 2;  //!< ADC Output Data Format Selection
-      enum MCP::conv_mode conv_mode     : 2;  //!< Conversion Mode Selection
+      bool crc_format : 1;  //!< CRC Checksum Format Selection on Read
+                            //!< Communications
+      enum MCP::data_format
+          data_format               : 2;  //!< ADC Output Data Format Selection
+      enum MCP::conv_mode conv_mode : 2;  //!< Conversion Mode Selection
     };
     uint8_t raw;  //!< raw access to register
+    Config3(const uint8_t data) : raw(data) {}
   } _config3;
 
   /**
@@ -411,17 +443,18 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1269747>MCP346x.pdf</a>
    */
   union Irq {
-    Irq(const uint8_t data) : raw(data) {}
     struct {
       bool en_stp        : 1;  //!< Enable Conversion Start Interrupt Output
       bool en_fastcmd    : 1;  //!< Enable Fast Commands in the COMMAND Byte
       uint8_t irq_mode   : 2;  //!< Configuration for the IRQ/MDAT Pin
       bool por_status    : 1;  //!< POR Status Flag
-      bool crccfg_status : 1;  //!< CRC Error Status Flag Bit for Internal Registers
+      bool crccfg_status : 1;  //!< CRC Error Status Flag Bit for Internal
+                               //!< Registers
       bool dr_status     : 1;  //!< Data Ready Status Flag
       bool               : 1;  //!< unimplemented
     };
     uint8_t raw;  //!< raw access to register
+    Irq(const uint8_t data) : raw(data) {}
   } _irq;
 
   /**
@@ -431,12 +464,12 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1273028>MCP346x.pdf</a>
    */
   union Mux {
-    Mux(const uint8_t data = MCP3x6x_CFG_MUX) : raw(data) {}
     struct {
       enum MCP::mux vin_minus : 4;  //!< MUX_VIN- Input Selection
       enum MCP::mux vin_plus  : 4;  //!< MUX_VIN+ Input Selection
     };
     uint8_t raw;  //!< raw access to register
+    Mux(const uint8_t data = MCP3x6x_CFG_MUX) : raw(data) {}
   } _mux;
 
   /**
@@ -446,7 +479,6 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270252>MCP346x.pdf</a>
    */
   union Scan {
-    Scan(const uint8_t data[3] = MCP3x6x_CFG_SCAN) : raw{data[0], data[1], data[2]} {}
     struct __attribute__((packed)) {
       union {
         struct {
@@ -461,9 +493,12 @@ class MCP3x6x {
       } channel;
       uint8_t unimplemented : 4;  //!< unimplemented: read as ‘0’
       bool reserved         : 1;  //!< reserved: should be set to ‘0‘
-      enum MCP::delay dly   : 3;  //!< delay time between each conversion during a scan cycle
+      enum MCP::delay
+          dly : 3;  //!< delay time between each conversion during a scan cycle
     };
     uint8_t raw[3];  //!< raw access to register
+    Scan(const uint8_t data[3] = MCP3x6x_CFG_SCAN)
+        : raw{data[0], data[1], data[2]} {}
   } _scan;
 
   /**
@@ -473,8 +508,10 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270583>MCP346x.pdf</a>
    */
   union Timer {
-    Timer(const uint8_t data[3] = MCP3x6x_CFG_TIMER) : raw{data[0], data[1], data[2]} {}
-    uint8_t raw[3];  //!< Selection Bits for the Time Interval Between Two Consecutive Scan Cycles
+    uint8_t raw[3];  //!< Selection Bits for the Time Interval Between Two
+                     //!< Consecutive Scan Cycles
+    Timer(const uint8_t data[3] = MCP3x6x_CFG_TIMER)
+        : raw{data[0], data[1], data[2]} {}
   } _timer;
 
   /**
@@ -484,8 +521,10 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270742>MCP346x.pdf</a>
    */
   union Offset {
-    Offset(const uint8_t data[3] = MCP3x6x_CFG_OFFSET) : raw{data[0], data[1], data[2]} {}
-    uint8_t raw[3];  //!< Offset Error Digital Calibration Code (two’s complement, MSb first coding)
+    uint8_t raw[3];  //!< Offset Error Digital Calibration Code (two’s
+                     //!< complement, MSb first coding)
+    Offset(const uint8_t data[3] = MCP3x6x_CFG_OFFSET)
+        : raw{data[0], data[1], data[2]} {}
   } _offset;
 
   /**
@@ -495,8 +534,10 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1270900>MCP346x.pdf</a>
    */
   union Gain {
-    Gain(const uint8_t data[3] = MCP3x6x_CFG_GAIN) : raw{data[0], data[1], data[2]} {}
-    uint8_t raw[3];  //!< Gain Error Digital Calibration Code (unsigned, MSb first coding)
+    uint8_t raw[3];  //!< Gain Error Digital Calibration Code (unsigned, MSb
+                     //!< first coding)
+    Gain(const uint8_t data[3] = MCP3x6x_CFG_GAIN)
+        : raw{data[0], data[1], data[2]} {}
   } _gain;
 
   /**
@@ -506,8 +547,8 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1271641>MCP346x.pdf</a>
    */
   union Lock {
-    Lock(const uint8_t data) : raw(data) {}
     uint8_t raw;  //!< Write Access Password Entry Code
+    Lock(const uint8_t data) : raw(data) {}
   } _lock;
 
   /**
@@ -517,12 +558,21 @@ class MCP3x6x {
    * href=https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP3461-2-4R-Family-Data-Sheet-DS20006404C.pdf#G1.1272118>MCP346x.pdf</a>
    */
   union Crccfg {
-    Crccfg(const uint8_t data[2]) : raw{data[0], data[1]} {}
     union {
       uint16_t value;
       uint8_t raw[2];  //!< CRC-16 Checksum Value
     };
+    Crccfg(const uint8_t data[2]) : raw{data[0], data[1]} {}
   } _crccfg;
+
+  /**
+   * @brief latest ADC value and channel
+   *
+   */
+  struct Adcdata {
+    uint8_t channelid : 4;   //!< channel ID
+    int32_t value     : 25;  //!< actual value of conversion
+  } _adcdata = {.channelid = MCP3x6x_CH0, .value = 0};  //!< todo
 
  public:
   ///////////////////////////////////////////////////////////////////////////////
@@ -532,7 +582,6 @@ class MCP3x6x {
   /**
    * @brief Construct a new MCP3x6x object
    *
-   * @param MCP3x6x_DEVICE_TYPE
    * @param pinCS
    * @param theSPI
    * @param theSPISettings
@@ -540,7 +589,8 @@ class MCP3x6x {
    * @param pinMISO
    * @param pinCLK
    */
-  MCP3x6x(uint8_t pinCS, uint8_t pinMISO, uint8_t pinMOSI, uint8_t pinCLK, SPIClass theSPI,
+  MCP3x6x(const size_t resolution, const size_t channels, uint8_t pinCS,
+          uint8_t pinMISO, uint8_t pinMOSI, uint8_t pinCLK, SPIClass theSPI,
           SPISettings theSPISettings);
 
   /**
@@ -565,9 +615,9 @@ class MCP3x6x {
    */
   void end() { _spi.end(); }
 
-  void configure(Config0 config0, Config1 config1, Config2 config2, Config3 config3, Irq irq,
-                 Mux mux, Scan scan, Timer timer, Offset offset, Gain gain, Lock lock,
-                 Crccfg crccfg);
+  void configure(Config0 config0, Config1 config1, Config2 config2,
+                 Config3 config3, Irq irq, Mux mux, Scan scan, Timer timer,
+                 Offset offset, Gain gain, Lock lock, Crccfg crccfg);
 
   ///////////////////////////////////////////////////////////////////////////////
   // attach pins
@@ -600,7 +650,8 @@ class MCP3x6x {
    * @param clk
    * @param vref_sel
    */
-  void config0(enum MCP::adc_mode adc, enum MCP::cs_sel bias, enum MCP::clk_sel clk, bool vref_sel);
+  void config0(enum MCP::adc_mode adc, enum MCP::cs_sel bias,
+               enum MCP::clk_sel clk, bool vref_sel);
 
   /**
    * @brief write register CONFIG1 to device
@@ -628,7 +679,8 @@ class MCP3x6x {
    * @param data_format
    * @param conv_mode
    */
-  void config3(bool gaincal, bool offcal, bool crccom, enum MCP::data_format data_format,
+  void config3(bool gaincal, bool offcal, bool crccom,
+               enum MCP::data_format data_format,
                enum MCP::conv_mode conv_mode);
 
   /**
@@ -660,8 +712,8 @@ class MCP3x6x {
    * @param offset
    * @param dly
    */
-  void scan(byte single_ended, byte differential, bool temp, bool avdd, bool vcm, bool offset,
-            enum MCP::delay dly);
+  void scan(byte single_ended, byte differential, bool temp, bool avdd,
+            bool vcm, bool offset, enum MCP::delay dly);
 
   /**
    * @brief write register TIMER to device
@@ -763,7 +815,9 @@ class MCP3x6x {
    *
    * @return status_t
    */
-  inline status_t full_shutdown() { return _fastcmd(MCP3x6x_CMD_FULL_SHUTDOWN); }
+  inline status_t full_shutdown() {
+    return _fastcmd(MCP3x6x_CMD_FULL_SHUTDOWN);
+  }
 
   /**
    * @brief Fast Command
@@ -1225,9 +1279,11 @@ class MCP3461 : public MCP3x6x {
    * @param theSPI
    * @param theSPISettings
    */
-  MCP3461(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI, uint8_t pinCLK = SCK,
-          SPIClass theSPI = SPI, SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(pinCS, pinMISO, pinMOSI, pinCLK, theSPI, theSPISettings) {}
+  MCP3461(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
+          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
+          SPISettings theSPISettings = SPISettings())
+      : MCP3x6x(16, 2, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
+                theSPISettings) {}
 };
 
 /**
@@ -1246,9 +1302,11 @@ class MCP3462 : public MCP3x6x {
    * @param theSPI
    * @param theSPISettings
    */
-  MCP3462(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI, uint8_t pinCLK = SCK,
-          SPIClass theSPI = SPI, SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(pinCS, pinMISO, pinMOSI, pinCLK, theSPI, theSPISettings) {}
+  MCP3462(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
+          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
+          SPISettings theSPISettings = SPISettings())
+      : MCP3x6x(16, 4, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
+                theSPISettings) {}
 };
 
 /**
@@ -1267,9 +1325,11 @@ class MCP3464 : public MCP3x6x {
    * @param theSPI
    * @param theSPISettings
    */
-  MCP3464(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI, uint8_t pinCLK = SCK,
-          SPIClass theSPI = SPI, SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(pinCS, pinMISO, pinMOSI, pinCLK, theSPI, theSPISettings) {}
+  MCP3464(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
+          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
+          SPISettings theSPISettings = SPISettings())
+      : MCP3x6x(16, 8, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
+                theSPISettings) {}
 };
 
 /**
@@ -1288,9 +1348,11 @@ class MCP3561 : public MCP3x6x {
    * @param theSPI
    * @param theSPISettings
    */
-  MCP3561(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI, uint8_t pinCLK = SCK,
-          SPIClass theSPI = SPI, SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(pinCS, pinMISO, pinMOSI, pinCLK, theSPI, theSPISettings) {}
+  MCP3561(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
+          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
+          SPISettings theSPISettings = SPISettings())
+      : MCP3x6x(24, 2, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
+                theSPISettings) {}
 };
 
 /**
@@ -1309,9 +1371,11 @@ class MCP3562 : public MCP3x6x {
    * @param theSPI
    * @param theSPISettings
    */
-  MCP3562(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI, uint8_t pinCLK = SCK,
-          SPIClass theSPI = SPI, SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(pinCS, pinMISO, pinMOSI, pinCLK, theSPI, theSPISettings) {}
+  MCP3562(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
+          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
+          SPISettings theSPISettings = SPISettings())
+      : MCP3x6x(24, 4, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
+                theSPISettings) {}
 };
 
 /**
@@ -1330,9 +1394,11 @@ class MCP3564 : public MCP3x6x {
    * @param theSPI
    * @param theSPISettings
    */
-  MCP3564(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI, uint8_t pinCLK = SCK,
-          SPIClass theSPI = SPI, SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(pinCS, pinMISO, pinMOSI, pinCLK, theSPI, theSPISettings) {}
+  MCP3564(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
+          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
+          SPISettings theSPISettings = SPISettings())
+      : MCP3x6x(24, 8, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
+                theSPISettings) {}
 };
 
 #endif  // SRC_ARDUINO_MCP3X6X_LIBRARY_HPP_

@@ -10,12 +10,12 @@
 #include "Arduino.h"
 #include "MCP3x6x.h"
 
-#if defined ARDUINO_ARCH_AVR
+#if defined(ARDUINO_ARCH_AVR)
 MCP3561 mcp(10);
-#elif defined ARDUINO_GRAND_CENTRAL_M4
+#elif defined(ARDUINO_GRAND_CENTRAL_M4)
 SPIClass mySPI = SPIClass(&sercom5, 125, 126, 99, SPI_PAD_0_SCK_3, SERCOM_RX_PAD_2);
 MCP3561 mcp(98, &mySPI);
-#elif defined ADAFRUIT_METRO_M0_EXPRESS
+#elif defined(ADAFRUIT_METRO_M0_EXPRESS)
 SPIClass mySPI(&sercom1, 12, 13, 11, SPI_PAD_0_SCK_1, SERCOM_RX_PAD_3);
 MCP::MCP3561 mcp(10, &mySPI, SPISettings(), 11, 12, 13);
 // #elif

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Stefan Herold
 
 /**
  * @file MCP3x6x.h
@@ -11,8 +12,8 @@
  *
  */
 
-#ifndef MCP3X6X_H
-#define MCP3X6X_H
+#ifndef SRC_MCP3X6X_H_
+#define SRC_MCP3X6X_H_
 
 #ifdef __cplusplus
 extern "C" {
