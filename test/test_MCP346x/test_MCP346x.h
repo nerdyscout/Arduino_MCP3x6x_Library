@@ -24,5 +24,6 @@ void setUp(void);
 void tearDown(void);
 
 void test_instance(void);
+void test_readings(void);
 
 #endif  // TEST_TEST_MCP3461_TEST_MCP3461_H_

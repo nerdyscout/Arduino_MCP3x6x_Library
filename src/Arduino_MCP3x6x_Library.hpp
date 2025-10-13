@@ -18,6 +18,9 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#ifdef ARDUINO_ARCH_SAMD
+#  include <wiring_private.h>
+#endif
 
 #ifdef MCP3x6x_DEBUG
 #  ifndef MCP3x6x_DEBUG_INTERFACE
@@ -299,11 +302,8 @@ enum __attribute__((packed)) delay {
  * @brief base class MCP3x6x
  *
  */
+template <size_t _MAX_RESOLUTION, size_t _MAX_CHANNELS>
 class MCP3x6x {
- protected:
-  const size_t _MAX_RESOLUTION = 0;
-  const size_t _MAX_CHANNELS   = 0;
-
  private:
   typedef union __attribute__((__packed__)) {
     struct {
@@ -337,20 +337,82 @@ class MCP3x6x {
   } _result;  //!< todo
 
   status_t _fastcmd(uint8_t cmd) { return _transfer(0x00, cmd, 0); }
-  void _reverse_array(uint8_t *array, size_t size);
-  status_t _transfer(uint8_t *data, uint8_t addr, size_t size);
-  //  status_t _transfer16(uint8_t *data, uint8_t addr);
-  int32_t _getValue(int32_t raw);
-  uint8_t _getChannel(uint32_t raw);
+  void _reverse_array(uint8_t *array, size_t size) {
+    for (size_t i = 0; i < size / 2; i++) {
+      uint8_t temp        = array[i];
+      array[i]            = array[size - 1 - i];
+      array[size - 1 - i] = temp;
+    }
+  }
 
-  SPIClass _spi;                                // SPI interface
-  SPISettings _spiSettings;                     // SPI settings
+  status_t _transfer(uint8_t *data, uint8_t addr, size_t size) {
+    _spi.beginTransaction(_spiSettings);
+    digitalWrite(_pinCS, LOW);
+    _status.raw = _spi.transfer(addr);
+    if (size) _spi.transfer(data, size);
+    digitalWrite(_pinCS, HIGH);
+    _spi.endTransaction();
+
+    return _status;
+  }
+
+  //  status_t _transfer16(uint8_t *data, uint8_t addr);
+  int32_t _getValue(int32_t raw) {
+    switch (_MAX_RESOLUTION) {
+      case 16:
+        switch (_config3.data_format) {
+          case (MCP::data_format::SGN_DATA_ZERO):
+            return raw >> 16;
+          case (MCP::data_format::SGN_DATA):
+            bitWrite(raw, 31, bitRead(raw, 16));
+            bitClear(raw, 16);
+            return raw;
+          case (MCP::data_format::SGNEXT_DATA):
+          case (MCP::data_format::ID_SGNEXT_DATA):
+            bitWrite(raw, 31, bitRead(raw, 17));
+            return raw & 0x8000FFFF;
+        }
+        break;
+
+      case 24:
+        switch (_config3.data_format) {
+          case (MCP::data_format::SGN_DATA_ZERO):
+            return raw >> 8;
+          case (MCP::data_format::SGN_DATA):
+            bitWrite(raw, 31, bitRead(raw, 24));
+            bitClear(raw, 24);
+            return raw;
+          case (MCP::data_format::SGNEXT_DATA):
+          case (MCP::data_format::ID_SGNEXT_DATA):
+            bitWrite(raw, 31, bitRead(raw, 25));
+            return raw & 0x80FFFFFF;
+        }
+        break;
+    }
+
+    return -1;
+  }
+  uint8_t _getChannel(uint32_t raw) {
+    if (_config3.data_format == MCP::data_format::ID_SGNEXT_DATA) {
+      return ((raw >> 28) & 0x0F);
+    } else {
+      for (size_t i = 0; i < sizeof(_channelID); i++) {
+        if (_channelID[i] == _mux.raw) {
+          return i;
+        }
+      }
+    }
+    return -1;
+  }
+
+  float _reference = 2.4;
+  uint16_t _channel_mask;
+
   uint8_t _pinCS, _pinMISO, _pinMOSI, _pinCLK;  // SPI pins
   uint8_t _pinIRQ, _pinMCLK;
 
-  float _reference = 2.4;
-  size_t _resolution, _channel_count;
-  uint16_t _channel_mask;
+  SPIClass _spi;             // SPI interface
+  SPISettings _spiSettings;  // SPI settings
 
   const uint8_t _channelID[16] = {
       MCP3x6x_CH0,   MCP3x6x_CH1,   MCP3x6x_CH2,   MCP3x6x_CH3,
@@ -576,7 +638,7 @@ class MCP3x6x {
 
  public:
   ///////////////////////////////////////////////////////////////////////////////
-  // de-constructor
+  // de/constructor
   ////////////////////////////////////////////////////////////////////////////////
 
   /**
@@ -589,9 +651,31 @@ class MCP3x6x {
    * @param pinMISO
    * @param pinCLK
    */
-  MCP3x6x(const size_t resolution, const size_t channels, uint8_t pinCS,
-          uint8_t pinMISO, uint8_t pinMOSI, uint8_t pinCLK, SPIClass theSPI,
-          SPISettings theSPISettings);
+  MCP3x6x(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
+          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
+          SPISettings theSPISettings = SPISettings())
+      : _pinCS(pinCS),
+        _pinMISO(pinMISO),
+        _pinMOSI(pinMOSI),
+        _pinCLK(pinCLK),
+        // spi
+        _spi(theSPI),
+        _spiSettings(theSPISettings),
+        // registers
+        _config0(MCP3x6x_CFG_CONFIG0),
+        _config1(MCP3x6x_CFG_CONFIG1),
+        _config2(MCP3x6x_CFG_CONFIG2),
+        _config3(MCP3x6x_CFG_CONFIG3),
+        _irq(MCP3x6x_CFG_IRQ),
+        _mux(MCP3x6x_CFG_MUX),
+        _scan(MCP3x6x_CFG_SCAN),
+        _timer(MCP3x6x_CFG_TIMER),
+        _offset(MCP3x6x_CFG_OFFSET),
+        _gain(MCP3x6x_CFG_GAIN),
+        _lock(MCP3x6x_CFG_LOCK),
+        _crccfg(MCP3x6x_CFG_CRCCFG) {
+    //  _channel_mask |= 0xff <<  _channel_count;  // todo
+  }
 
   /**
    * @brief Destroy the MCP3x6x object
@@ -607,7 +691,33 @@ class MCP3x6x {
   //
   ////////////////////////////////////////////////////////////////////////////////
 
-  bool begin();
+  bool begin() {  // setup SPI
+#if defined(ARDUINO_ARCH_STM32)
+    _spi = new SPIClass(_pinCS, _pinMISO, _pinMOSI, _pinCLK);
+    _spi.begin();
+
+#elif defined(ARDUINO_ARCH_ESP32)
+    _spi.begin(_pinCS, _pinMISO, _pinMOSI, _pinCLK);
+
+#else
+    pinMode(_pinCS, OUTPUT);
+    digitalWrite(_pinCS, HIGH);
+
+    _spi.begin();
+#  if ARDUINO_ARCH_SAMD
+    pinPeripheral(_pinMISO, PIO_SERCOM);
+    pinPeripheral(_pinMOSI, PIO_SERCOM);
+    pinPeripheral(_pinCLK, PIO_SERCOM);
+#  endif
+
+#endif
+
+    // reset ADC
+    bool s = reset().por;
+    //  configure();
+
+    return s;
+  }
 
   /**
    * @brief end communication
@@ -617,7 +727,55 @@ class MCP3x6x {
 
   void configure(Config0 config0, Config1 config1, Config2 config2,
                  Config3 config3, Irq irq, Mux mux, Scan scan, Timer timer,
-                 Offset offset, Gain gain, Lock lock, Crccfg crccfg);
+                 Offset offset, Gain gain, Lock lock, Crccfg crccfg) {
+    if (_config0.raw != config0.raw) {
+      write(_config0 = config0);
+    }
+
+    if (_config1.raw != config1.raw) {
+      write(_config1 = config1);
+    }
+
+    if (_config2.raw != config2.raw) {
+      write(_config2 = config2);
+    }
+
+    if (_config3.raw != config3.raw) {
+      write(_config3 = config3);
+    }
+
+    if (_irq.raw != MCP3x6x_CFG_IRQ) {
+      write(irq);
+    }
+
+    if (_mux.raw != MCP3x6x_CFG_MUX) {
+      write(mux);
+    }
+
+    if (memcmp(_scan.raw, MCP3x6x_CFG_SCAN, sizeof(scan.raw))) {
+      write(_scan = scan);
+    }
+
+    if (memcmp(_timer.raw, MCP3x6x_CFG_TIMER, sizeof(timer.raw))) {
+      write(_timer = timer);
+    }
+
+    if (memcmp(_offset.raw, MCP3x6x_CFG_OFFSET, sizeof(offset.raw))) {
+      write(_offset = offset);
+    }
+
+    if (memcmp(_gain.raw, MCP3x6x_CFG_GAIN, sizeof(gain.raw))) {
+      write(_gain = gain);
+    }
+
+    if (_lock.raw != MCP3x6x_CFG_LOCK) {
+      write(_lock = lock);
+    }
+
+    if (memcmp(_crccfg.raw, MCP3x6x_CFG_CRCCFG, sizeof(crccfg))) {
+      write(_crccfg = crccfg);
+    }
+  }
 
   ///////////////////////////////////////////////////////////////////////////////
   // attach pins
@@ -626,17 +784,29 @@ class MCP3x6x {
   /**
    * @brief attaches pin to interrupt callback function
    *
-   * @param _pinIRQ
+   * @param pinIRQ
    * @param callback
    */
-  void attachIRQ(const uint8_t _pinIRQ, void (*callback)(void));
+  void attachIRQ(const uint8_t pinIRQ, void (*callback)(void)) {
+    _pinIRQ = pinIRQ;
+
+    attachInterrupt(digitalPinToInterrupt(_pinIRQ), callback, FALLING);
+  }
 
   /**
    * @brief attached pin to clock generator
    *
-   * @param _pinMCLK
+   * @param pinMCLK
    */
-  void attachMCLK(const uint8_t _pinMCLK);
+  void attachMCLK(const uint8_t pinMCLK) {
+    _pinMCLK = pinMCLK;
+
+#if ((F_CPU / 2) < 4915200)
+// #  error "MCLK frequency is too low"
+#else
+    tone(_pinMCLK, 4915200);
+#endif
+  }
 
   ///////////////////////////////////////////////////////////////////////////////
   // set configuration registers
@@ -651,7 +821,14 @@ class MCP3x6x {
    * @param vref_sel
    */
   void config0(enum MCP::adc_mode adc, enum MCP::cs_sel bias,
-               enum MCP::clk_sel clk, bool vref_sel);
+               enum MCP::clk_sel clk, bool vref_sel) {
+    _config0.adc      = adc;
+    _config0.bias     = bias;
+    _config0.clk      = clk;
+    _config0.vref_sel = vref_sel;
+
+    write(_config0);
+  }
 
   /**
    * @brief write register CONFIG1 to device
@@ -659,7 +836,11 @@ class MCP3x6x {
    * @param osr
    * @param pre
    */
-  void config1(enum MCP::osr osr, enum MCP::pre pre);
+  void config1(enum MCP::osr osr, enum MCP::pre pre) {
+    _config1.osr = osr;
+    _config1.pre = pre;
+    write(_config1);
+  }
 
   /**
    * @brief write register CONFIG2 to device
@@ -668,7 +849,12 @@ class MCP3x6x {
    * @param gain
    * @param boost
    */
-  void config2(bool az_mux, enum MCP::gain gain, enum MCP::boost boost);
+  void config2(bool az_mux, enum MCP::gain gain, enum MCP::boost boost) {
+    _config2.az_mux = az_mux;
+    _config2.gain   = gain;
+    _config2.boost  = boost;
+    write(_config2);
+  }
 
   /**
    * @brief write register CONFIG3 to device
@@ -681,7 +867,14 @@ class MCP3x6x {
    */
   void config3(bool gaincal, bool offcal, bool crccom,
                enum MCP::data_format data_format,
-               enum MCP::conv_mode conv_mode);
+               enum MCP::conv_mode conv_mode) {
+    _config3.en_gaincal  = gaincal;
+    _config3.en_offcal   = offcal;
+    _config3.en_crccom   = crccom;
+    _config3.data_format = data_format;
+    _config3.conv_mode   = conv_mode;
+    write(_config3);
+  }
 
   /**
    * @brief write register IRQ to device
@@ -691,7 +884,12 @@ class MCP3x6x {
    * @param por_status
    * @param irq_mode
    */
-  void irq(bool stp, bool fastcmd, uint8_t irq_mode);
+  void irq(bool stp, bool fastcmd, uint8_t irq_mode) {
+    _irq.en_stp     = stp;
+    _irq.en_fastcmd = fastcmd;
+    _irq.irq_mode   = irq_mode;
+    write(_irq);
+  }
 
   /**
    * @brief write register MUX to device
@@ -699,7 +897,11 @@ class MCP3x6x {
    * @param minus
    * @param plus
    */
-  void mux(enum MCP::mux minus, enum MCP::mux plus);
+  void mux(enum MCP::mux minus, enum MCP::mux plus) {
+    _mux.vin_minus = minus;
+    _mux.vin_plus  = plus;
+    write(_mux);
+  }
 
   /**
    * @brief write register SCAN to device
@@ -713,49 +915,75 @@ class MCP3x6x {
    * @param dly
    */
   void scan(byte single_ended, byte differential, bool temp, bool avdd,
-            bool vcm, bool offset, enum MCP::delay dly);
+            bool vcm, bool offset, enum MCP::delay dly) {
+    _scan.channel.single_ended = single_ended;
+    _scan.channel.differential = differential;
+    _scan.channel.temp         = temp;
+    _scan.channel.avdd         = avdd;
+    _scan.channel.vcm          = vcm;
+    _scan.channel.offset       = offset;
+    _scan.dly                  = dly;
+    write(_scan);
+  }
 
   /**
    * @brief write register TIMER to device
    *
    * @param timer
    */
-  void timer(uint8_t *timer);
+  void timer(uint8_t *timer) {
+    _timer = timer;
+    write(_timer);
+  }
 
   /**
    * @brief write register OFFSET to device
    *
    * @param offset
    */
-  void offset(uint8_t *offset);
+  void offset(uint8_t *offset) {
+    _offset = offset;
+    write(_offset);
+  }
 
   /**
    * @brief write register GAIN to device
    *
    * @param gain
    */
-  void gain(uint8_t *gain);
+  void gain(uint8_t *gain) {
+    _gain = gain;
+    write(_gain);
+  }
 
   /**
    * @brief write register LOCK to device
    *
    * @param lock
    */
-  void lock(uint8_t lock);
+  void lock(uint8_t key) {
+    _lock.raw = key;
+    write(_lock);
+  }
 
   /**
    * @brief write register LOCK to unlock device
    *
    * @param key
    */
-  void unlock();
+  void unlock() {  // todo
+    write(_lock);
+  }
 
   /**
    * @brief write register CRCCFG to device
    *
    * @param crccfg
    */
-  void crccfg(uint16_t crccfg);
+  void crccfg(uint16_t crccfg) {
+    _crccfg.value = crccfg;
+    write(_crccfg);
+  }
 
   ///////////////////////////////////////////////////////////////////////////////
   // read status
@@ -963,7 +1191,32 @@ class MCP3x6x {
    * @param data
    * @return status_t
    */
-  status_t read(Adcdata *data);
+  status_t read(Adcdata *data) {
+    size_t s = 1;
+
+    switch (_MAX_RESOLUTION) {
+      case 16:
+        s = _config3.data_format == MCP::data_format::SGN_DATA ? 2 : 4;
+        break;
+      case 24:
+        s = _config3.data_format == MCP::data_format::SGN_DATA ? 3 : 4;
+        break;
+    }
+
+    uint8_t buffer[4];
+    memset(buffer, 0, 4);
+
+    //  while (status_dr()) {
+    _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
+    //  }
+
+    _reverse_array(buffer, s);
+
+    data->channelid = _getChannel((uint32_t &)buffer);
+    data->value     = _getValue((uint32_t &)buffer);
+
+    return _status;
+  }
 
   /**
    * @brief read register CONFIG0 from ADC
@@ -1093,91 +1346,149 @@ class MCP3x6x {
    * @brief handler
    *
    */
-  void IRQ_handler();
+  void IRQ_handler() {
+    //  _read(&_adcdata, MCP3x6x_ADR_ADCDATA, 4);
+    _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
+  }
 
   /**
    * @brief Set the Data Format
    *
    * @param format
    */
-  void setDataFormat(MCP::data_format format);
+  void setDataFormat(MCP::data_format format) {
+    _config3.data_format = format;
+    write(_config3);
+
+    switch (format) {
+      case MCP::data_format::SGN_DATA:
+      case MCP::data_format::SGN_DATA_ZERO:
+        //      _resolution--;
+        break;
+      case MCP::data_format::SGNEXT_DATA:
+      case MCP::data_format::ID_SGNEXT_DATA:
+        break;
+      default:
+        //      _resolution = -1;
+        break;
+    }
+  }
 
   /**
    * @brief Set the Conversion Mode
    *
    * @param mode
    */
-  void setConversionMode(MCP::conv_mode mode);
+  void setConversionMode(MCP::conv_mode mode) {
+    _config3.conv_mode = mode;
+    write(_config3);
+  }
 
   /**
    * @brief Set the Adc Mode object
    *
    * @param mode
    */
-  void setAdcMode(MCP::adc_mode mode);
+  void setAdcMode(MCP::adc_mode mode) {
+    _config0.adc = mode;
+    write(_config0);
+  }
 
   /**
    * @brief Set the Clock Selection object
    *
    * @param clk
    */
-  void setClockSelection(MCP::clk_sel clk);
+  void setClockSelection(MCP::clk_sel clk) {
+    _config0.clk = clk;
+    write(_config0);
+  }
 
   /**
    * @brief enable scanning on given channel
    *
    * @param ch
    */
-  void enableScanChannel(Mux chan);
+  void enableScanChannel(Mux chan) {
+    for (size_t i = 0; i < sizeof(_channelID); i++) {
+      // if (_channelID[i] == ch.raw) {
+      //   bitSet(_scan.channel.raw, i);
+      //   break;
+      // }
+    }
+    write(_scan);
+  }
 
   /**
    * @brief disable scanning of given channel
    *
    * @param ch
    */
-  void disableScanChannel(Mux chan);
+  void disableScanChannel(Mux chan) {
+    for (size_t i = 0; i < sizeof(_channelID); i++) {
+      // if (_channelID[i] == ch.raw) {
+      //   bitClear(_scan.channel.raw, i);
+      //   break;
+      // }
+    }
+    write(_scan);
+  }
 
   /**
    * @brief set oversampling rate
    *
    * @param rate
    */
-  void setAveraging(MCP::osr rate);
+  void setAveraging(MCP::osr rate) {
+    _config1.osr = rate;
+    write(_config1);
+  }
 
   /**
    * @brief set resolution to specific amount of bits
    *
    * @param bits
    */
-  void setResolution(size_t bits);
+  void setResolution(size_t bits) { analogReadResolution(bits); }
 
   /**
    * @brief set resolution to specific amount of bits
    *
    * @param bits
    */
-  void analogReadResolution(size_t bits);
+  void analogReadResolution(size_t bits) {
+    if (bits <= _MAX_RESOLUTION) {
+      //    _resolution = bits;
+    }
+  }
 
   /**
    * @brief set reference voltage
    *
    * @param vref
    */
-  void setReference(float vref = 0.0);
+  void setReference(float vref = 0.0) {
+    if (vref == 0.0) {
+      vref              = 2.4;
+      _config0.vref_sel = 1;
+      write(_config0);
+    }
+    _reference = vref;
+  }
 
   /**
    * @brief get reference voltage
    *
    * @return float
    */
-  float getReference();
+  float getReference() { return _reference; }
 
   /**
-   * @brief get maximal value (=pow(2,resolution))
+   * @brief get maximal value
    *
    * @return uint32_t
    */
-  uint32_t getMaxValue();
+  uint32_t getMaxValue() { return pow(2, _MAX_RESOLUTION); }
 
   /**
    * @brief conversion finished
@@ -1185,25 +1496,34 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  bool isComplete();
+  bool isComplete() { return status_dr(); }
 
   /**
    * @brief starts a continuous conversion cycle
    *
    */
-  void startContinuous();
+  void startContinuous() {
+    setConversionMode(MCP::conv_mode::CONTINUOUS);
+    conversion();
+  }
 
   /**
    * @brief stops a continuous conversion cycle
    *
    */
-  void stopContinuous();
+  void stopContinuous() {
+    setConversionMode(MCP::conv_mode::ONESHOT_STANDBY);
+    standby();
+  }
 
   /**
    * @brief starts a continuous conversion cycle on differential channels
    *
    */
-  void startContinuousDifferential();
+  void startContinuousDifferential() {
+    differentialMode();
+    startContinuous();
+  }
 
   /**
    * @brief checks if continuois mode is set
@@ -1211,19 +1531,24 @@ class MCP3x6x {
    * @return true
    * @return false
    */
-  bool isContinuous();
+  bool isContinuous() {
+    if (_config3.conv_mode == MCP::conv_mode::CONTINUOUS) {
+      return true;
+    }
+    return false;
+  }
 
   /**
    * @brief set single ended mode
    *
    */
-  void singleEndedMode();
+  void singleEndedMode() {}
 
   /**
    * @brief set differential mode
    *
    */
-  void differentialMode();
+  void differentialMode() {}
 
   /**
    * @brief returns mode
@@ -1239,7 +1564,30 @@ class MCP3x6x {
    * @param ch
    * @return int32_t analog value
    */
-  int32_t analogRead(Mux chan);
+  int32_t analogRead(Mux chan) {
+    // MuxMode
+    if (_scan.channel.raw == 0) {
+      _mux = chan;
+      write(_mux);
+      conversion();
+      //    _read(&_adcdata, MCP3x6x_ADR_ADCDATA, 4);
+
+      return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
+    }
+
+    // ScanMode
+    for (size_t i = 0; i < sizeof(_channelID); i++) {
+      if (_channelID[i] == chan.raw) {
+        conversion();
+        while (status_dr()) {
+          //        _read(&_adcdata.raw, MCP3x6x_ADR_ADCDATA, 4);
+        }
+
+        return _adcdata.value;
+      }
+    }
+    return -1;
+  }
 
   /**
    * @brief read
@@ -1247,7 +1595,16 @@ class MCP3x6x {
    * @param ch
    * @return int32_t
    */
-  int32_t analogReadContinuous(Mux chan);
+  int32_t analogReadContinuous(Mux chan) {
+    if (isContinuous()) {
+      for (size_t i = 0; i < sizeof(_channelID); i++) {
+        // if (_channelID[i] == ch.raw) {
+        //   return _result.raw[(uint8_t)_adcdata.channelid];
+        // }
+      }
+    }
+    return -1;
+  }
 
   /**
    * @brief mux
@@ -1256,149 +1613,22 @@ class MCP3x6x {
    * @param pinN
    * @return int32_t
    */
-  int32_t analogReadDifferential(Mux pinP, Mux pinN);
+  int32_t analogReadDifferential(Mux pinP, Mux pinN) {
+    _mux = ((uint8_t)pinP.raw << 4) | (uint8_t)pinN.raw;
+    write(_mux);
+
+    conversion();
+    //  _read(&_adcdata, MCP3x6x_ADR_ADCDATA, 4);
+    return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
+  }
 };
 
-///////////////////////////////////////////////////////////////////////////////
-// concrete classes
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * @brief inherited class
- *
- */
-class MCP3461 : public MCP3x6x {
- public:
-  /**
-   * @brief Construct a new MCP3461 object
-   *
-   * @param pinCS
-   * @param pinMISO
-   * @param pinMOSI
-   * @param pinCLK
-   * @param theSPI
-   * @param theSPISettings
-   */
-  MCP3461(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
-          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
-          SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(16, 2, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
-                theSPISettings) {}
-};
-
-/**
- * @brief inherited class
- *
- */
-class MCP3462 : public MCP3x6x {
- public:
-  /**
-   * @brief Construct a new MCP3462 object
-   *
-   * @param pinCS
-   * @param pinMISO
-   * @param pinMOSI
-   * @param pinCLK
-   * @param theSPI
-   * @param theSPISettings
-   */
-  MCP3462(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
-          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
-          SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(16, 4, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
-                theSPISettings) {}
-};
-
-/**
- * @brief inherited class
- *
- */
-class MCP3464 : public MCP3x6x {
- public:
-  /**
-   * @brief Construct a new MCP3464 object
-   *
-   * @param pinCS
-   * @param pinMISO
-   * @param pinMOSI
-   * @param pinCLK
-   * @param theSPI
-   * @param theSPISettings
-   */
-  MCP3464(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
-          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
-          SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(16, 8, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
-                theSPISettings) {}
-};
-
-/**
- * @brief inherited class
- *
- */
-class MCP3561 : public MCP3x6x {
- public:
-  /**
-   * @brief Construct a new MCP3561 object
-   *
-   * @param pinCS
-   * @param pinMISO
-   * @param pinMOSI
-   * @param pinCLK
-   * @param theSPI
-   * @param theSPISettings
-   */
-  MCP3561(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
-          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
-          SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(24, 2, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
-                theSPISettings) {}
-};
-
-/**
- * @brief inherited class
- *
- */
-class MCP3562 : public MCP3x6x {
- public:
-  /**
-   * @brief Construct a new MCP3562 object
-   *
-   * @param pinCS
-   * @param pinMISO
-   * @param pinMOSI
-   * @param pinCLK
-   * @param theSPI
-   * @param theSPISettings
-   */
-  MCP3562(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
-          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
-          SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(24, 4, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
-                theSPISettings) {}
-};
-
-/**
- * @brief inherited class
- *
- */
-class MCP3564 : public MCP3x6x {
- public:
-  /**
-   * @brief Construct a new MCP3564 object
-   *
-   * @param pinCS
-   * @param pinMISO
-   * @param pinMOSI
-   * @param pinCLK
-   * @param theSPI
-   * @param theSPISettings
-   */
-  MCP3564(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI,
-          uint8_t pinCLK = SCK, SPIClass theSPI = SPI,
-          SPISettings theSPISettings = SPISettings())
-      : MCP3x6x(24, 8, pinCS, pinMISO, pinMOSI, pinCLK, theSPI,
-                theSPISettings) {}
-};
+// type aliases for concrete devices:
+using MCP3461 = MCP3x6x<16, 2>;
+using MCP3462 = MCP3x6x<16, 4>;
+using MCP3464 = MCP3x6x<16, 8>;
+using MCP3561 = MCP3x6x<24, 2>;
+using MCP3562 = MCP3x6x<24, 4>;
+using MCP3564 = MCP3x6x<24, 8>;
 
 #endif  // SRC_ARDUINO_MCP3X6X_LIBRARY_HPP_

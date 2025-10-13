@@ -41,6 +41,7 @@ int runUnityTests(void) {
   UNITY_BEGIN();
 
   RUN_TEST(test_instance);
+  RUN_TEST(test_readings);
 
   return UNITY_END();
 }
@@ -80,4 +81,10 @@ void test_instance(void) {
   MCP3461 mcp1();
   MCP3462 mcp2();
   MCP3464 mcp4();
+}
+
+void test_readings(void) {
+  MCP3461 mcp1;
+
+  //  TEST_MESSAGE(String(mcp1.analogRead(0x01)));
 }
