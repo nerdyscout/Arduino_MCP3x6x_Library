@@ -9,7 +9,7 @@
     (title "Adafruit Feather MCP3x62R Breakout")
     (date "2023-10-10")
     (company "Stefan Herold")
-    (comment 1 "https://github.com/nerdyscout/Arduino_MCP3x6x_Library/pcb/Adafruit")
+    (comment 1 "https://gitlab.com/stefanherold/Arduino_MCP3x6x_Library/pcb/Adafruit")
     (comment 2 "FEATHER")
     (comment 4 "CERN-OHL-S-2.0")
   )

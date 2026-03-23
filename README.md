@@ -1,8 +1,8 @@
-# Arduino MCP3x6x/R Library [![build](https://github.com/nerdyscout/Arduino_MCP3x6x_Library/workflows/build/badge.svg)](https://github.com/nerdyscout/Arduino_MCP3x6x_Library/actions/workflows/build.yml)
+# Arduino MCP3x6x/R Library [![build](https://gitlab.com/stefanherold/Arduino_MCP3x6x_Library/workflows/build/badge.svg)](https://gitlab.com/stefanherold/Arduino_MCP3x6x_Library/actions/workflows/build.yml)
 
 Supports Microchip 16bit [MCP3461R/MCP3462R/MCP3464R](https://www.microchip.com/en-us/product/MCP3461r) and 24bit [MCP3561R/MCP3562R/MCP3564R](https://www.microchip.com/en-us/product/MCP3561r) Analog Digital Converters.
 
-Without the `R` in the name seems to be early hardware versions which are [not recommended for designs] anymore. (https://www.microchip.com/en-us/product/MCP3464) anymore. As they do have a subset of features this lib should mostly work as well.
+Without the `R` in the name seems to be early hardware versions which are [not recommended for designs](https://www.microchip.com/en-us/product/MCP3464) anymore. As they do have a subset of features this lib should mostly work as well.
 
 ## Supported Boards
 
@@ -30,8 +30,6 @@ So scan mode requieres two additional pins, pinIQR for the conversion interrupt 
 Both constructors fall back to default definitions which are common in the Arduino world. So if no pins is explicit specified the default SPI pinout will be used. Therefor it boils down to something simple as `MCP3561 mcp(2, 3, 10);` or even `MCP3561 mcp(10);`.
 
 Please take a look at the examples how to configure these different modes.
-
-Further documentation is available [here](http://nerdyscout.github.io/Arduino_MCP3x6x_Library).
 
 ---
 

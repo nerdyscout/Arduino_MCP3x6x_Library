@@ -1,6 +1,5 @@
+# platformio
 .pio
 .vscode/*
 docs/**
-
-# kicad
-*-backup*
+logs/*

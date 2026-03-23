@@ -9,7 +9,7 @@
     (date "2022-12-29")
     (rev "0.1")
     (company "Stefan Herold")
-    (comment 1 "https://github.com/nerdyscout/Arduino_MCP3x6x_Library/pcb/Sparkfun")
+    (comment 1 "https://gitlab.com/stefanherold/Arduino_MCP3x6x_Library/pcb/Sparkfun")
     (comment 2 "ProMicro")
     (comment 4 "CERN-OHL-S-2.0")
   )

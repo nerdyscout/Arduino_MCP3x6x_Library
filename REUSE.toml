@@ -1,7 +1,7 @@
 version = 1
 SPDX-PackageName = "Arduino_MCP3x6x_Library"
 SPDX-PackageSupplier = "Stefan Herold <stefan.herold@posteo.de>"
-SPDX-PackageDownloadLocation = "https://github.com/nerdyscout/Arduino_MCP3x6x_Library"
+SPDX-PackageDownloadLocation = "https://gitlab.com/stefanherold/Arduino_MCP3x6x_Library"
 
 [[annotations]]
 path = ["examples/**", ".clang-format"]
