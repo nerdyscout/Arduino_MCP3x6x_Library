@@ -1646,7 +1646,9 @@ class MCP3x6x : public Stream {
     write(_mux);
 
     conversion();
-    // _read(&_adcdata, MCP3x6x_ADR_ADCDATA, 4);
+    do {
+      read(&_adcdata);
+    } while (!_status.dr);
     return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
   }
 };
