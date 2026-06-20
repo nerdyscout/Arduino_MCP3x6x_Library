@@ -114,10 +114,10 @@ void test_configure_writes_lock_when_changed(void) {
   adc.configure(MCP3x6x_CFG_CONFIG0, MCP3x6x_CFG_CONFIG1, MCP3x6x_CFG_CONFIG2,
                 MCP3x6x_CFG_CONFIG3, MCP3x6x_CFG_IRQ, MCP3x6x_CFG_MUX,
                 MCP3x6x_CFG_SCAN, MCP3x6x_CFG_TIMER, MCP3x6x_CFG_OFFSET,
-                MCP3x6x_CFG_GAIN, (uint8_t)0x00, MCP3x6x_CFG_CRCCFG);
+                MCP3x6x_CFG_GAIN, (uint8_t)0xA5, MCP3x6x_CFG_CRCCFG);
 
   bool found = std::find(spiAddrs.begin(), spiAddrs.end(), ADR_LOCK_WRITE) != spiAddrs.end();
-  TEST_ASSERT_TRUE_MESSAGE(found, "LOCK not written when value changed");
+  TEST_ASSERT_TRUE_MESSAGE(found, "LOCK not written when value changed (0x00→0xA5)");
 }
 
 void test_configure_skips_unchanged(void) {

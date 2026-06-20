@@ -102,7 +102,7 @@ const uint8_t MCP3x6x_CFG_OFFSET[3]    = {0x00, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_GAIN[3]      = {0x80, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_RESERVED2    = 0x50;                //!< default value
-const uint8_t MCP3x6x_CFG_LOCK         = 0xA5;                //!< default value
+const uint8_t MCP3x6x_CFG_LOCK         = 0x00;                //!< default value (unlocked)
 const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
 #endif
 
@@ -958,7 +958,8 @@ class MCP3x6x : public Stream {
    *
    * @param key
    */
-  void unlock() {  // todo
+  void unlock() {
+    _lock.raw = 0x00;
     write(_lock);
   }
 
