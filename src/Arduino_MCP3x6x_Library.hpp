@@ -355,12 +355,12 @@ class MCP3x6x : public Stream {
           case (data_format::SGN_DATA_ZERO):
             return raw >> 16;
           case (data_format::SGN_DATA):
-            bitWrite(raw, 31, bitRead(raw, 16));
-            bitClear(raw, 16);
+            bitWrite(raw, 31, bitRead(raw, 15));
+            bitClear(raw, 15);
             return raw;
           case (data_format::SGNEXT_DATA):
           case (data_format::ID_SGNEXT_DATA):
-            bitWrite(raw, 31, bitRead(raw, 17));
+            bitWrite(raw, 31, bitRead(raw, 16));
             return raw & 0x8000FFFF;
         }
         break;
@@ -370,12 +370,12 @@ class MCP3x6x : public Stream {
           case (data_format::SGN_DATA_ZERO):
             return raw >> 8;
           case (data_format::SGN_DATA):
-            bitWrite(raw, 31, bitRead(raw, 24));
-            bitClear(raw, 24);
+            bitWrite(raw, 31, bitRead(raw, 23));
+            bitClear(raw, 23);
             return raw;
           case (data_format::SGNEXT_DATA):
           case (data_format::ID_SGNEXT_DATA):
-            bitWrite(raw, 31, bitRead(raw, 25));
+            bitWrite(raw, 31, bitRead(raw, 24));
             return raw & 0x80FFFFFF;
         }
         break;
