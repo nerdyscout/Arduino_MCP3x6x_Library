@@ -389,6 +389,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     return -1;
   }
 
+  volatile bool _dataAvailable = false;
   float _reference = 2.4;
     uint8_t _pinCS, _pinMISO, _pinMOSI, _pinCLK;  // SPI pins
   uint8_t _pinIRQ, _pinMCLK;
@@ -1331,7 +1332,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   // stream methodes
   ////////////////////////////////////////////////////////////////////////////////
 
-  int available() override { return status_dr(); }
+  int available() override { return _dataAvailable; }
 
   int read() override {
     static_assert(sizeof(int) >= 4 || _MAX_RESOLUTION <= 16,
@@ -1349,6 +1350,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     uint8_t buffer[4] = {0};
     _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
     _reverse_array(buffer, s);
+    _dataAvailable = false;
     return _getValue((uint32_t&)buffer);
   }
 
@@ -1368,6 +1370,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     // Read the ADC data when IRQ is triggered
     read(&_adcdata);
     _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
+    _dataAvailable = true;
   }
 
   /**
@@ -1612,12 +1615,14 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
         read(&_adcdata);
       } while (!_status.dr);
 
+      _dataAvailable = false;
       return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
     }
 
     // ScanMode — return cached result without restarting scan cycle
     for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
       if (_channelID[i] == chan.raw) {
+        _dataAvailable = false;
         return _result.raw[i];
       }
     }

@@ -90,6 +90,7 @@ void test_IRQ_handler_reads_adcdata() {
   mockStatusByte = 0x04;  // DR=1
   adc.IRQ_handler();
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, spiAddrs[0]);
+  TEST_ASSERT_TRUE(adc.available());
 }
 
 #endif  // PIO_NATIVE_TESTING

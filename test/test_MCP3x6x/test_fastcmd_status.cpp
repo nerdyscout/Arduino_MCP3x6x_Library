@@ -87,13 +87,17 @@ void test_isComplete() {
 }
 
 // ---------------------------------------------------------------------------
-// available() returns status_dr()
+// available() returns _dataAvailable flag
 // ---------------------------------------------------------------------------
 void test_available() {
   TestADC adc;
-  mockStatusByte = 0x04;
-  adc.reset();
-  TEST_ASSERT_EQUAL(adc.status_dr(), adc.available());
+  mockStatusByte = 0x10;
+  adc.begin();
+  TEST_ASSERT_FALSE(adc.available());
+
+  mockStatusByte = 0x04;  // DR=1
+  adc.IRQ_handler();
+  TEST_ASSERT_TRUE(adc.available());
 }
 
 // ---------------------------------------------------------------------------
