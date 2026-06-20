@@ -1419,10 +1419,10 @@ class MCP3x6x : public Stream {
    */
   void enableScanChannel(Mux chan) {
     for (size_t i = 0; i < sizeof(_channelID); i++) {
-      // if (_channelID[i] == ch.raw) {
-      //   bitSet(_scan.channel.raw, i);
-      //   break;
-      // }
+      if (_channelID[i] == chan.raw) {
+        bitSet(_scan.channel.raw, i);
+        break;
+      }
     }
     write(_scan);
   }
@@ -1434,10 +1434,10 @@ class MCP3x6x : public Stream {
    */
   void disableScanChannel(Mux chan) {
     for (size_t i = 0; i < sizeof(_channelID); i++) {
-      // if (_channelID[i] == ch.raw) {
-      //   bitClear(_scan.channel.raw, i);
-      //   break;
-      // }
+      if (_channelID[i] == chan.raw) {
+        bitClear(_scan.channel.raw, i);
+        break;
+      }
     }
     write(_scan);
   }
