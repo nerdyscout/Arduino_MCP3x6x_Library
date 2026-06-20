@@ -659,8 +659,8 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    *
    */
   ~MCP3x6x() {
-    detachInterrupt(digitalPinToInterrupt(_pinIRQ));
-    noTone(_pinMCLK);
+    if (_pinIRQ) detachInterrupt(digitalPinToInterrupt(_pinIRQ));
+    if (_pinMCLK) noTone(_pinMCLK);
     end();
   }
 
