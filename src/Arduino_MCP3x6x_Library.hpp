@@ -1591,11 +1591,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @return false if single ended mode is set
    */
   bool isDifferential() {
-    // Check if the current MUX configuration is for differential mode
-    // Differential channels are typically CH0-CH1, CH2-CH3, etc.
-    // or specific differential pairs defined in the datasheet
-    return (_mux.vin_plus < 8 && _mux.vin_minus < 8 && (_mux.vin_plus % 2 == 0) &&
-            (_mux.vin_minus == _mux.vin_plus + 1));
+    return (_mux.vin_plus < 8 && _mux.vin_minus < 8 && _mux.vin_plus != _mux.vin_minus);
   }
 
   /**
