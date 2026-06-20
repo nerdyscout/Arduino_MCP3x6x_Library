@@ -51,12 +51,7 @@
 #define MCP3x6x_CH1    (byte)(0x18)  //!< corresponding mux setting
 #define MCP3x6x_CH0    (byte)(0x08)  //!< corresponding mux setting
 
-#define MCP3461_DEVICE_TYPE (uint16_t)(0x0008)  //!< MCP3461 device ID
-#define MCP3462_DEVICE_TYPE (uint16_t)(0x0009)  //!< MCP3462 device ID
-#define MCP3464_DEVICE_TYPE (uint16_t)(0x000B)  //!< MCP3464 device ID
-#define MCP3561_DEVICE_TYPE (uint16_t)(0x000C)  //!< MCP3561 device ID
-#define MCP3562_DEVICE_TYPE (uint16_t)(0x000D)  //!< MCP3562 device ID
-#define MCP3564_DEVICE_TYPE (uint16_t)(0x000F)  //!< MCP3564 device ID
+// (device ID defines removed — unused; device type is a template parameter)
 
 #ifndef MCP3x6x_SPI_ADR
   #define MCP3x6x_SPI_ADR (byte)(0b01000000)  //!< DEVICE ADDRESS
@@ -622,27 +617,26 @@ class MCP3x6x : public Stream {
   ////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * @brief Construct a new MCP3x6x object
+   * @brief Construct a new MCP3x6x object (mux mode)
    *
    * @param pinCS
-   * @param theSPI
-   * @param theSPISettings
    * @param pinMOSI
    * @param pinMISO
    * @param pinCLK
+   * @param theSPI
+   * @param theSPISettings
    */
   MCP3x6x(uint8_t pinCS = SS, uint8_t pinMOSI = MOSI, uint8_t pinMISO = MISO, uint8_t pinCLK = SCK,
           SPIClass* theSPI           = &SPI,
           SPISettings theSPISettings = SPISettings())
-      :  // pins
-        _pinCS(pinCS),
+      : _pinCS(pinCS),
         _pinMISO(pinMISO),
         _pinMOSI(pinMOSI),
         _pinCLK(pinCLK),
-        // spi
+        _pinIRQ(0),
+        _pinMCLK(0),
         _spi(theSPI),
         _spiSettings(theSPISettings),
-        // registers
         _config0(MCP3x6x_CFG_CONFIG0),
         _config1(MCP3x6x_CFG_CONFIG1),
         _config2(MCP3x6x_CFG_CONFIG2),
@@ -654,11 +648,42 @@ class MCP3x6x : public Stream {
         _offset(MCP3x6x_CFG_OFFSET),
         _gain(MCP3x6x_CFG_GAIN),
         _lock(MCP3x6x_CFG_LOCK),
-        _crccfg(MCP3x6x_CFG_CRCCFG),
-        _pinIRQ(0),
-        _pinMCLK(0) {
-    //  _channel_mask |= 0xff <<  _channel_count;  // todo
-  }
+        _crccfg(MCP3x6x_CFG_CRCCFG) {}
+
+  /**
+   * @brief Construct a new MCP3x6x object (scan mode)
+   *
+   * @param pinIRQ
+   * @param pinMCLK
+   * @param pinCS
+   * @param pinMOSI
+   * @param pinMISO
+   * @param pinCLK
+   * @param theSPI
+   * @param theSPISettings
+   */
+  MCP3x6x(uint8_t pinIRQ, uint8_t pinMCLK, uint8_t pinCS, uint8_t pinMOSI, uint8_t pinMISO,
+          uint8_t pinCLK, SPIClass* theSPI = &SPI, SPISettings theSPISettings = SPISettings())
+      : _pinCS(pinCS),
+        _pinMISO(pinMISO),
+        _pinMOSI(pinMOSI),
+        _pinCLK(pinCLK),
+        _pinIRQ(pinIRQ),
+        _pinMCLK(pinMCLK),
+        _spi(theSPI),
+        _spiSettings(theSPISettings),
+        _config0(MCP3x6x_CFG_CONFIG0),
+        _config1(MCP3x6x_CFG_CONFIG1),
+        _config2(MCP3x6x_CFG_CONFIG2),
+        _config3(MCP3x6x_CFG_CONFIG3),
+        _irq(MCP3x6x_CFG_IRQ),
+        _mux(MCP3x6x_CFG_MUX),
+        _scan(MCP3x6x_CFG_SCAN),
+        _timer(MCP3x6x_CFG_TIMER),
+        _offset(MCP3x6x_CFG_OFFSET),
+        _gain(MCP3x6x_CFG_GAIN),
+        _lock(MCP3x6x_CFG_LOCK),
+        _crccfg(MCP3x6x_CFG_CRCCFG) {}
 
   /**
    * @brief Destroy the MCP3x6x object
@@ -1468,23 +1493,11 @@ class MCP3x6x : public Stream {
     write(_config1);
   }
 
-  /**
-   * @brief set resolution to specific amount of bits
-   *
-   * @param bits
-   */
-  void setResolution(size_t bits) { analogReadResolution(bits); }
+  void setOversamplingRatio(osr rate) { setAveraging(rate); }
 
-  /**
-   * @brief set resolution to specific amount of bits
-   *
-   * @param bits
-   */
-  void analogReadResolution(size_t bits) {
-    if (bits <= _MAX_RESOLUTION) {
-      // _resolution = bits;
-    }
-  }
+  void setResolution(size_t bits) {}
+
+  void analogReadResolution(size_t bits) {}
 
   /**
    * @brief set reference voltage
@@ -1562,6 +1575,19 @@ class MCP3x6x : public Stream {
       return true;
     }
     return false;
+  }
+
+  /**
+   * @brief start scan mode: configure IRQ pin and set ADC to Conversion
+   *
+   */
+  void startScan() {
+    _irq.en_fastcmd = 1;
+    _irq.irq_mode   = 0b01;  // IRQ pin shows DR flag (open drain)
+    write(_irq);
+    _config0.adc = adc_mode::CONVERSION;
+    write(_config0);
+    conversion();
   }
 
   /**
