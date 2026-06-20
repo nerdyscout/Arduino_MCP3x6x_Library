@@ -4,7 +4,7 @@
 /**
  * @file Arduino_MCP3x6x_Library.hpp
  * @author Stefan Herold (stefan.herold@posteo.de)
- * @brief Library to support Microchip MPC3x6x/R 16/24bit ADCs
+ * @brief Library to support Microchip MCP3x6x/R 16/24bit ADCs
  * @version 0.1.0
  * @date 2026-03-23
  *
@@ -71,7 +71,7 @@
 #define MCP3x6x_CMD_IREAD         (byte)(MCP3x6x_SPI_ADR | 0b000011)  //!< fast command
 #define MCP3x6x_CMD_IWRITE        (byte)(MCP3x6x_SPI_ADR | 0b000010)  //!< fast command
 
-#define MCP3x6x_ADR_ADCDATA   (byte)(MCP3x6x_SPI_ADR | (0x0 << 2))  //!< Register ADCDdata address
+#define MCP3x6x_ADR_ADCDATA   (byte)(MCP3x6x_SPI_ADR | (0x0 << 2))  //!< Register ADCDATA address
 #define MCP3x6x_ADR_CONFIG0   (byte)(MCP3x6x_SPI_ADR | (0x1 << 2))  //!< Register Config0 address
 #define MCP3x6x_ADR_CONFIG1   (byte)(MCP3x6x_SPI_ADR | (0x2 << 2))  //!< Register Config1 address
 #define MCP3x6x_ADR_CONFIG2   (byte)(MCP3x6x_SPI_ADR | (0x3 << 2))  //!< Register Config2 address
@@ -654,7 +654,9 @@ class MCP3x6x : public Stream {
         _offset(MCP3x6x_CFG_OFFSET),
         _gain(MCP3x6x_CFG_GAIN),
         _lock(MCP3x6x_CFG_LOCK),
-        _crccfg(MCP3x6x_CFG_CRCCFG) {
+        _crccfg(MCP3x6x_CFG_CRCCFG),
+        _pinIRQ(0),
+        _pinMCLK(0) {
     //  _channel_mask |= 0xff <<  _channel_count;  // todo
   }
 
@@ -809,11 +811,13 @@ class MCP3x6x : public Stream {
    * @param clk
    * @param vref_sel
    */
-  void config0(enum adc_mode adc, enum cs_sel bias, enum clk_sel clk, bool vref_sel) {
+  void config0(enum adc_mode adc, enum cs_sel bias, enum clk_sel clk, bool vref_sel,
+               bool cfg0 = 0) {
     _config0.adc      = adc;
     _config0.bias     = bias;
     _config0.clk      = clk;
     _config0.vref_sel = vref_sel;
+    _config0.cfg0     = cfg0;
 
     write(_config0);
   }
@@ -1491,8 +1495,10 @@ class MCP3x6x : public Stream {
     if (vref == 0.0) {
       vref              = 2.4;
       _config0.vref_sel = 1;
-      write(_config0);
+    } else {
+      _config0.vref_sel = 0;
     }
+    write(_config0);
     _reference = vref;
   }
 
@@ -1633,9 +1639,9 @@ class MCP3x6x : public Stream {
   int32_t analogReadContinuous(Mux chan) {
     if (isContinuous()) {
       for (size_t i = 0; i < sizeof(_channelID); i++) {
-        // if (_channelID[i] == ch.raw) {
-        //   return _result.raw[(uint8_t)_adcdata.channelid];
-        // }
+        if (_channelID[i] == chan.raw) {
+          return _result.raw[(uint8_t)_adcdata.channelid];
+        }
       }
     }
     return -1;
