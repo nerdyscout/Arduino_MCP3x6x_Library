@@ -620,7 +620,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   ////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * @brief Construct a new MCP3x6x object (mux mode)
+   * @brief Construct a new MCP3x6x object
    *
    * @param pinCS
    * @param pinMOSI
@@ -639,42 +639,6 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
         _pinCLK(pinCLK),
         _pinIRQ(0),
         _pinMCLK(0),
-        _spi(theSPI),
-        _spiSettings(theSPISettings),
-        _config0(MCP3x6x_CFG_CONFIG0),
-        _config1(MCP3x6x_CFG_CONFIG1),
-        _config2(MCP3x6x_CFG_CONFIG2),
-        _config3(MCP3x6x_CFG_CONFIG3),
-        _irq(MCP3x6x_CFG_IRQ),
-        _mux(MCP3x6x_CFG_MUX),
-        _scan(MCP3x6x_CFG_SCAN),
-        _timer(MCP3x6x_CFG_TIMER),
-        _offset(MCP3x6x_CFG_OFFSET),
-        _gain(MCP3x6x_CFG_GAIN),
-        _lock(MCP3x6x_CFG_LOCK),
-        _crccfg(MCP3x6x_CFG_CRCCFG) {}
-
-  /**
-   * @brief Construct a new MCP3x6x object (scan mode)
-   *
-   * @param pinIRQ
-   * @param pinMCLK
-   * @param pinCS
-   * @param pinMOSI
-   * @param pinMISO
-   * @param pinCLK
-   * @param theSPI
-   * @param theSPISettings
-   */
-  explicit MCP3x6x(uint8_t pinIRQ, uint8_t pinMCLK, uint8_t pinCS, uint8_t pinMOSI, uint8_t pinMISO,
-          uint8_t pinCLK, SPIClass* theSPI = &SPI, SPISettings theSPISettings = SPISettings())
-      : _result{},
-        _pinCS(pinCS),
-        _pinMISO(pinMISO),
-        _pinMOSI(pinMOSI),
-        _pinCLK(pinCLK),
-        _pinIRQ(pinIRQ),
-        _pinMCLK(pinMCLK),
         _spi(theSPI),
         _spiSettings(theSPISettings),
         _config0(MCP3x6x_CFG_CONFIG0),

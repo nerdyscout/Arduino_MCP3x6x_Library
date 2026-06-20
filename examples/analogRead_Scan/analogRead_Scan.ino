@@ -24,6 +24,7 @@ void setup() {
 
   mcp.enableScanChannel(MCP3x6x_CH0);
   mcp.enableScanChannel(MCP3x6x_CH1);
+  mcp.startScan();
 }
 
 // the loop routine runs over and over again forever:

@@ -23,6 +23,7 @@ void setup() {
   mcp.attachIRQ(6, mcp_wrapper);
 
   mcp.enableScanChannel(MCP3x6x_DIFFA);
+  mcp.startScan();
 }
 
 // the loop routine runs over and over again forever:

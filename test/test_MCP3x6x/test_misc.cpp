@@ -161,14 +161,6 @@ void test_mux_constructor() {
 }
 
 // ---------------------------------------------------------------------------
-// Scan constructor creates valid instance (no crash)
-// ---------------------------------------------------------------------------
-void test_scan_constructor() {
-  TestADC adc(2, 3, 10, 11, 12, 13);
-  TEST_ASSERT_TRUE(true);
-}
-
-// ---------------------------------------------------------------------------
 // end() calls SPI.end() — verified by no crash
 // ---------------------------------------------------------------------------
 void test_end_calls_spi_end() {
@@ -217,7 +209,6 @@ void register_misc_tests() {
   RUN_TEST(test_setAdcMode_writes_config0);
   RUN_TEST(test_setClockSelection_writes_config0);
   RUN_TEST(test_mux_constructor);
-  RUN_TEST(test_scan_constructor);
   RUN_TEST(test_end_calls_spi_end);
   RUN_TEST(test_setResolution_noop);
   RUN_TEST(test_analogReadResolution_noop);

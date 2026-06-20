@@ -56,11 +56,6 @@ T* createADC() {
   return new T();
 }
 
-template <typename T>
-T* createADCScan(uint8_t irq, uint8_t mclk) {
-  return new T(irq, mclk, SS, MOSI, MISO, SCK);
-}
-
 // ---------------------------------------------------------------------------
 // Friend struct for testing private members
 // ---------------------------------------------------------------------------
