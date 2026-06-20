@@ -1113,6 +1113,7 @@ class MCP3x6x : public Stream {
    * @return status_t
    */
   inline status_t write(Scan data) {
+    _reverse_array(data.raw, 3);
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_SCAN, 3);
   }
 
@@ -1123,6 +1124,7 @@ class MCP3x6x : public Stream {
    * @return status_t
    */
   inline status_t write(Timer data) {
+    _reverse_array(data.raw, 3);
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_TIMER, 3);
   }
 
@@ -1133,6 +1135,7 @@ class MCP3x6x : public Stream {
    * @return status_t
    */
   inline status_t write(Offset data) {
+    _reverse_array(data.raw, 3);
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_OFFSET, 3);
   }
 
@@ -1143,6 +1146,7 @@ class MCP3x6x : public Stream {
    * @return status_t
    */
   inline status_t write(Gain data) {
+    _reverse_array(data.raw, 3);
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_GAIN, 3);
   }
 
@@ -1163,6 +1167,7 @@ class MCP3x6x : public Stream {
    * @return status_t
    */
   inline status_t write(Crccfg data) {
+    _reverse_array(data.raw, 2);
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CRCCFG, 2);
   }
 

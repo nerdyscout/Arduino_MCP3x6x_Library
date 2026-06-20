@@ -152,10 +152,11 @@ void test_enable_scan_channel_sets_bit(void) {
   // verify SCAN register was written with bit 0 set
   for (size_t i = 0; i < spiAddrs.size(); i++) {
     if (spiAddrs[i] == ADR_SCAN_WRITE) {
-      // SCAN register: raw[0] contains channel bits (little-endian)
+      // SCAN register: raw reversed to MSB-first before SPI send.
+      // Channel bits (bit 0 = CH0) end up in the LAST byte (index 2).
       TEST_ASSERT_TRUE_MESSAGE(spiData[i].size() == 3,
                                "SCAN write should transfer 3 bytes");
-      TEST_ASSERT_TRUE_MESSAGE(spiData[i][0] & 0x01,
+      TEST_ASSERT_TRUE_MESSAGE(spiData[i][2] & 0x01,
                                "SCAN bit 0 (CH0) was not set");
       return;
     }
@@ -180,7 +181,7 @@ void test_disable_scan_channel_clears_bit(void) {
     if (spiAddrs[i] == ADR_SCAN_WRITE) {
       TEST_ASSERT_TRUE_MESSAGE(spiData[i].size() == 3,
                                "SCAN write should transfer 3 bytes");
-      TEST_ASSERT_TRUE_MESSAGE(!(spiData[i][0] & 0x01),
+      TEST_ASSERT_TRUE_MESSAGE(!(spiData[i][2] & 0x01),
                                "SCAN bit 0 (CH0) was not cleared");
       return;
     }
