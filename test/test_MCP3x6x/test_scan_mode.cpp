@@ -46,12 +46,14 @@ void test_startScan_configures_irq_adc_conversion() {
 
   adc.startScan();
   // 1: write IRQ (en_fastcmd=1, irq_mode=01)
-  // 2: write CONFIG0 (adc=CONVERSION)
-  // 3: fastcmd CONVERSION
-  TEST_ASSERT(spiAddrs.size() >= 3);
+  // 2: write CONFIG3 (ID_SGNEXT_DATA)
+  // 3: write CONFIG0 (adc=CONVERSION)
+  // 4: fastcmd CONVERSION
+  TEST_ASSERT(spiAddrs.size() >= 4);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[0]);
-  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[1]);
-  TEST_ASSERT_EQUAL(MCP3x6x_CMD_CONVERSION, spiAddrs[2]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[1]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[2]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_CONVERSION, spiAddrs[3]);
 }
 
 // ---------------------------------------------------------------------------

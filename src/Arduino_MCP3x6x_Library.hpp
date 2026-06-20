@@ -1554,6 +1554,8 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     _irq.en_fastcmd = 1;
     _irq.irq_mode   = 0b01;  // IRQ pin shows DR flag (open drain)
     write(_irq);
+    _config3.data_format = data_format::ID_SGNEXT_DATA;
+    write(_config3);
     _config0.adc = adc_mode::CONVERSION;
     write(_config0);
     conversion();
