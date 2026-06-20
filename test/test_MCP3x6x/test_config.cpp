@@ -15,7 +15,9 @@ void test_configure_writes_irq() {
   adc.configure(MCP3x6x_CFG_CONFIG0, MCP3x6x_CFG_CONFIG1, MCP3x6x_CFG_CONFIG2, MCP3x6x_CFG_CONFIG3,
                 0x00, MCP3x6x_CFG_MUX, MCP3x6x_CFG_SCAN, MCP3x6x_CFG_TIMER, MCP3x6x_CFG_OFFSET,
                 MCP3x6x_CFG_GAIN, MCP3x6x_CFG_LOCK, MCP3x6x_CFG_CRCCFG);
-  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[0]);   // unlock
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[1]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[2]);   // re-lock
 }
 
 // ---------------------------------------------------------------------------
@@ -28,7 +30,9 @@ void test_configure_writes_mux() {
   adc.configure(MCP3x6x_CFG_CONFIG0, MCP3x6x_CFG_CONFIG1, MCP3x6x_CFG_CONFIG2, MCP3x6x_CFG_CONFIG3,
                 MCP3x6x_CFG_IRQ, 0x01, MCP3x6x_CFG_SCAN, MCP3x6x_CFG_TIMER, MCP3x6x_CFG_OFFSET,
                 MCP3x6x_CFG_GAIN, MCP3x6x_CFG_LOCK, MCP3x6x_CFG_CRCCFG);
-  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[0]);  // unlock
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[1]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[2]);  // re-lock
 }
 
 // ---------------------------------------------------------------------------
@@ -41,7 +45,10 @@ void test_configure_writes_lock() {
   adc.configure(MCP3x6x_CFG_CONFIG0, MCP3x6x_CFG_CONFIG1, MCP3x6x_CFG_CONFIG2, MCP3x6x_CFG_CONFIG3,
                 MCP3x6x_CFG_IRQ, MCP3x6x_CFG_MUX, MCP3x6x_CFG_SCAN, MCP3x6x_CFG_TIMER,
                 MCP3x6x_CFG_OFFSET, MCP3x6x_CFG_GAIN, 0xA5, MCP3x6x_CFG_CRCCFG);
-  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[0]);  // unlock (0x00)
+  size_t last = spiAddrs.size() - 1;
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[last]);
+  TEST_ASSERT_EQUAL(0xA5, spiData[last][0]);  // user's lock value
 }
 
 // ---------------------------------------------------------------------------
@@ -51,11 +58,13 @@ void test_configure_skips_unchanged() {
   TestADC adc;
   adc.begin();
   setUp();
-  size_t prevCount = spiAddrs.size();
   adc.configure(MCP3x6x_CFG_CONFIG0, MCP3x6x_CFG_CONFIG1, MCP3x6x_CFG_CONFIG2, MCP3x6x_CFG_CONFIG3,
                 MCP3x6x_CFG_IRQ, MCP3x6x_CFG_MUX, MCP3x6x_CFG_SCAN, MCP3x6x_CFG_TIMER,
                 MCP3x6x_CFG_OFFSET, MCP3x6x_CFG_GAIN, MCP3x6x_CFG_LOCK, MCP3x6x_CFG_CRCCFG);
-  TEST_ASSERT_EQUAL(prevCount, spiAddrs.size());
+  // unlock + re-lock always occur; registers unchanged are skipped
+  TEST_ASSERT_EQUAL(2, spiAddrs.size());
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[1]);
 }
 
 // ---------------------------------------------------------------------------
@@ -186,6 +195,8 @@ void test_write_Config2() {
   setUp();
   adc.write(MCP3x6xTest::Config2<TestADC>(0x00));
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(1, spiData.size());
+  TEST_ASSERT(spiData[0][0] & 0x80);  // datasheet requires bit 7 = 1
 }
 
 void test_write_Config3() {
@@ -302,6 +313,29 @@ void test_ADCDATA_read_24bit_3bytes() {
   TEST_ASSERT_EQUAL(3, spiData[0].size());
 }
 
+// ---------------------------------------------------------------------------
+// config2() az_ref parameter
+// ---------------------------------------------------------------------------
+void test_config2_az_ref_true() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  adc.config2(false, TestADC::GAIN_1, TestADC::BOOST_2, true);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(1, spiData.size());
+  TEST_ASSERT(spiData[0][0] & 0x40);  // az_ref = bit 6
+}
+
+void test_config2_az_ref_default_false() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  adc.config2(false, TestADC::GAIN_1, TestADC::BOOST_2);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(1, spiData.size());
+  TEST_ASSERT_FALSE(spiData[0][0] & 0x40);  // az_ref not set by default
+}
+
 #endif  // PIO_NATIVE_TESTING
 
 // ---------------------------------------------------------------------------
@@ -317,6 +351,8 @@ void register_config_tests() {
   RUN_TEST(test_config1_writes_correct_addr);
   RUN_TEST(test_config2_writes_correct_addr);
   RUN_TEST(test_config3_writes_correct_addr);
+  RUN_TEST(test_config2_az_ref_true);
+  RUN_TEST(test_config2_az_ref_default_false);
   RUN_TEST(test_irq_writes_correct_addr);
   RUN_TEST(test_mux_writes_correct_addr);
   RUN_TEST(test_scan_writes_correct_addr);

@@ -117,6 +117,56 @@ void test_startContinuousDifferential() {
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_CONVERSION, spiAddrs[2]);
 }
 
+// ---------------------------------------------------------------------------
+// startScan() custom irq_mode
+// ---------------------------------------------------------------------------
+void test_startScan_custom_irq_mode() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+
+  adc.startScan(0b00);
+
+  TEST_ASSERT(spiAddrs.size() >= 4);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(0b00, (spiData[0][0] >> 2) & 0x03);  // irq_mode bits 3:2
+}
+
+// ---------------------------------------------------------------------------
+// startScan() custom data_format
+// ---------------------------------------------------------------------------
+void test_startScan_custom_data_format() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+
+  adc.startScan(0b01, TestADC::SGNEXT_DATA);
+
+  TEST_ASSERT(spiAddrs.size() >= 4);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[1]);
+  TEST_ASSERT_EQUAL(2, ((spiData[1][0] >> 4) & 0x03));  // SGNEXT_DATA = 2
+}
+
+// ---------------------------------------------------------------------------
+// startScan() defaults match original hardcoded values
+// ---------------------------------------------------------------------------
+void test_startScan_defaults_match_original() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+
+  adc.startScan();
+
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(0b01, (spiData[0][0] >> 2) & 0x03);  // irq_mode = 0b01
+
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[1]);
+  TEST_ASSERT_EQUAL(3, (spiData[1][0] >> 4) & 0x03);  // ID_SGNEXT_DATA = 3
+
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[2]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_CONVERSION, spiAddrs[3]);
+}
+
 #endif  // PIO_NATIVE_TESTING
 
 // ---------------------------------------------------------------------------
@@ -132,5 +182,8 @@ void register_scan_mode_tests() {
   RUN_TEST(test_isContinuous_true);
   RUN_TEST(test_isContinuous_false);
   RUN_TEST(test_startContinuousDifferential);
+  RUN_TEST(test_startScan_custom_irq_mode);
+  RUN_TEST(test_startScan_custom_data_format);
+  RUN_TEST(test_startScan_defaults_match_original);
 #endif
 }

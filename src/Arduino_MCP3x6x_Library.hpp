@@ -456,7 +456,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
       enum gain gain   : 3;  //!< ADC Gain Selection (bits 4:2)
       bool az_mux      : 1;  //!< Auto-Zeroing MUX Setting (bit 5)
       bool az_ref      : 1;  //!< Auto-Zeroing Reference Buffer Setting (bit 6)
-      uint8_t          : 1;  //!< reserved, should always be '1' (bit 7)
+      bool reserved7   : 1;  //!< reserved, must always be '1' (bit 7)
     };
     uint8_t raw;  //!< raw access to register
     Config2(const uint8_t data) : raw(data) {}
@@ -766,6 +766,8 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   void configure(Config0 config0, Config1 config1, Config2 config2, Config3 config3, Irq irq,
                  Mux mux, Scan scan, Timer timer, Offset offset, Gain gain, Lock lock,
                  Crccfg crccfg) {
+    unlock();
+
     if (_config0.raw != config0.raw) {
       write(_config0 = config0);
     }
@@ -806,13 +808,12 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
       write(_gain = gain);
     }
 
-    if (_lock.raw != lock.raw) {
-      write(_lock = lock);
-    }
-
     if (memcmp(_crccfg.raw, crccfg.raw, sizeof(crccfg))) {
       write(_crccfg = crccfg);
     }
+
+    _lock = lock;
+    write(_lock);
   }
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -888,10 +889,11 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param gain
    * @param boost
    */
-  void config2(bool az_mux, enum gain gain, enum boost boost) {
+  void config2(bool az_mux, enum gain gain, enum boost boost, bool az_ref = false) {
     _config2.az_mux = az_mux;
     _config2.gain   = gain;
     _config2.boost  = boost;
+    _config2.az_ref = az_ref;
     write(_config2);
   }
 
@@ -1125,6 +1127,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @return status_t
    */
   inline status_t write(Config2 data) {
+    data.reserved7 = 1;  // datasheet requires bit 7 always = 1
     return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, 1);
   }
 
@@ -1679,11 +1682,12 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @brief start scan mode: configure IRQ pin and set ADC to Conversion
    *
    */
-  void startScan() {
-    _irq.en_fastcmd = 1;
-    _irq.irq_mode   = 0b01;  // IRQ pin shows DR flag (open drain)
+  void startScan(uint8_t irq_mode = 0b01,
+                 data_format fmt = data_format::ID_SGNEXT_DATA) {
+    _irq.en_fastcmd           = 1;
+    _irq.irq_mode             = irq_mode;
     write(_irq);
-    _config3.data_format = data_format::ID_SGNEXT_DATA;
+    _config3.data_format      = fmt;
     write(_config3);
     _config0.adc = adc_mode::CONVERSION;
     write(_config0);
