@@ -88,9 +88,9 @@ void test_isDifferential_true() {
 // ---------------------------------------------------------------------------
 // Stream interface: peek() returns 1
 // ---------------------------------------------------------------------------
-void test_peek_returns_1() {
+void test_peek_returns_minus_1() {
   TestADC adc;
-  TEST_ASSERT_EQUAL(1, adc.peek());
+  TEST_ASSERT_EQUAL(-1, adc.peek());
 }
 
 // ---------------------------------------------------------------------------
@@ -200,7 +200,7 @@ void register_misc_tests() {
   RUN_TEST(test_differentialMode);
   RUN_TEST(test_isDifferential_false);
   RUN_TEST(test_isDifferential_true);
-  RUN_TEST(test_peek_returns_1);
+  RUN_TEST(test_peek_returns_minus_1);
   RUN_TEST(test_write_returns_0);
   RUN_TEST(test_flush_noop);
   RUN_TEST(test_setAveraging_writes_config1);

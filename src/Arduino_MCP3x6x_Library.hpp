@@ -1354,7 +1354,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
 
   size_t write(uint8_t data) override { return 0; }
 
-  int peek() override { return 1; }
+  int peek() override { return -1; }
 
   ///////////////////////////////////////////////////////////////////////////////
   //
