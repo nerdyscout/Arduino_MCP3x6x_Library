@@ -29,9 +29,9 @@
   #ifndef MCP3x6x_DEBUG_INTERFACE
     #define MCP3x6x_DEBUG_INTERFACE Serial.print
   #endif
-  #define MCP3x6x_LOG(msg) MCP3x6x_DEBUG_INTERFACE(msg)
+  #define MCP3x6x_LOG(...) MCP3x6x_DEBUG_INTERFACE(__VA_ARGS__)
 #else
-  #define MCP3x6x_LOG(msg)
+  #define MCP3x6x_LOG(...)
 #endif
 
 #define MCP3x6x_OFFSET (byte)(0x88)  //!< corresponding mux setting
@@ -203,6 +203,17 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     GAIN_2   = 2,  //!< Gain is x2
     GAIN_1   = 1,  //!< Gain is x1 (default)
     GAIN_033 = 0   //!< Gain is x 1/3
+  };
+
+  /**
+   * @brief IRQ/MDAT Pin Configuration
+   *
+   */
+  enum __attribute__((packed)) irq_mode : uint8_t {
+    IRQ_OFF            = 0,  //!< Hi-Z (pin disabled)
+    IRQ_OPEN_DRAIN     = 1,  //!< IRQ output, open drain, active low
+    IRQ_PUSH_PULL_LOW  = 2,  //!< IRQ output, push-pull, active low
+    IRQ_PUSH_PULL_HIGH = 3   //!< IRQ output, push-pull, active high
   };
 
   /**
@@ -924,10 +935,10 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param por_status
    * @param irq_mode
    */
-  void irq(bool stp, bool fastcmd, uint8_t irq_mode) {
+  void irq(bool stp, bool fastcmd, enum irq_mode mode) {
     _irq.en_stp     = stp;
     _irq.en_fastcmd = fastcmd;
-    _irq.irq_mode   = irq_mode;
+    _irq.irq_mode   = (uint8_t)mode;
     write(_irq);
   }
 
@@ -1080,8 +1091,11 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   inline status_t shutdown() { return _fastcmd(MCP3x6x_CMD_SHUTDOWN); }
 
   /**
-   * @brief Fast Command
+   * @brief Fast Command — Full Shutdown (lowest power)
    *
+   * @warning Datasheet errata: AVDD and DVDD must drop below 100 mV before
+   *          power is reapplied after Full Shutdown, otherwise CHIPID bits
+   *          may be corrupted.
    * @return status_t
    */
   inline status_t full_shutdown() { return _fastcmd(MCP3x6x_CMD_FULL_SHUTDOWN); }
@@ -1168,6 +1182,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @return status_t
    */
   inline status_t write(Scan data) {
+    data.reserved = 0;  // datasheet requires bit 20 = 0
     _reverse_array(data.raw, 3);
     return _transfer(data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_SCAN, 3);
   }
@@ -1411,9 +1426,9 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     return _getValue((uint32_t&)buffer);
   }
 
-  size_t write(uint8_t data) override { return 0; }
+  size_t write(uint8_t data) override { return 0; }  // ADC does not support Stream writes
 
-  int peek() override { return -1; }
+  int peek() override { return _dataAvailable ? (int)_adcdata.value : -1; }
 
   ///////////////////////////////////////////////////////////////////////////////
   //
@@ -1525,9 +1540,9 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
 
   void setOversamplingRatio(osr rate) { setAveraging(rate); }
 
-  void setResolution(size_t bits) {}
+  void setResolution(size_t bits) {}  // not applicable for fixed-resolution external ADC
 
-  void analogReadResolution(size_t bits) {}
+  void analogReadResolution(size_t bits) {}  // not applicable for fixed-resolution external ADC
 
   /**
    * @brief set reference voltage
@@ -1551,6 +1566,13 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @return float
    */
   float getReference() { return _reference; }
+
+  /**
+   * @brief get SPI device address from last status byte
+   *
+   * @return uint8_t device address (0-3)
+   */
+  uint8_t getDeviceAddress() { return (~_status.addr) & 0x07; }
 
   /**
    * @brief convert raw ADC value to microvolts
@@ -1682,10 +1704,10 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @brief start scan mode: configure IRQ pin and set ADC to Conversion
    *
    */
-  void startScan(uint8_t irq_mode = 0b01,
-                 data_format fmt = data_format::ID_SGNEXT_DATA) {
+  void startScan(enum irq_mode mode = IRQ_OPEN_DRAIN,
+                 data_format fmt  = data_format::ID_SGNEXT_DATA) {
     _irq.en_fastcmd           = 1;
-    _irq.irq_mode             = irq_mode;
+    _irq.irq_mode             = (uint8_t)mode;
     write(_irq);
     _config3.data_format      = fmt;
     write(_config3);
@@ -1808,5 +1830,8 @@ using MCP3464 = MCP3x6x<16, 8>;
 using MCP3561 = MCP3x6x<24, 2>;
 using MCP3562 = MCP3x6x<24, 4>;
 using MCP3564 = MCP3x6x<24, 8>;
+
+using MCP3465 = MCP3x6x<16, 2>;  // 2-channel UQFN variant
+using MCP3565 = MCP3x6x<24, 2>;  // 2-channel UQFN variant
 
 #endif  // SRC_ARDUINO_MCP3X6X_LIBRARY_HPP_

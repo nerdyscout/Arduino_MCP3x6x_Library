@@ -125,11 +125,11 @@ void test_startScan_custom_irq_mode() {
   adc.begin();
   setUp();
 
-  adc.startScan(0b00);
+  adc.startScan(TestADC::IRQ_OFF);
 
   TEST_ASSERT(spiAddrs.size() >= 4);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[0]);
-  TEST_ASSERT_EQUAL(0b00, (spiData[0][0] >> 2) & 0x03);  // irq_mode bits 3:2
+  TEST_ASSERT_EQUAL(0, (spiData[0][0] >> 2) & 0x03);  // IRQ_OFF = 0
 }
 
 // ---------------------------------------------------------------------------
@@ -140,7 +140,7 @@ void test_startScan_custom_data_format() {
   adc.begin();
   setUp();
 
-  adc.startScan(0b01, TestADC::SGNEXT_DATA);
+  adc.startScan(TestADC::IRQ_OPEN_DRAIN, TestADC::SGNEXT_DATA);
 
   TEST_ASSERT(spiAddrs.size() >= 4);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[1]);

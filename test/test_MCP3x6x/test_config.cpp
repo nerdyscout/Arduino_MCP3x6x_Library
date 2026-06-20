@@ -118,7 +118,7 @@ void test_irq_writes_correct_addr() {
   TestADC adc;
   adc.begin();
   setUp();
-  adc.irq(false, false, 0);
+  adc.irq(false, false, TestADC::IRQ_OFF);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[0]);
 }
 
@@ -227,9 +227,13 @@ void test_write_Scan() {
   TestADC adc;
   adc.begin();
   setUp();
-  uint8_t scanData[3] = {0x01, 0x02, 0x03};
+  uint8_t scanData[3] = {0xFF, 0xFF, 0xFF};
   adc.write(MCP3x6xTest::Scan<TestADC>(scanData));
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_SCAN, spiAddrs[0]);
+  // reserved bit 20 (bit 4 of byte 2) must be forced to 0
+  TEST_ASSERT_EQUAL(1, spiData.size());
+  TEST_ASSERT_EQUAL(3, spiData[0].size());
+  TEST_ASSERT_EQUAL(0x00, spiData[0][0] & 0x10);  // reserved bit cleared in byte 2
 }
 
 void test_write_Lock() {
@@ -336,6 +340,30 @@ void test_config2_az_ref_default_false() {
   TEST_ASSERT_FALSE(spiData[0][0] & 0x40);  // az_ref not set by default
 }
 
+void test_irq_enum_values() {
+  TEST_ASSERT_EQUAL(0, (uint8_t)TestADC::IRQ_OFF);
+  TEST_ASSERT_EQUAL(1, (uint8_t)TestADC::IRQ_OPEN_DRAIN);
+  TEST_ASSERT_EQUAL(2, (uint8_t)TestADC::IRQ_PUSH_PULL_LOW);
+  TEST_ASSERT_EQUAL(3, (uint8_t)TestADC::IRQ_PUSH_PULL_HIGH);
+}
+
+void test_irq_enum_written() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  adc.irq(false, true, TestADC::IRQ_PUSH_PULL_HIGH);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(1, spiData.size());
+  TEST_ASSERT_EQUAL(3, (spiData[0][0] >> 2) & 0x03);  // irq_mode = 3
+}
+
+void test_getDeviceAddress() {
+  TestADC adc;
+  mockStatusByte = 0xC0;  // addr bits [7:5] = 110 (inverted 1 → device address 01)
+  adc.begin();
+  TEST_ASSERT_EQUAL(1, adc.getDeviceAddress());
+}
+
 #endif  // PIO_NATIVE_TESTING
 
 // ---------------------------------------------------------------------------
@@ -353,6 +381,9 @@ void register_config_tests() {
   RUN_TEST(test_config3_writes_correct_addr);
   RUN_TEST(test_config2_az_ref_true);
   RUN_TEST(test_config2_az_ref_default_false);
+  RUN_TEST(test_irq_enum_values);
+  RUN_TEST(test_irq_enum_written);
+  RUN_TEST(test_getDeviceAddress);
   RUN_TEST(test_irq_writes_correct_addr);
   RUN_TEST(test_mux_writes_correct_addr);
   RUN_TEST(test_scan_writes_correct_addr);
