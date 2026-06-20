@@ -90,7 +90,7 @@ const uint8_t MCP3x6x_CFG_CONFIG1      = 0x0C;                //!< default value
 const uint8_t MCP3x6x_CFG_CONFIG2      = 0x8B;                //!< default value
 const uint8_t MCP3x6x_CFG_CONFIG3      = 0x00;                //!< default value
 const uint8_t MCP3x6x_CFG_IRQ          = 0x73;                //!< default value
-const uint8_t MCP3x6x_CFG_MUX          = 0x01;                //!< default value
+const uint8_t MCP3x6x_CFG_MUX          = 0x08;                //!< default value (CH0+/AGND-)
 const uint8_t MCP3x6x_CFG_SCAN[3]      = {0x00, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_TIMER[3]     = {0x00, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_OFFSET[3]    = {0x00, 0x00, 0x00};  //!< default value
@@ -105,9 +105,12 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
  * @brief base class MCP3x6x
  *
  */
-template <const size_t _MAX_RESOLUTION, const size_t _MAX_CHANNELS>
-class MCP3x6x : public Stream {
- public:
+ template <const size_t _MAX_RESOLUTION, const size_t _MAX_CHANNELS>
+ class MCP3x6x : public Stream {
+#ifdef PIO_NATIVE_TESTING
+  friend struct MCP3x6xTest;
+#endif
+  public:
   /**
    * @brief ADC Operating Mode Selection
    *
@@ -648,7 +651,8 @@ class MCP3x6x : public Stream {
         _offset(MCP3x6x_CFG_OFFSET),
         _gain(MCP3x6x_CFG_GAIN),
         _lock(MCP3x6x_CFG_LOCK),
-        _crccfg(MCP3x6x_CFG_CRCCFG) {}
+        _crccfg(MCP3x6x_CFG_CRCCFG),
+        _result{} {}
 
   /**
    * @brief Construct a new MCP3x6x object (scan mode)
@@ -683,7 +687,8 @@ class MCP3x6x : public Stream {
         _offset(MCP3x6x_CFG_OFFSET),
         _gain(MCP3x6x_CFG_GAIN),
         _lock(MCP3x6x_CFG_LOCK),
-        _crccfg(MCP3x6x_CFG_CRCCFG) {}
+        _crccfg(MCP3x6x_CFG_CRCCFG),
+        _result{} {}
 
   /**
    * @brief Destroy the MCP3x6x object
