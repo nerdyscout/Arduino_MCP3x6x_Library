@@ -1336,6 +1336,9 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   int available() override { return status_dr(); }
 
   int read() override {
+    static_assert(sizeof(int) >= 4 || _MAX_RESOLUTION <= 16,
+                  "Stream::read() returns int (16-bit on AVR). "
+                  "Use analogRead() for full 24-bit values on this platform.");
     size_t s = 1;
     switch (_MAX_RESOLUTION) {
       case 16:
