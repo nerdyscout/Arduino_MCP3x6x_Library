@@ -629,10 +629,11 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param theSPI
    * @param theSPISettings
    */
-  MCP3x6x(uint8_t pinCS = SS, uint8_t pinMOSI = MOSI, uint8_t pinMISO = MISO, uint8_t pinCLK = SCK,
+  explicit MCP3x6x(uint8_t pinCS = SS, uint8_t pinMOSI = MOSI, uint8_t pinMISO = MISO, uint8_t pinCLK = SCK,
           SPIClass* theSPI           = &SPI,
           SPISettings theSPISettings = SPISettings())
-      : _pinCS(pinCS),
+      : _result{},
+        _pinCS(pinCS),
         _pinMISO(pinMISO),
         _pinMOSI(pinMOSI),
         _pinCLK(pinCLK),
@@ -651,8 +652,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
         _offset(MCP3x6x_CFG_OFFSET),
         _gain(MCP3x6x_CFG_GAIN),
         _lock(MCP3x6x_CFG_LOCK),
-        _crccfg(MCP3x6x_CFG_CRCCFG),
-        _result{} {}
+        _crccfg(MCP3x6x_CFG_CRCCFG) {}
 
   /**
    * @brief Construct a new MCP3x6x object (scan mode)
@@ -666,9 +666,10 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param theSPI
    * @param theSPISettings
    */
-  MCP3x6x(uint8_t pinIRQ, uint8_t pinMCLK, uint8_t pinCS, uint8_t pinMOSI, uint8_t pinMISO,
+  explicit MCP3x6x(uint8_t pinIRQ, uint8_t pinMCLK, uint8_t pinCS, uint8_t pinMOSI, uint8_t pinMISO,
           uint8_t pinCLK, SPIClass* theSPI = &SPI, SPISettings theSPISettings = SPISettings())
-      : _pinCS(pinCS),
+      : _result{},
+        _pinCS(pinCS),
         _pinMISO(pinMISO),
         _pinMOSI(pinMOSI),
         _pinCLK(pinCLK),
@@ -687,8 +688,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
         _offset(MCP3x6x_CFG_OFFSET),
         _gain(MCP3x6x_CFG_GAIN),
         _lock(MCP3x6x_CFG_LOCK),
-        _crccfg(MCP3x6x_CFG_CRCCFG),
-        _result{} {}
+        _crccfg(MCP3x6x_CFG_CRCCFG) {}
 
   /**
    * @brief Destroy the MCP3x6x object

@@ -14,6 +14,7 @@ MCP3561 mcp;
 
 void mcp_wrapper() { mcp.IRQ_handler(); }
 
+// cppcheck-suppress unusedFunction
 void setup() {
   Serial.begin(SERIAL_BAUD);
   while (!Serial);
@@ -26,7 +27,7 @@ void setup() {
   mcp.enableScanChannel(MCP3x6x_CH1);
 }
 
-// the loop routine runs over and over again forever:
+// cppcheck-suppress unusedFunction
 void loop() {
   // read the input on default analog channel:
   int32_t adcdata0 = mcp.analogRead(MCP3x6x_CH0);

@@ -16,16 +16,16 @@ Depending on which constructor is called the ADC will be configured in two diffe
 
 **Mux Mode** (SPI pins with defaults)
 ```
-MCP3x6x(uint8_t pinCS = SS, uint8_t pinMOSI = MOSI, uint8_t pinMISO = MISO,
-        uint8_t pinCLK = SCK, SPIClass *theSPI = &SPI,
-        SPISettings theSPISettings = SPISettings())
+explicit MCP3x6x(uint8_t pinCS = SS, uint8_t pinMOSI = MOSI, uint8_t pinMISO = MISO,
+                  uint8_t pinCLK = SCK, SPIClass *theSPI = &SPI,
+                  SPISettings theSPISettings = SPISettings())
 ```
 
 **Scan Mode** (all pins required)
 ```
-MCP3x6x(uint8_t pinIRQ, uint8_t pinMCLK, uint8_t pinCS, uint8_t pinMOSI,
-        uint8_t pinMISO, uint8_t pinCLK, SPIClass *theSPI = &SPI,
-        SPISettings theSPISettings = SPISettings())
+explicit MCP3x6x(uint8_t pinIRQ, uint8_t pinMCLK, uint8_t pinCS, uint8_t pinMOSI,
+                  uint8_t pinMISO, uint8_t pinCLK, SPIClass *theSPI = &SPI,
+                  SPISettings theSPISettings = SPISettings())
 ```
 So scan mode requires two additional pins: pinIRQ for the conversion interrupt flag and pinMCLK for the master clock (generated via `tone()`; attach with `attachMCLK()`).
 
