@@ -456,11 +456,11 @@ class MCP3x6x : public Stream {
    */
   union Config2 {
     struct {
-      uint8_t          : 2;  //!< reserved // Should always be equal to ‘1’
-      bool az_ref      : 1;  //!< Auto-Zeroing Reference Buffer Setting
-      bool az_mux      : 1;  //!< Auto-Zeroing MUX Setting
-      enum gain gain   : 3;  //!< ADC Gain Selection
-      enum boost boost : 2;  //!< ADC Bias Current Selection
+      enum boost boost : 2;  //!< ADC Bias Current Selection (bits 1:0)
+      enum gain gain   : 3;  //!< ADC Gain Selection (bits 4:2)
+      bool az_mux      : 1;  //!< Auto-Zeroing MUX Setting (bit 5)
+      bool az_ref      : 1;  //!< Auto-Zeroing Reference Buffer Setting (bit 6)
+      uint8_t          : 1;  //!< reserved, should always be '1' (bit 7)
     };
     uint8_t raw;  //!< raw access to register
     Config2(const uint8_t data) : raw(data) {}
