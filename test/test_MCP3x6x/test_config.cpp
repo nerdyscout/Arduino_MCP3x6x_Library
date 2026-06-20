@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Stefan Herold
 
-#include "__init__.h"
+#include "test.h"
 
 #ifdef PIO_NATIVE_TESTING
 
@@ -26,7 +26,7 @@ void test_configure_writes_mux() {
   adc.begin();
   setUp();
   adc.configure(MCP3x6x_CFG_CONFIG0, MCP3x6x_CFG_CONFIG1, MCP3x6x_CFG_CONFIG2, MCP3x6x_CFG_CONFIG3,
-                 MCP3x6x_CFG_IRQ, 0x01, MCP3x6x_CFG_SCAN, MCP3x6x_CFG_TIMER, MCP3x6x_CFG_OFFSET,
+                MCP3x6x_CFG_IRQ, 0x01, MCP3x6x_CFG_SCAN, MCP3x6x_CFG_TIMER, MCP3x6x_CFG_OFFSET,
                 MCP3x6x_CFG_GAIN, MCP3x6x_CFG_LOCK, MCP3x6x_CFG_CRCCFG);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[0]);
 }
@@ -173,44 +173,58 @@ void test_write_Config0() {
 }
 
 void test_write_Config1() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.write(MCP3x6xTest::Config1<TestADC>(0x00));
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG1, spiAddrs[0]);
 }
 
 void test_write_Config2() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.write(MCP3x6xTest::Config2<TestADC>(0x00));
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, spiAddrs[0]);
 }
 
 void test_write_Config3() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.write(MCP3x6xTest::Config3<TestADC>(0x00));
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[0]);
 }
 
 void test_write_Irq() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.write(MCP3x6xTest::Irq<TestADC>(0x00));
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[0]);
 }
 
 void test_write_Mux() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.write(MCP3x6xTest::Mux<TestADC>(0x00));
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[0]);
 }
 
 void test_write_Scan() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   uint8_t scanData[3] = {0x01, 0x02, 0x03};
   adc.write(MCP3x6xTest::Scan<TestADC>(scanData));
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_SCAN, spiAddrs[0]);
 }
 
 void test_write_Lock() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.write(MCP3x6xTest::Lock<TestADC>(0xA5));
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[0]);
 }
@@ -219,35 +233,45 @@ void test_write_Lock() {
 // read overloads verify correct SPI addressing
 // ---------------------------------------------------------------------------
 void test_read_ADCDATA_SGN_DATA_16bit() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   MCP3x6xTest::Adcdata<TestADC> d;
   adc.read(&d);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, spiAddrs[0]);
 }
 
 void test_read_ADCDATA_SGN_DATA_24bit() {
-  MCP3564 adc; adc.begin(); setUp();
+  MCP3564 adc;
+  adc.begin();
+  setUp();
   MCP3x6xTest::Adcdata<MCP3564> d;
   adc.read(&d);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, spiAddrs[0]);
 }
 
 void test_read_Config0() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   auto cfg0 = MCP3x6xTest::Config0<TestADC>(0x00);
   adc.read(cfg0);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
 }
 
 void test_read_Config1() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   auto cfg1 = MCP3x6xTest::Config1<TestADC>(0x00);
   adc.read(cfg1);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG1, spiAddrs[0]);
 }
 
 void test_read_Mux() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   auto mux = MCP3x6xTest::Mux<TestADC>(0x00);
   adc.read(mux);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IREAD | MCP3x6x_ADR_MUX, spiAddrs[0]);
@@ -257,7 +281,9 @@ void test_read_Mux() {
 // ADCDATA read byte count (SPI data transfer size)
 // ---------------------------------------------------------------------------
 void test_ADCDATA_read_16bit_2bytes() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   MCP3x6xTest::Adcdata<TestADC> d;
   adc.read(&d);
   TEST_ASSERT_EQUAL(1, spiData.size());
@@ -265,7 +291,9 @@ void test_ADCDATA_read_16bit_2bytes() {
 }
 
 void test_ADCDATA_read_24bit_3bytes() {
-  MCP3564 adc; adc.begin(); setUp();
+  MCP3564 adc;
+  adc.begin();
+  setUp();
   MCP3x6xTest::Adcdata<MCP3564> d;
   adc.read(&d);
   TEST_ASSERT_EQUAL(1, spiData.size());

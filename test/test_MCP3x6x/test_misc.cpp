@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Stefan Herold
 
-#include "__init__.h"
+#include "test.h"
 
 #ifdef PIO_NATIVE_TESTING
 
@@ -9,7 +9,9 @@
 // setReference(vref=0) → sets internal ref + writes CONFIG0
 // ---------------------------------------------------------------------------
 void test_setReference_internal() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.setReference(0.0);
   TEST_ASSERT_EQUAL(2.4f, adc.getReference());
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
@@ -19,7 +21,9 @@ void test_setReference_internal() {
 // setReference(vref=3.3) → sets external ref + writes CONFIG0
 // ---------------------------------------------------------------------------
 void test_setReference_external() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.setReference(3.3);
   TEST_ASSERT_EQUAL(3.3f, adc.getReference());
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
@@ -52,7 +56,9 @@ void test_getMaxValue_24bit() {
 // singleEndedMode() sets MUX VIN- to AGND
 // ---------------------------------------------------------------------------
 void test_singleEndedMode() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.singleEndedMode();
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[0]);
 }
@@ -61,7 +67,9 @@ void test_singleEndedMode() {
 // differentialMode() sets MUX to CH0-CH1
 // ---------------------------------------------------------------------------
 void test_differentialMode() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.differentialMode();
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[0]);
 }
@@ -114,13 +122,17 @@ void test_flush_noop() {
 // setAveraging / setOversamplingRatio writes CONFIG1
 // ---------------------------------------------------------------------------
 void test_setAveraging_writes_config1() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.setAveraging(TestADC::OSR_1024);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG1, spiAddrs[0]);
 }
 
 void test_setOversamplingRatio_writes_config1() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.setOversamplingRatio(TestADC::OSR_4096);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG1, spiAddrs[0]);
 }
@@ -129,7 +141,9 @@ void test_setOversamplingRatio_writes_config1() {
 // setConversionMode writes CONFIG3
 // ---------------------------------------------------------------------------
 void test_setConversionMode_writes_config3() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.setConversionMode(TestADC::CONTINUOUS);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[0]);
 }
@@ -138,7 +152,9 @@ void test_setConversionMode_writes_config3() {
 // setAdcMode writes CONFIG0
 // ---------------------------------------------------------------------------
 void test_setAdcMode_writes_config0() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.setAdcMode(TestADC::CONVERSION);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
 }
@@ -147,7 +163,9 @@ void test_setAdcMode_writes_config0() {
 // setClockSelection writes CONFIG0
 // ---------------------------------------------------------------------------
 void test_setClockSelection_writes_config0() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.setClockSelection(TestADC::INTERN);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
 }
@@ -164,7 +182,8 @@ void test_mux_constructor() {
 // end() calls SPI.end() — verified by no crash
 // ---------------------------------------------------------------------------
 void test_end_calls_spi_end() {
-  TestADC adc; adc.begin();
+  TestADC adc;
+  adc.begin();
   adc.end();
   TEST_ASSERT_TRUE(true);
 }

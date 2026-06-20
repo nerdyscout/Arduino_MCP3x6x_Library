@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Stefan Herold
 
-#include "__init__.h"
+#include "test.h"
 
 #ifdef PIO_NATIVE_TESTING
 
@@ -9,31 +9,36 @@
 // All 5 fast commands send correct bytes
 // ---------------------------------------------------------------------------
 void test_conversion_fastcmd() {
-  TestADC adc; setUp();
+  TestADC adc;
+  setUp();
   adc.conversion();
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_CONVERSION, spiAddrs[0]);
 }
 
 void test_standby_fastcmd() {
-  TestADC adc; setUp();
+  TestADC adc;
+  setUp();
   adc.standby();
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_STANDBY, spiAddrs[0]);
 }
 
 void test_shutdown_fastcmd() {
-  TestADC adc; setUp();
+  TestADC adc;
+  setUp();
   adc.shutdown();
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_SHUTDOWN, spiAddrs[0]);
 }
 
 void test_full_shutdown_fastcmd() {
-  TestADC adc; setUp();
+  TestADC adc;
+  setUp();
   adc.full_shutdown();
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_FULL_SHUTDOWN, spiAddrs[0]);
 }
 
 void test_reset_fastcmd() {
-  TestADC adc; setUp();
+  TestADC adc;
+  setUp();
   adc.reset();
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_RESET, spiAddrs[0]);
 }
@@ -158,7 +163,9 @@ void test_getValue_ID_SGNEXT_24bit() {
 // setDataFormat() writes CONFIG3
 // ---------------------------------------------------------------------------
 void test_setDataFormat_writes_config3() {
-  TestADC adc; adc.begin(); setUp();
+  TestADC adc;
+  adc.begin();
+  setUp();
   adc.setDataFormat(TestADC::SGNEXT_DATA);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[0]);
 }

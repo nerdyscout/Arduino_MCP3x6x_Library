@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Stefan Herold
 
-#include "__init__.h"
+#include "test.h"
 
 // ---------------------------------------------------------------------------
 // Instance creation
@@ -53,13 +53,13 @@ void test_begin_MCP3564() {
 // Registration
 // ---------------------------------------------------------------------------
 void register_basic_tests() {
-  #define REG_INSTANCE(V) RUN_TEST(test_instance_##V);
+#define REG_INSTANCE(V) RUN_TEST(test_instance_##V);
   FOR_EACH_ADC(REG_INSTANCE)
-  #undef REG_INSTANCE
+#undef REG_INSTANCE
 
-  #ifdef PIO_NATIVE_TESTING
-    #define REG_BEGIN(V) RUN_TEST(test_begin_##V);
-    FOR_EACH_ADC(REG_BEGIN)
-    #undef REG_BEGIN
-  #endif
+#ifdef PIO_NATIVE_TESTING
+  #define REG_BEGIN(V) RUN_TEST(test_begin_##V);
+  FOR_EACH_ADC(REG_BEGIN)
+  #undef REG_BEGIN
+#endif
 }

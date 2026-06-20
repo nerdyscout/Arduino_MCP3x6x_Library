@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Stefan Herold
 
-#include "__init__.h"
+#include "test.h"
 
 #ifdef PIO_NATIVE_TESTING
 

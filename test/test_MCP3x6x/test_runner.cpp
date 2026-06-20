@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Stefan Herold
 
-#include "__init__.h"
+#include "test.h"
 
 // ---------------------------------------------------------------------------
 // SPI tracking definitions
 // ---------------------------------------------------------------------------
 std::vector<uint8_t> spiAddrs;
 std::vector<std::vector<uint8_t>> spiData;
-uint8_t mockStatusByte = 0x00;
+uint8_t mockStatusByte    = 0x00;
 
-bool digitalWriteCalled = false;
-uint8_t digitalWritePin = 0xFF;
+bool digitalWriteCalled   = false;
+uint8_t digitalWritePin   = 0xFF;
 uint8_t digitalWriteValue = 0xFF;
 
-bool pinModeCalled = false;
-uint8_t pinModePin = 0xFF;
-uint8_t pinModeMode = 0xFF;
+bool pinModeCalled        = false;
+uint8_t pinModePin        = 0xFF;
+uint8_t pinModeMode       = 0xFF;
 
 // ---------------------------------------------------------------------------
 // suiteSetUp / setUp / tearDown
@@ -62,11 +62,11 @@ void setUp(void) {
   spiAddrs.clear();
   spiData.clear();
   digitalWriteCalled = false;
-  digitalWritePin = 0xFF;
-  digitalWriteValue = 0xFF;
-  pinModeCalled = false;
-  pinModePin = 0xFF;
-  pinModeMode = 0xFF;
+  digitalWritePin    = 0xFF;
+  digitalWriteValue  = 0xFF;
+  pinModeCalled      = false;
+  pinModePin         = 0xFF;
+  pinModeMode        = 0xFF;
 }
 
 void tearDown(void) {}
@@ -98,9 +98,10 @@ int main(int argc, char** argv) {
 void loop(void) {}
 void setup(void) {
   #if defined(USB_VID) && defined(USB_PID)
-    while (!Serial) {}
+  while (!Serial) {
+  }
   #else
-    delay(2000);
+  delay(2000);
   #endif
   runUnityTests();
 }
