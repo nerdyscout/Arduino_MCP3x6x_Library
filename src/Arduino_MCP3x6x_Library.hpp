@@ -380,7 +380,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     if (_config3.data_format == data_format::ID_SGNEXT_DATA) {
       return ((raw >> 28) & 0x0F);
     } else {
-      for (size_t i = 0; i < sizeof(_channelID); i++) {
+      for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
         if (_channelID[i] == _mux.raw) {
           return i;
         }
@@ -1431,7 +1431,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param ch
    */
   void enableScanChannel(Mux chan) {
-    for (size_t i = 0; i < sizeof(_channelID); i++) {
+    for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
       if (_channelID[i] == chan.raw) {
         bitSet(_scan.channel.raw, i);
         break;
@@ -1446,7 +1446,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param ch
    */
   void disableScanChannel(Mux chan) {
-    for (size_t i = 0; i < sizeof(_channelID); i++) {
+    for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
       if (_channelID[i] == chan.raw) {
         bitClear(_scan.channel.raw, i);
         break;
@@ -1622,7 +1622,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     }
 
     // ScanMode — return cached result without restarting scan cycle
-    for (size_t i = 0; i < sizeof(_channelID); i++) {
+    for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
       if (_channelID[i] == chan.raw) {
         return _result.raw[i];
       }
@@ -1638,7 +1638,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    */
   int32_t analogReadContinuous(Mux chan) {
     if (isContinuous()) {
-      for (size_t i = 0; i < sizeof(_channelID); i++) {
+      for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
         if (_channelID[i] == chan.raw) {
           return _result.raw[(uint8_t)_adcdata.channelid];
         }
