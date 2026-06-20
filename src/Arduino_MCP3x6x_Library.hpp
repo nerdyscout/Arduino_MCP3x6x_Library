@@ -1614,15 +1614,10 @@ class MCP3x6x : public Stream {
       return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
     }
 
-    // ScanMode
+    // ScanMode — return cached result without restarting scan cycle
     for (size_t i = 0; i < sizeof(_channelID); i++) {
       if (_channelID[i] == chan.raw) {
-        conversion();
-        do {
-          delayMicroseconds(10);
-        } while (!_status.dr);
-        read(&_adcdata);
-        return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
+        return _result.raw[i];
       }
     }
     return -1;
