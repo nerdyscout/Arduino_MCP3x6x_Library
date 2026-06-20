@@ -292,12 +292,13 @@ void suiteSetUp(void) {
           spiData.back().assign(bytes, bytes + size);
         }
       });
-  // default SPI byte transfer returns DR=1, POR=1
+  // STATUS byte: POR=bit4, CRCCFG=bit3, DR=bit2
+  // default: POR=1, DR=1 → 0x14
   When(OverloadedMethod(ArduinoFake(SPI), transfer, byte(uint8_t)))
       .AlwaysDo([](uint8_t addr) -> byte {
         spiAddrs.push_back(addr);
         spiData.push_back({});
-        return 0x05;
+        return 0x14;
       });
 #endif
 }

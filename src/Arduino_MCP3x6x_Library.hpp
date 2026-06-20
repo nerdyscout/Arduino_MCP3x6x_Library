@@ -287,14 +287,11 @@ class MCP3x6x : public Stream {
  private:
   typedef union __attribute__((__packed__)) {
     struct {
-      struct {
-        bool por    : 1;  //!< status: power on reset
-        bool crccfg : 1;  //!< status: crc
-        bool dr     : 1;  //!< status: data ready
-      };
-      uint8_t      : 1;  //!< !addr[0]
-      uint8_t addr : 2;  //!< addresse
-      uint8_t      : 2;  //!< EMTPY
+      uint8_t      : 2;  //!< reserved (always 0)
+      bool dr      : 1;  //!< status: data ready
+      bool crccfg  : 1;  //!< status: crc
+      bool por     : 1;  //!< status: power on reset
+      uint8_t addr : 3;  //!< inverted address !addr[2:0]
     };
     uint8_t raw = 0;
   } status_t;
