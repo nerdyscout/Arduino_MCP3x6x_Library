@@ -735,35 +735,35 @@ class MCP3x6x : public Stream {
       write(_config3 = config3);
     }
 
-    if (_irq.raw != MCP3x6x_CFG_IRQ) {
-      write(irq);
+    if (_irq.raw != irq.raw) {
+      write(_irq = irq);
     }
 
-    if (_mux.raw != MCP3x6x_CFG_MUX) {
-      write(mux);
+    if (_mux.raw != mux.raw) {
+      write(_mux = mux);
     }
 
-    if (memcmp(_scan.raw, MCP3x6x_CFG_SCAN, sizeof(scan.raw))) {
+    if (memcmp(_scan.raw, scan.raw, sizeof(scan.raw))) {
       write(_scan = scan);
     }
 
-    if (memcmp(_timer.raw, MCP3x6x_CFG_TIMER, sizeof(timer.raw))) {
+    if (memcmp(_timer.raw, timer.raw, sizeof(timer.raw))) {
       write(_timer = timer);
     }
 
-    if (memcmp(_offset.raw, MCP3x6x_CFG_OFFSET, sizeof(offset.raw))) {
+    if (memcmp(_offset.raw, offset.raw, sizeof(offset.raw))) {
       write(_offset = offset);
     }
 
-    if (memcmp(_gain.raw, MCP3x6x_CFG_GAIN, sizeof(gain.raw))) {
+    if (memcmp(_gain.raw, gain.raw, sizeof(gain.raw))) {
       write(_gain = gain);
     }
 
-    if (_lock.raw != MCP3x6x_CFG_LOCK) {
+    if (_lock.raw != lock.raw) {
       write(_lock = lock);
     }
 
-    if (memcmp(_crccfg.raw, MCP3x6x_CFG_CRCCFG, sizeof(crccfg))) {
+    if (memcmp(_crccfg.raw, crccfg.raw, sizeof(crccfg))) {
       write(_crccfg = crccfg);
     }
   }
