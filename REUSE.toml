@@ -6,29 +6,29 @@ SPDX-PackageDownloadLocation = "https://gitlab.com/stefanherold/Arduino_MCP3x6x_
 [[annotations]]
 path = ["examples/**", ".clang-format"]
 precedence = "aggregate"
-SPDX-FileCopyrightText = "2025, Stefan Herold <stefan.herold@posteo.de>"
+SPDX-FileCopyrightText = "2026, Stefan Herold <stefan.herold@posteo.de>"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
 path = "pcb/**"
 precedence = "aggregate"
-SPDX-FileCopyrightText = "2025, Stefan Herold <stefan.herold@posteo.de>"
+SPDX-FileCopyrightText = "2026, Stefan Herold <stefan.herold@posteo.de>"
 SPDX-License-Identifier = "CERN-OHL-S-2.0"
 
 [[annotations]]
-path = [".github/**", ".gitignore", ".pre-commit-config.yaml", "Doxyfile"]
+path = [".devcontainer/**", ".gitignore", ".pre-commit-config.yaml", "Doxyfile"]
 precedence = "aggregate"
-SPDX-FileCopyrightText = "2025, Stefan Herold <stefan.herold@posteo.de>"
+SPDX-FileCopyrightText = "2026, Stefan Herold <stefan.herold@posteo.de>"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
 path = ["library.json", "library.properties", "platformio**.ini", "keywords.txt"]
 precedence = "aggregate"
-SPDX-FileCopyrightText = "2025, Stefan Herold <stefan.herold@posteo.de>"
+SPDX-FileCopyrightText = "2026, Stefan Herold <stefan.herold@posteo.de>"
 SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
 path = ["docs/**", "README.md"]
 precedence = "aggregate"
-SPDX-FileCopyrightText = "2025, Stefan Herold <stefan.herold@posteo.de>"
+SPDX-FileCopyrightText = "2026, Stefan Herold <stefan.herold@posteo.de>"
 SPDX-License-Identifier = "CC0-1.0"
