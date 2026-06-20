@@ -1215,7 +1215,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Config0 data) {
+  inline status_t read(Config0& data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, 1);
   }
 
@@ -1225,7 +1225,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Config1 data) {
+  inline status_t read(Config1& data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG1, 1);
   }
 
@@ -1235,7 +1235,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Config2 data) {
+  inline status_t read(Config2& data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG2, 1);
   }
 
@@ -1245,7 +1245,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Config3 data) {
+  inline status_t read(Config3& data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG3, 1);
   }
 
@@ -1255,7 +1255,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Irq data) {
+  inline status_t read(Irq& data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_IRQ, 1);
   }
 
@@ -1265,7 +1265,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Mux data) {
+  inline status_t read(Mux& data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_MUX, 1);
   }
 
@@ -1275,7 +1275,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Scan data) {
+  inline status_t read(Scan& data) {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_SCAN, 3);
   }
 
@@ -1285,7 +1285,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Timer data) {
+  inline status_t read(Timer& data) {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_TIMER, 3);
   }
 
@@ -1295,7 +1295,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Offset data) {
+  inline status_t read(Offset& data) {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_OFFSET, 3);
   }
 
@@ -1305,7 +1305,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Gain data) {
+  inline status_t read(Gain& data) {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_GAIN, 3);
   }
 
@@ -1315,7 +1315,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Lock data) {
+  inline status_t read(Lock& data) {
     return _transfer(&data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_LOCK, 1);
   }
 
@@ -1325,7 +1325,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param data
    * @return status_t
    */
-  inline status_t read(Crccfg data) {
+  inline status_t read(Crccfg& data) {
     return _transfer(data.raw, MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CRCCFG, 2);
   }
 

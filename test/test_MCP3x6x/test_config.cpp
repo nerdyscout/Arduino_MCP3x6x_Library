@@ -234,19 +234,22 @@ void test_read_ADCDATA_SGN_DATA_24bit() {
 
 void test_read_Config0() {
   TestADC adc; adc.begin(); setUp();
-  adc.read(MCP3x6xTest::Config0<TestADC>(0x00));
+  auto cfg0 = MCP3x6xTest::Config0<TestADC>(0x00);
+  adc.read(cfg0);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
 }
 
 void test_read_Config1() {
   TestADC adc; adc.begin(); setUp();
-  adc.read(MCP3x6xTest::Config1<TestADC>(0x00));
+  auto cfg1 = MCP3x6xTest::Config1<TestADC>(0x00);
+  adc.read(cfg1);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IREAD | MCP3x6x_ADR_CONFIG1, spiAddrs[0]);
 }
 
 void test_read_Mux() {
   TestADC adc; adc.begin(); setUp();
-  adc.read(MCP3x6xTest::Mux<TestADC>(0x00));
+  auto mux = MCP3x6xTest::Mux<TestADC>(0x00);
+  adc.read(mux);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IREAD | MCP3x6x_ADR_MUX, spiAddrs[0]);
 }
 
