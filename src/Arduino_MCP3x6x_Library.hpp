@@ -390,9 +390,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   }
 
   float _reference = 2.4;
-  uint16_t _channel_mask;
-
-  uint8_t _pinCS, _pinMISO, _pinMOSI, _pinCLK;  // SPI pins
+    uint8_t _pinCS, _pinMISO, _pinMOSI, _pinCLK;  // SPI pins
   uint8_t _pinIRQ, _pinMCLK;
 
   SPIClass* _spi;            // SPI interface
