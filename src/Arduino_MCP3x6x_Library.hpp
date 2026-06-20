@@ -1337,10 +1337,18 @@ class MCP3x6x : public Stream {
   int available() override { return status_dr(); }
 
   int read() override {
+    size_t s = 1;
+    switch (_MAX_RESOLUTION) {
+      case 16:
+        s = _config3.data_format == data_format::SGN_DATA ? 2 : 4;
+        break;
+      case 24:
+        s = _config3.data_format == data_format::SGN_DATA ? 3 : 4;
+        break;
+    }
     uint8_t buffer[4] = {0};
-
-    _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, sizeof(buffer));
-
+    _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
+    _reverse_array(buffer, s);
     return _getValue((uint32_t&)buffer);
   }
 
