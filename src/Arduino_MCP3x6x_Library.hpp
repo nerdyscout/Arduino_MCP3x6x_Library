@@ -15,10 +15,14 @@
 #ifndef SRC_ARDUINO_MCP3X6X_LIBRARY_HPP_
 #define SRC_ARDUINO_MCP3X6X_LIBRARY_HPP_
 
-#include <Arduino.h>
-#include <SPI.h>
-#ifdef ARDUINO_ARCH_SAMD
-  #include <wiring_private.h>
+#ifdef PIO_NATIVE_TESTING
+  #include <ArduinoFake.h>
+#else
+  #include <Arduino.h>
+  #include <SPI.h>
+  #ifdef ARDUINO_ARCH_SAMD
+    #include <wiring_private.h>
+  #endif
 #endif
 
 #ifdef MCP3x6x_DEBUG
@@ -619,6 +623,9 @@ class MCP3x6x : public Stream {
   } _adcdata = {.channelid = MCP3x6x_CH0, .value = 0};  //!< todo
 
  public:
+  // override Stream
+  void flush() override {}
+
   ///////////////////////////////////////////////////////////////////////////////
   // de/constructor
   ////////////////////////////////////////////////////////////////////////////////
