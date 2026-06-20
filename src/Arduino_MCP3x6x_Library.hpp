@@ -633,7 +633,7 @@ class MCP3x6x : public Stream {
    * @param pinMISO
    * @param pinCLK
    */
-  MCP3x6x(uint8_t pinCS = SS, uint8_t pinMISO = MISO, uint8_t pinMOSI = MOSI, uint8_t pinCLK = SCK,
+  MCP3x6x(uint8_t pinCS = SS, uint8_t pinMOSI = MOSI, uint8_t pinMISO = MISO, uint8_t pinCLK = SCK,
           SPIClass* theSPI           = &SPI,
           SPISettings theSPISettings = SPISettings())
       :  // pins
@@ -1588,7 +1588,7 @@ class MCP3x6x : public Stream {
    * @param ch
    * @return int32_t analog value
    */
-  int32_t analogRead(Mux chan) {
+  int32_t analogRead(Mux chan = MCP3x6x_CH0) {
     // MuxMode
     if (_scan.channel.raw == 0) {
       _mux = chan;
@@ -1596,11 +1596,10 @@ class MCP3x6x : public Stream {
       conversion();
 
       // Wait for conversion to complete
-      while (!status_dr()) {
-        delayMicroseconds(10);
-      }
+      do {
+        read(&_adcdata);
+      } while (!_status.dr);
 
-      read(&_adcdata);
       return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
     }
 
@@ -1608,9 +1607,9 @@ class MCP3x6x : public Stream {
     for (size_t i = 0; i < sizeof(_channelID); i++) {
       if (_channelID[i] == chan.raw) {
         conversion();
-        while (!status_dr()) {
+        do {
           delayMicroseconds(10);
-        }
+        } while (!_status.dr);
         read(&_adcdata);
         return _adcdata.value;
       }
