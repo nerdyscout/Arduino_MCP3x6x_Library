@@ -1638,7 +1638,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     if (isContinuous()) {
       for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
         if (_channelID[i] == chan.raw) {
-          return _result.raw[(uint8_t)_adcdata.channelid];
+          return _result.raw[i];
         }
       }
     }
