@@ -39,6 +39,8 @@
 extern std::vector<uint8_t> spiAddrs;
 extern std::vector<std::vector<uint8_t>> spiData;
 extern uint8_t mockStatusByte;
+extern uint8_t lastSpiAddress;
+extern std::vector<uint8_t> mockReadSequence;
 
 extern bool digitalWriteCalled;
 extern uint8_t digitalWritePin;

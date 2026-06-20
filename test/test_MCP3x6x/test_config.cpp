@@ -242,6 +242,7 @@ void test_read_ADCDATA_SGN_DATA_16bit() {
 }
 
 void test_read_ADCDATA_SGN_DATA_24bit() {
+  mockReadSequence = {0x0F, 0x30};  // HW_ID=MCP3564, R-variant
   MCP3564 adc;
   adc.begin();
   setUp();
@@ -291,6 +292,7 @@ void test_ADCDATA_read_16bit_2bytes() {
 }
 
 void test_ADCDATA_read_24bit_3bytes() {
+  mockReadSequence = {0x0F, 0x30};  // HW_ID=MCP3564, R-variant
   MCP3564 adc;
   adc.begin();
   setUp();

@@ -83,6 +83,8 @@
 #define MCP3x6x_ADR_RESERVED3 (byte)(MCP3x6x_SPI_ADR | (0xE << 2))  //!< reserved register
 #define MCP3x6x_ADR_CRCCFG    (byte)(MCP3x6x_SPI_ADR | (0xF << 2))  //!< Register CRCCFG address
 
+#define MCP3x6x_TIMEOUT INT32_MIN
+
 #ifndef MCP3x6x_CFG
   #define MCP3x6x_CFG
 const uint8_t MCP3x6x_CFG_CONFIG0      = 0xC0;                //!< default value
@@ -391,6 +393,9 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
 
   volatile bool _dataAvailable = false;
   float _reference = 2.4;
+  uint32_t _readTimeout = 0;
+  int16_t _tempOffset = 0;
+  uint16_t _tempSlope = 1150;
     uint8_t _pinCS, _pinMISO, _pinMOSI, _pinCLK;  // SPI pins
   uint8_t _pinIRQ, _pinMCLK;
 
@@ -700,7 +705,56 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
 #endif
 
     // reset ADC and return
-    return reset().por;
+    if (!reset().por) {
+      return false;
+    }
+
+    // chip ID validation
+    if (!_validateChipID()) {
+      return false;
+    }
+
+    // R-variant detection and VREF auto-configuration
+    _detectVariant();
+
+    return true;
+  }
+
+  bool _validateChipID() {
+    uint8_t reserved_e = 0;
+    _transfer(&reserved_e, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_RESERVED3, sizeof(reserved_e));
+    uint8_t hw_id = reserved_e & 0x0F;
+
+    uint8_t expected_id;
+    if (_MAX_RESOLUTION == 16) {
+      if (_MAX_CHANNELS == 2)      expected_id = 0x8;
+      else if (_MAX_CHANNELS == 4) expected_id = 0x9;
+      else                         expected_id = 0xB;
+    } else {
+      if (_MAX_CHANNELS == 2)      expected_id = 0xC;
+      else if (_MAX_CHANNELS == 4) expected_id = 0xD;
+      else                         expected_id = 0xF;
+    }
+
+    if (hw_id != expected_id) {
+      MCP3x6x_LOG("MCP3x6x: chip ID mismatch\n");
+      return false;
+    }
+    return true;
+  }
+
+  void _detectVariant() {
+    uint8_t reserved_c = 0;
+    _transfer(&reserved_c, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_RESERVED2, sizeof(reserved_c));
+
+    if (reserved_c == 0x30) {
+      _config0.vref_sel = 1;
+      _reference = 2.4f;
+      write(_config0);
+    } else {
+      _config0.vref_sel = 0;
+      _reference = 0.0f;
+    }
   }
 
   /**
@@ -1496,6 +1550,77 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   float getReference() { return _reference; }
 
   /**
+   * @brief convert raw ADC value to microvolts
+   *
+   * @param raw
+   * @return int32_t voltage in microvolts
+   */
+  int32_t toVoltage(int32_t raw) {
+    int64_t VREF_uV = (int64_t)(_reference * 1000000.0f);
+    int64_t num = (int64_t)raw * VREF_uV;
+    int64_t den = (int64_t)(1UL << (_MAX_RESOLUTION - 1));
+
+    if (_config2.gain == GAIN_033) {
+      num *= 3;
+    } else {
+      den *= (int64_t)(1UL << (uint8_t)_config2.gain);
+    }
+
+    return (int32_t)(num / den);
+  }
+
+  /**
+   * @brief set analogRead timeout in milliseconds
+   *
+   * @param ms timeout (0 = disabled)
+   */
+  void setReadTimeout(uint32_t ms) { _readTimeout = ms; }
+
+  /**
+   * @brief get analogRead timeout in milliseconds
+   *
+   * @return uint32_t
+   */
+  uint32_t getReadTimeout() { return _readTimeout; }
+
+  /**
+   * @brief read temperature sensor and return centi-Celsius
+   *
+   * @return int16_t temperature in 0.01°C (e.g. 2550 = 25.50°C)
+   */
+  int16_t readTemperature() {
+    uint32_t savedTimeout = _readTimeout;
+    _readTimeout = 0;
+    int32_t raw = analogRead(MCP3x6x_TEMP);
+    _readTimeout = savedTimeout;
+
+    int32_t V_uV = toVoltage(raw);
+
+    int32_t V_25_uV;
+    if (_MAX_RESOLUTION == 16) {
+      V_25_uV = 684000;
+    } else {
+      V_25_uV = 690000;
+    }
+
+    return (int16_t)((int64_t)(V_uV - V_25_uV) * 100 / (int64_t)_tempSlope + 2500 + _tempOffset);
+  }
+
+  /**
+   * @brief set temperature offset calibration (centi-Celsius)
+   *
+   * @param offset_cC
+   */
+  void setTempOffset(int16_t offset_cC) { _tempOffset = offset_cC; }
+
+  /**
+   * @brief set temperature slope calibration (uV/°C)
+   *
+   * @param slope_uV_per_C
+   */
+  void setTempSlope(uint16_t slope_uV_per_C) { _tempSlope = slope_uV_per_C; }
+
+  /**
    * @brief get maximal value
    *
    * @return uint32_t
@@ -1603,16 +1728,19 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param ch
    * @return int32_t analog value
    */
-  int32_t analogRead(Mux chan = MCP3x6x_CH0) {
+   int32_t analogRead(Mux chan = MCP3x6x_CH0) {
     // MuxMode
     if (_scan.channel.raw == 0) {
       _mux = chan;
       write(_mux);
       conversion();
 
-      // Wait for conversion to complete
+      uint32_t start = millis();
       do {
         read(&_adcdata);
+        if (_readTimeout && (millis() - start) >= _readTimeout) {
+          return MCP3x6x_TIMEOUT;
+        }
       } while (!_status.dr);
 
       _dataAvailable = false;
@@ -1653,13 +1781,17 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @param pinN
    * @return int32_t
    */
-  int32_t analogReadDifferential(Mux pinP, Mux pinN) {
+   int32_t analogReadDifferential(Mux pinP, Mux pinN) {
     _mux = ((uint8_t)pinP.raw << 4) | (uint8_t)pinN.raw;
     write(_mux);
 
     conversion();
+    uint32_t start = millis();
     do {
       read(&_adcdata);
+      if (_readTimeout && (millis() - start) >= _readTimeout) {
+        return MCP3x6x_TIMEOUT;
+      }
     } while (!_status.dr);
     return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
   }

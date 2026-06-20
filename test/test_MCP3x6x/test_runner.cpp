@@ -9,6 +9,8 @@
 std::vector<uint8_t> spiAddrs;
 std::vector<std::vector<uint8_t>> spiData;
 uint8_t mockStatusByte    = 0x00;
+uint8_t lastSpiAddress    = 0x00;
+std::vector<uint8_t> mockReadSequence;
 
 bool digitalWriteCalled   = false;
 uint8_t digitalWritePin   = 0xFF;
@@ -29,6 +31,7 @@ void suiteSetUp(void) {
   When(Method(ArduinoFake(), digitalWrite)).AlwaysReturn();
   When(Method(ArduinoFake(), pinMode)).AlwaysReturn();
   When(Method(ArduinoFake(), delay)).AlwaysReturn();
+  When(Method(ArduinoFake(), millis)).AlwaysReturn(0);
   When(Method(ArduinoFake(), attachInterrupt)).AlwaysReturn();
   When(Method(ArduinoFake(), detachInterrupt)).AlwaysReturn();
   When(Method(ArduinoFake(), noTone)).AlwaysReturn();
@@ -43,6 +46,7 @@ void suiteSetUp(void) {
 
   When(OverloadedMethod(ArduinoFake(SPI), transfer, byte(uint8_t)))
       .AlwaysDo([](uint8_t addr) -> byte {
+        lastSpiAddress = addr;
         spiAddrs.push_back(addr);
         return mockStatusByte;
       });
@@ -52,6 +56,22 @@ void suiteSetUp(void) {
         std::vector<uint8_t> bytes(size);
         std::memcpy(bytes.data(), data, size);
         spiData.push_back(bytes);
+
+        if ((lastSpiAddress & 0x01) && size > 0) {
+          if (!mockReadSequence.empty()) {
+            size_t n = size < mockReadSequence.size() ? size : mockReadSequence.size();
+            std::memcpy(data, mockReadSequence.data(), n);
+            mockReadSequence.erase(mockReadSequence.begin(), mockReadSequence.begin() + n);
+          } else {
+            uint8_t reg = (lastSpiAddress >> 2) & 0x0F;
+            std::memset(data, 0x00, size);
+            if (reg == 0x0E) {
+              ((uint8_t*)data)[0] = 0x08;  // MCP3461 HW_ID (TestADC default)
+            } else if (reg == 0x0C) {
+              ((uint8_t*)data)[0] = 0x30;  // R-variant
+            }
+          }
+        }
       });
 #endif
 }
@@ -61,6 +81,7 @@ int suiteTearDown(int num_failures) { return num_failures; }
 void setUp(void) {
   spiAddrs.clear();
   spiData.clear();
+  mockReadSequence.clear();
   digitalWriteCalled = false;
   digitalWritePin    = 0xFF;
   digitalWriteValue  = 0xFF;
