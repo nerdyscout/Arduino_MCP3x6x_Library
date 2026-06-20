@@ -12,7 +12,7 @@ Personally I use the SAMD21, so this should be the most stable code.
 ### Introduction
 
 This lib does not (yet) support all features of these ADCs, but should help to get you started.
-Depending on which constructor is called the ADC will be configuerd in two different mode:
+Depending on which constructor is called the ADC will be configured in two different modes:
 
 **Mux Mode** (SPI pins with defaults)
 ```
@@ -29,7 +29,7 @@ MCP3x6x(uint8_t pinIRQ, uint8_t pinMCLK, uint8_t pinCS, uint8_t pinMOSI,
 ```
 So scan mode requires two additional pins: pinIRQ for the conversion interrupt flag and pinMCLK for the master clock (generated via `tone()`; attach with `attachMCLK()`).
 
-Both constructors fall back to default definitions which are common in the Arduino world. So if no pins is explicit specified the default SPI pinout will be used. Therefor it boils down to something simple as `MCP3561 mcp(2, 3, 10);` or even `MCP3561 mcp(10);`.
+Both constructors fall back to default definitions common in the Arduino world. If no pins are explicitly specified the default SPI pinout will be used. Mux mode boils down to something simple as `MCP3561 mcp(10)`. Scan mode requires all 6 pins: `MCP3561 mcp(irqPin, mclkPin, csPin, mosiPin, misoPin, sckPin)`.
 
 Please take a look at the examples how to configure these different modes.
 
