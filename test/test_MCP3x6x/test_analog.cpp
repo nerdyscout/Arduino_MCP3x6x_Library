@@ -30,21 +30,11 @@ void test_analogRead_scan_mode_no_spi() {
   adc.begin();
   setUp();
 
-  // Enable scan channel CH0 and start scan
   adc.enableScanChannel(MCP3x6x_CH0);
-  setUp();
-
-  // Force _mux to match CH0 before startScan
   adc.mux(TestADC::MUX_CH0, TestADC::MUX_AGND);
-  setUp();
-
   adc.startScan();
-  setUp();
-
-  // IRQ_handler reads ADCDATA and populates _result
   mockStatusByte = 0x04;  // DR=1
   adc.IRQ_handler();
-  setUp();
 
   // analogRead scan mode should NOT produce any SPI traffic
   size_t addrCount = spiAddrs.size();
@@ -84,9 +74,7 @@ void test_analogReadContinuous_continuous_mode() {
   TestADC adc;
   mockStatusByte = 0x10;
   adc.begin();
-  setUp();
   adc.startContinuous();
-  setUp();
   int32_t val = adc.analogReadContinuous(MCP3x6x_CH0);
   TEST_ASSERT_EQUAL(0, val);  // cached value is 0 (from mock)
 }
