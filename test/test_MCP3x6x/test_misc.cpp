@@ -94,47 +94,6 @@ void test_isDifferential_true() {
 }
 
 // ---------------------------------------------------------------------------
-// Stream interface: peek() returns -1 when no data available
-// ---------------------------------------------------------------------------
-void test_peek_returns_minus_1() {
-  TestADC adc;
-  TEST_ASSERT_EQUAL(-1, adc.peek());
-}
-
-// ---------------------------------------------------------------------------
-// Stream interface: peek() returns cached value when data available
-// ---------------------------------------------------------------------------
-void test_peek_with_data_available() {
-  TestADC adc;
-  mockStatusByte = 0x10;
-  adc.begin();
-  setUp();
-  mockStatusByte = 0x04;  // DR=1
-  adc.IRQ_handler();
-  TEST_ASSERT_TRUE(adc.available());
-  int val = adc.peek();
-  TEST_ASSERT_EQUAL(0, val);         // cached ADCDATA from mock (all zeros)
-  TEST_ASSERT_TRUE(adc.available()); // peek does not consume data
-}
-
-// ---------------------------------------------------------------------------
-// Stream interface: write(uint8_t) returns 0
-// ---------------------------------------------------------------------------
-void test_write_returns_0() {
-  TestADC adc;
-  TEST_ASSERT_EQUAL(0, adc.write(0xAA));
-}
-
-// ---------------------------------------------------------------------------
-// Stream interface: flush() is callable (no-op)
-// ---------------------------------------------------------------------------
-void test_flush_noop() {
-  TestADC adc;
-  adc.flush();  // should not crash
-  TEST_ASSERT_TRUE(true);
-}
-
-// ---------------------------------------------------------------------------
 // setAveraging / setOversamplingRatio writes CONFIG1
 // ---------------------------------------------------------------------------
 void test_setAveraging_writes_config1() {
@@ -235,10 +194,6 @@ void register_misc_tests() {
   RUN_TEST(test_differentialMode);
   RUN_TEST(test_isDifferential_false);
   RUN_TEST(test_isDifferential_true);
-  RUN_TEST(test_peek_returns_minus_1);
-  RUN_TEST(test_peek_with_data_available);
-  RUN_TEST(test_write_returns_0);
-  RUN_TEST(test_flush_noop);
   RUN_TEST(test_setAveraging_writes_config1);
   RUN_TEST(test_setOversamplingRatio_writes_config1);
   RUN_TEST(test_setConversionMode_writes_config3);

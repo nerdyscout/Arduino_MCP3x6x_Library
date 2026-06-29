@@ -92,17 +92,17 @@ void test_isComplete() {
 }
 
 // ---------------------------------------------------------------------------
-// available() returns _dataAvailable flag
+// dataAvailable() returns _dataAvailable flag
 // ---------------------------------------------------------------------------
-void test_available() {
+void test_dataAvailable() {
   TestADC adc;
   mockStatusByte = 0x10;
   adc.begin();
-  TEST_ASSERT_FALSE(adc.available());
+  TEST_ASSERT_FALSE(adc.dataAvailable());
 
   mockStatusByte = 0x04;  // DR=1
   adc.IRQ_handler();
-  TEST_ASSERT_TRUE(adc.available());
+  TEST_ASSERT_TRUE(adc.dataAvailable());
 }
 
 // ---------------------------------------------------------------------------
@@ -188,7 +188,7 @@ void register_fastcmd_status_tests() {
   RUN_TEST(test_status_por);
   RUN_TEST(test_status_raw);
   RUN_TEST(test_isComplete);
-  RUN_TEST(test_available);
+  RUN_TEST(test_dataAvailable);
   RUN_TEST(test_getValue_16bit_SGN_DATA);
   RUN_TEST(test_getValue_24bit_SGN_DATA);
   RUN_TEST(test_getValue_16bit_SGN_DATA_ZERO);

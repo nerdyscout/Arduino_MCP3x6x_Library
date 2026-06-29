@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Stefan Herold
 //
-// MCP3462 (16-bit, 4ch) — scan mode using Stream::available() / read() API.
-// Demonstrates non-blocking polling instead of analogRead().
+// MCP3462 (16-bit, 4ch) — scan mode with non-blocking polling.
+// Uses dataAvailable() / readADCDATA() instead of analogRead().
 
 #include "Arduino.h"
 #include "MCP3x6x.h"
@@ -25,8 +25,8 @@ void setup() {
 }
 
 void loop() {
-  if (mcp.available()) {
-    int32_t val = mcp.read();
+  if (mcp.dataAvailable()) {
+    int32_t val = mcp.readADCDATA();
     double voltage = val * mcp.getReference() / mcp.getMaxValue();
     Serial.print("voltage: ");
     Serial.println(voltage, 10);

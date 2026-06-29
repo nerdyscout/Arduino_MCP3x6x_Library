@@ -108,7 +108,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
  *
  */
  template <const size_t _MAX_RESOLUTION, const size_t _MAX_CHANNELS>
- class MCP3x6x : public Stream {
+ class MCP3x6x {
 #ifdef PIO_NATIVE_TESTING
   friend struct MCP3x6xTest;
 #endif
@@ -626,10 +626,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     int32_t value     : 25;                             //!< actual value of conversion
   } _adcdata = {.channelid = MCP3x6x_CH0, .value = 0};  //!< todo
 
- public:
-  // override Stream
-  void flush() override {}
-
+  public:
   ///////////////////////////////////////////////////////////////////////////////
   // de/constructor
   ////////////////////////////////////////////////////////////////////////////////
@@ -1401,15 +1398,12 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   }
 
   ///////////////////////////////////////////////////////////////////////////////
-  // stream methodes
+  // data access
   ////////////////////////////////////////////////////////////////////////////////
 
-  int available() override { return _dataAvailable; }
+  bool dataAvailable() { return _dataAvailable; }
 
-  int read() override {
-    static_assert(sizeof(int) >= 4 || _MAX_RESOLUTION <= 16,
-                  "Stream::read() returns int (16-bit on AVR). "
-                  "Use analogRead() for full 24-bit values on this platform.");
+  int32_t readADCDATA() {
     size_t s = 1;
     switch (_MAX_RESOLUTION) {
       case 16:
@@ -1425,10 +1419,6 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     _dataAvailable = false;
     return _getValue((uint32_t&)buffer);
   }
-
-  size_t write(uint8_t data) override { return 0; }  // ADC does not support Stream writes
-
-  int peek() override { return _dataAvailable ? (int)_adcdata.value : -1; }
 
   ///////////////////////////////////////////////////////////////////////////////
   //
