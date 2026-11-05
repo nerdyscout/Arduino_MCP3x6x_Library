@@ -99,7 +99,7 @@ const uint8_t MCP3x6x_CFG_OFFSET[3]    = {0x00, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_GAIN[3]      = {0x80, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_RESERVED2    = 0x50;                //!< default value
-const uint8_t MCP3x6x_CFG_LOCK         = 0x00;                //!< default value (unlocked)
+const uint8_t MCP3x6x_CFG_LOCK         = 0xA5;                //!< default value at POR (unlocked; 0xA5 = write access allowed)
 const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
 #endif
 
@@ -1005,24 +1005,23 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   }
 
   /**
-   * @brief write register LOCK to device
+   * @brief write register LOCK to device (key: 0xA5 unlocks the register map,
+   *        any other value locks it)
    *
-   * @param lock
+   * @param key lock key / lock value (default 0x00 = locked)
+   * @return status_t
    */
-  void lock(uint8_t key) {
+  status_t lock(uint8_t key = 0x00) {
     _lock.raw = key;
-    write(_lock);
+    return write(_lock);
   }
 
   /**
-   * @brief write register LOCK to unlock device
+   * @brief write register LOCK to unlock device (uses the datasheet key 0xA5)
    *
-   * @param key
+   * @return status_t
    */
-  void unlock() {
-    _lock.raw = 0x00;
-    write(_lock);
-  }
+  status_t unlock() { return lock(MCP3x6x_CFG_LOCK); }
 
   /**
    * @brief write register CRCCFG to device

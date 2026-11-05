@@ -158,13 +158,26 @@ void test_lock_writes_correct_addr() {
 }
 
 // ---------------------------------------------------------------------------
-// unlock() sends correct SPI address and value 0x00
+// unlock() sends correct SPI address and value 0xA5 (datasheet unlock key)
 // ---------------------------------------------------------------------------
 void test_unlock_writes_correct_addr() {
   TestADC adc;
   adc.begin();
   setUp();
   adc.unlock();
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(1, spiData.size());
+  TEST_ASSERT_EQUAL(0xA5, spiData[0][0]);  // unlock key (0xA5)
+}
+
+// ---------------------------------------------------------------------------
+// lock() with default key writes the lock value (0x00 = locked)
+// ---------------------------------------------------------------------------
+void test_lock_default_writes_lock() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  adc.lock();
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[0]);
   TEST_ASSERT_EQUAL(1, spiData.size());
   TEST_ASSERT_EQUAL(0x00, spiData[0][0]);
@@ -388,6 +401,7 @@ void register_config_tests() {
   RUN_TEST(test_mux_writes_correct_addr);
   RUN_TEST(test_scan_writes_correct_addr);
   RUN_TEST(test_lock_writes_correct_addr);
+  RUN_TEST(test_lock_default_writes_lock);
   RUN_TEST(test_unlock_writes_correct_addr);
   RUN_TEST(test_write_Config0);
   RUN_TEST(test_write_Config1);
