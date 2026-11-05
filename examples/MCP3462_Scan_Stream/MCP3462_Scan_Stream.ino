@@ -5,7 +5,7 @@
 // Uses dataAvailable() / readADCDATA() instead of analogRead().
 
 #include "Arduino.h"
-#include "MCP3x6x.h"
+#include "Arduino_MCP3x6x_Library.hpp"
 
 MCP3462 mcp;
 

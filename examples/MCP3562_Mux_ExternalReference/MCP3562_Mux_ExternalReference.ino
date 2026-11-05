@@ -5,7 +5,7 @@
 // setReference() configures the ADC for an external VREF (e.g. 3.3V).
 
 #include "Arduino.h"
-#include "MCP3x6x.h"
+#include "Arduino_MCP3x6x_Library.hpp"
 
 MCP3562 mcp;
 

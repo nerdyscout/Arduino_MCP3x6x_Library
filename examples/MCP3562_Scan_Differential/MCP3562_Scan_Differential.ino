@@ -5,7 +5,7 @@
 // Scans differential pair DIFFA via IRQ handler, prints voltage reading.
 
 #include "Arduino.h"
-#include "MCP3x6x.h"
+#include "Arduino_MCP3x6x_Library.hpp"
 
 MCP3562 mcp;
 

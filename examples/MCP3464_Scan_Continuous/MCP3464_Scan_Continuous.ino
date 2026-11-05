@@ -5,7 +5,7 @@
 // Scans CH0-CH1 continuously via IRQ, reads with analogReadContinuous().
 
 #include "Arduino.h"
-#include "MCP3x6x.h"
+#include "Arduino_MCP3x6x_Library.hpp"
 
 MCP3464 mcp;
 

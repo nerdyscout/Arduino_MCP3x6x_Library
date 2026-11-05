@@ -6,7 +6,7 @@
 // Voltage must be divided by the gain factor to get the actual input voltage.
 
 #include "Arduino.h"
-#include "MCP3x6x.h"
+#include "Arduino_MCP3x6x_Library.hpp"
 
 MCP3564 mcp;
 

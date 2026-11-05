@@ -5,7 +5,7 @@
 // No external wiring needed — purely diagnostic.
 
 #include "Arduino.h"
-#include "MCP3x6x.h"
+#include "Arduino_MCP3x6x_Library.hpp"
 
 MCP3461 mcp;
 

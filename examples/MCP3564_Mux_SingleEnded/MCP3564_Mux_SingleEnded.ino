@@ -5,7 +5,7 @@
 // Reads CH0, converts to voltage, prints to serial.
 
 #include "Arduino.h"
-#include "MCP3x6x.h"
+#include "Arduino_MCP3x6x_Library.hpp"
 
 MCP3564 mcp;
 

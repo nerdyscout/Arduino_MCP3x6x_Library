@@ -5,7 +5,7 @@
 // Scans CH0 and CH1 via IRQ handler, prints voltage readings.
 
 #include "Arduino.h"
-#include "MCP3x6x.h"
+#include "Arduino_MCP3x6x_Library.hpp"
 
 MCP3462 mcp;
 
