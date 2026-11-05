@@ -15,6 +15,7 @@ void test_setReference_internal() {
   adc.setReference(0.0);
   TEST_ASSERT_EQUAL(2.4f, adc.getReference());
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
+  TEST_ASSERT(spiData[0][0] & 0x80);  // vref_sel (bit 7) = 1 -> internal
 }
 
 // ---------------------------------------------------------------------------
@@ -27,6 +28,7 @@ void test_setReference_external() {
   adc.setReference(3.3);
   TEST_ASSERT_EQUAL(3.3f, adc.getReference());
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
+  TEST_ASSERT_FALSE(spiData[0][0] & 0x80);  // vref_sel (bit 7) = 0 -> external
 }
 
 // ---------------------------------------------------------------------------

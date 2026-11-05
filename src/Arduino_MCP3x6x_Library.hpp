@@ -432,8 +432,8 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
       enum adc_mode adc : 2;  //!< ADC Operating Mode Selection
       enum cs_sel bias  : 2;  //!< Current Source/Sink Selection Bits for Sensor Bias
       enum clk_sel clk  : 2;  //!< Clock Selection
-      bool vref_sel     : 1;  //!<
-      uint8_t cfg0      : 1;  //!< Full Shutdown Mode Enable
+      uint8_t cfg0      : 1;  //!< Full Shutdown Mode Enable (bit 6)
+      bool vref_sel     : 1;  //!< Internal Voltage Reference Selection (bit 7)
     };
     uint8_t raw;  //!< raw access to register
     Config0(const uint8_t data) : raw(data) {}
