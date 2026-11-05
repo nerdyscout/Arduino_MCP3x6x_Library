@@ -62,14 +62,14 @@ void test_status_dr_false() {
 
 void test_status_crccfg() {
   TestADC adc;
-  mockStatusByte = 0x08;  // CRCCFG=1 → inverted → false
+  mockStatusByte = 0x02;  // CRCCFG=1 (bit 1) → inverted → false
   adc.reset();
   TEST_ASSERT_FALSE(adc.status_crccfg());
 }
 
 void test_status_por() {
   TestADC adc;
-  mockStatusByte = 0x10;  // POR=1 → inverted → false
+  mockStatusByte = 0x01;  // POR=1 (bit 0) → inverted → false
   adc.reset();
   TEST_ASSERT_FALSE(adc.status_por());
 }

@@ -385,7 +385,7 @@ void test_irq_enum_written() {
 
 void test_getDeviceAddress() {
   TestADC adc;
-  mockStatusByte = 0xC0;  // addr bits [7:5] = 110 (inverted 1 → device address 01)
+  mockStatusByte = 0x30;  // addr bits [5:3] = 110 (inverted 1 → device address 01)
   adc.begin();
   TEST_ASSERT_EQUAL(1, adc.getDeviceAddress());
 }

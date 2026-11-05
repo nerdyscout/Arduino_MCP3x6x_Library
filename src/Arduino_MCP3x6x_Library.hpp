@@ -298,11 +298,11 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
  private:
   typedef union __attribute__((__packed__)) {
     struct {
-      uint8_t      : 2;  //!< reserved (always 0)
-      bool dr      : 1;  //!< status: data ready
-      bool crccfg  : 1;  //!< status: crc
-      bool por     : 1;  //!< status: power on reset
-      uint8_t addr : 3;  //!< inverted address !addr[2:0]
+      bool por        : 1;  //!< status: power on reset (bit 0)
+      bool crccfg     : 1;  //!< status: crc error (bit 1)
+      bool dr         : 1;  //!< status: data ready (bit 2)
+      uint8_t addr    : 3;  //!< inverted device address ack (bits 5:3)
+      uint8_t        : 2;  //!< reserved, always 0 (bits 7:6)
     };
     uint8_t raw = 0;
   } status_t;
