@@ -209,7 +209,7 @@ void test_write_Config2() {
   adc.write(MCP3x6xTest::Config2<TestADC>(0x00));
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, spiAddrs[0]);
   TEST_ASSERT_EQUAL(1, spiData.size());
-  TEST_ASSERT(spiData[0][0] & 0x80);  // datasheet requires bit 7 = 1
+  TEST_ASSERT(spiData[0][0] & 0x01);  // datasheet requires bit 0 = 1
 }
 
 void test_write_Config3() {
@@ -340,7 +340,7 @@ void test_config2_az_ref_true() {
   adc.config2(false, TestADC::GAIN_1, TestADC::BOOST_2, true);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, spiAddrs[0]);
   TEST_ASSERT_EQUAL(1, spiData.size());
-  TEST_ASSERT(spiData[0][0] & 0x40);  // az_ref = bit 6
+  TEST_ASSERT(spiData[0][0] & 0x02);  // az_ref = bit 1
 }
 
 void test_config2_az_ref_default_false() {
@@ -350,7 +350,20 @@ void test_config2_az_ref_default_false() {
   adc.config2(false, TestADC::GAIN_1, TestADC::BOOST_2);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, spiAddrs[0]);
   TEST_ASSERT_EQUAL(1, spiData.size());
-  TEST_ASSERT_FALSE(spiData[0][0] & 0x40);  // az_ref not set by default
+  TEST_ASSERT_FALSE(spiData[0][0] & 0x02);  // az_ref not set by default
+}
+
+// ---------------------------------------------------------------------------
+// config2() writes BOOST in bits 7:6 and GAIN in bits 5:3 (RESERVED=1)
+// ---------------------------------------------------------------------------
+void test_config2_boost_gain_boost2() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  adc.config2(false, TestADC::GAIN_1, TestADC::BOOST_2);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(1, spiData.size());
+  TEST_ASSERT_EQUAL(0x89, spiData[0][0]);  // BOOST=2 (x1) in bits 7:6, GAIN=1 (x1) in bits 5:3, RESERVED=1
 }
 
 void test_irq_enum_values() {
@@ -394,6 +407,7 @@ void register_config_tests() {
   RUN_TEST(test_config3_writes_correct_addr);
   RUN_TEST(test_config2_az_ref_true);
   RUN_TEST(test_config2_az_ref_default_false);
+  RUN_TEST(test_config2_boost_gain_boost2);
   RUN_TEST(test_irq_enum_values);
   RUN_TEST(test_irq_enum_written);
   RUN_TEST(test_getDeviceAddress);

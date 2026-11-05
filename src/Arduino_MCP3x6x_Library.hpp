@@ -463,11 +463,11 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    */
   union Config2 {
     struct {
-      enum boost boost : 2;  //!< ADC Bias Current Selection (bits 1:0)
-      enum gain gain   : 3;  //!< ADC Gain Selection (bits 4:2)
-      bool az_mux      : 1;  //!< Auto-Zeroing MUX Setting (bit 5)
-      bool az_ref      : 1;  //!< Auto-Zeroing Reference Buffer Setting (bit 6)
-      bool reserved7   : 1;  //!< reserved, must always be '1' (bit 7)
+      bool reserved     : 1;  //!< reserved, must always be '1' (bit 0)
+      bool az_ref      : 1;  //!< Auto-Zeroing Reference Buffer Setting (bit 1)
+      bool az_mux      : 1;  //!< Auto-Zeroing MUX Setting (bit 2)
+      enum gain gain   : 3;  //!< ADC Gain Selection (bits 5:3)
+      enum boost boost : 2;  //!< ADC Bias Current Selection (bits 7:6)
     };
     uint8_t raw;  //!< raw access to register
     Config2(const uint8_t data) : raw(data) {}
@@ -1137,7 +1137,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @return status_t
    */
   inline status_t write(Config2 data) {
-    data.reserved7 = 1;  // datasheet requires bit 7 always = 1
+    data.reserved = 1;  // datasheet requires bit 0 always = 1
     return _transfer(&data.raw, MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, 1);
   }
 
