@@ -1,4 +1,4 @@
-# Arduino MCP3x6x/R Library [![build](https://gitlab.com/stefanherold/Arduino_MCP3x6x_Library/workflows/build/badge.svg)](https://gitlab.com/stefanherold/Arduino_MCP3x6x_Library/actions/workflows/build.yml)
+# Arduino MCP3x6x/R Library [![build](https://github.com/nerdyscout/Arduino_MCP3x6x_Library/actions/workflows/build.yml/badge.svg)](https://github.com/nerdyscout/Arduino_MCP3x6x_Library/actions/workflows/build.yml)
 
 Supports Microchip 16-bit [MCP3461R/MCP3462R/MCP3464R](https://www.microchip.com/en-us/product/MCP3461r) and 24-bit [MCP3561R/MCP3562R/MCP3564R](https://www.microchip.com/en-us/product/MCP3561r) analog-to-digital converters.
 
@@ -57,11 +57,11 @@ void loop() {
 }
 ```
 
-Scan mode also supports the Arduino `Stream` interface for non-blocking polling:
+Scan mode also supports non-blocking polling without `analogRead()`:
 
 ```cpp
-if (mcp.available()) {
-  int32_t val = mcp.read();
+if (mcp.dataAvailable()) {
+  int32_t val = mcp.readADCDATA();  // clears dataAvailable()
 }
 ```
 
@@ -90,7 +90,7 @@ MCP346xR/MCP356xR datasheets. Breaking changes:
 | `MCP3461_Mux_SingleEnded` | MCP3461 | Mux | Basic single-ended read |
 | `MCP3461_Mux_InternalChannels` | MCP3461 | Mux | TEMP sensor + AVDD voltage |
 | `MCP3462_Scan_SingleEnded` | MCP3462 | Scan | Basic scan mode |
-| `MCP3462_Scan_Stream` | MCP3462 | Scan | Stream polling (`available()` / `read()`) |
+| `MCP3462_Scan_Stream` | MCP3462 | Scan | Non-blocking polling (`dataAvailable()` / `readADCDATA()`) |
 | `MCP3464_Mux_Differential` | MCP3464 | Mux | Differential pair |
 | `MCP3464_Scan_Continuous` | MCP3464 | Scan | Continuous conversion |
 | `MCP3561_Scan_SingleEnded` | MCP3561 | Scan | Basic scan (24-bit) |
