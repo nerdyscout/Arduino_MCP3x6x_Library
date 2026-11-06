@@ -484,6 +484,15 @@ class MCP3x6x {
 #ifdef ARDUINO_ARCH_SAMD
   uint8_t _dmaSamdChan = 0;
   bool _dmaSamdActive  = false;
+  // DMAC descriptor (16-byte aligned, in SRAM)
+  struct __attribute__((aligned(16))) DmacDescriptor {
+    uint16_t BTCTRL;
+    uint8_t  reserved[2];
+    uint32_t SRCADDR;
+    uint32_t DSTADDR;
+    uint32_t DESCADDR;
+  };
+  DmacDescriptor _dmaSamdDescriptor;
 #endif
 
   /**
@@ -567,7 +576,12 @@ class MCP3x6x {
   ///////////////////////////////////////////////////////////////////////////////
 #ifdef ARDUINO_ARCH_ESP32
   bool _dmaInitESP32(uint8_t dmaChannel) {
-    spi_host_device_t host               = (dmaChannel == 1) ? SPI3_HOST : SPI2_HOST;
+    // ESP32-C3 has only 2 SPI hosts; ESP32/ESP32-S2/S3 have 3
+#if defined(ARDUINO_ARCH_ESP32) && !defined(CONFIG_IDF_TARGET_ESP32C3)
+    spi_host_device_t host = (dmaChannel == 1) ? SPI3_HOST : SPI2_HOST;
+#else
+    spi_host_device_t host = SPI2_HOST;  // ESP32-C3: only SPI2_HOST available
+#endif
     spi_device_interface_config_t devcfg = {};
     devcfg.clock_speed_hz                = 1000000;  // 1 MHz: safe default for ADCDATA reads
     devcfg.mode                          = 0;
@@ -619,126 +633,125 @@ class MCP3x6x {
   ///////////////////////////////////////////////////////////////////////////////
 #ifdef ARDUINO_ARCH_SAMD
   bool _dmaInitSAMD(uint8_t dmaChannel) {
-  #if defined(__SAMD21__)
-    if (dmaChannel > 7) {
-      return false;
-    }
-  #elif defined(__SAMD51__)
-    if (dmaChannel > 11) {
-      return false;
-    }
-  #else
+#if defined(__SAMD21__)
+    if (dmaChannel > 7) return false;
+#elif defined(__SAMD51__)
+    if (dmaChannel > 11) return false;
+#else
     return false;
-  #endif
+#endif
     _dmaSamdChan   = dmaChannel;
     _dmaSamdActive = true;
     return true;
   }
 
   void _dmaStartSAMD() {
-    if (!_dmaSamdActive) {
-      return;
-    }
-    // Determine the SERCOM instance used by the SPI pins
-    Sercom* spiSercom = g_APinDescription[_pinCLK].ulSercom;
-    if (!spiSercom) {
-      return;
-    }
-    // Set up DMAC channel: source = SERCOM SPI DATA register, destination = _dmaData
-    // Trigger on SERCOM RX complete; transfer 4 bytes (ADCDATA)
+    if (!_dmaSamdActive) return;
+
+    // Get SERCOM pointer from SPI class (public API)
+    uint8_t sercomIndex = _spi->getSercomIndex();
+    Sercom* spiSercom = reinterpret_cast<Sercom*>(0x42000000UL + sercomIndex * 0x400UL);
+    if (!spiSercom) return;
+
+#if defined(__SAMD21__)
+    // SAMD21: select channel via CHID, then access channel registers directly
     DMAC->CHID.reg = _dmaSamdChan;
-    DMAC->CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;  // disable channel during config
-    while (DMAC->CHCTRLA.bit.ENABLE) {
-      ;  // wait for disable to complete
-    }
-
+    DMAC->CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;
+    while (DMAC->CHCTRLA.bit.ENABLE) { ; }
     DMAC->CHCTRLA.reg = DMAC_CHCTRLA_SWRST;
-    while (DMAC->CHCTRLA.bit.SWRST) {
-      ;  // wait for reset
-    }
+    while (DMAC->CHCTRLA.bit.SWRST) { ; }
 
-    DMAC->CHCTRLB.reg = DMAC_CHCTRLB_LVL(0) |     // channel priority level 0
-                        DMAC_CHCTRLB_EVOE |       // event output enable
-                        DMAC_CHCTRLB_EVACT_TRIG;  // event action: trigger
+    // Set up descriptor
+    _dmaSamdDescriptor.BTCTRL = DMAC_BTCTRL_BEATSIZE_BYTE |
+                                DMAC_BTCTRL_SRCINC |
+                                DMAC_BTCTRL_DSTINC |
+                                DMAC_BTCTRL_VALID;
+    _dmaSamdDescriptor.SRCADDR = (uint32_t)&(spiSercom->SPI.DATA.reg);
+    _dmaSamdDescriptor.DSTADDR = (uint32_t)_dmaData;
+    _dmaSamdDescriptor.DESCADDR = 0;
 
-    // Source: SERCOM SPI data register (fixed address)
-    DMAC->CHSRCADDR.reg = (uint32_t)&(spiSercom->SPI.DATA.reg);
-    // Destination: our staging buffer (incrementing address)
-    DMAC->CHDSTADDR.reg = (uint32_t)_dmaData;
-    // Buffer length: 4 bytes (ADCDATA)
-    DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_BEATSIZE_BYTE;
-    DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_SRCINC | DMAC_CHCTRLA_DSTINC;
+    DMAC->BASEADDR.reg = (uint32_t)&_dmaSamdDescriptor;
 
-    // Set up the trigger source: SERCOM DMAC ID RX
-    uint8_t trig = 0;
-  #if defined(__SAMD21__)
-    // Map SERCOM instance to DMAC trigger ID
-    if (spiSercom == SERCOM0)
-      trig = SERCOM0_DMAC_ID_RX;
-    else if (spiSercom == SERCOM1)
-      trig = SERCOM1_DMAC_ID_RX;
-    else if (spiSercom == SERCOM2)
-      trig = SERCOM2_DMAC_ID_RX;
-    else if (spiSercom == SERCOM3)
-      trig = SERCOM3_DMAC_ID_RX;
-    else if (spiSercom == SERCOM4)
-      trig = SERCOM4_DMAC_ID_RX;
-    else if (spiSercom == SERCOM5)
-      trig = SERCOM5_DMAC_ID_RX;
-  #elif defined(__SAMD51__)
-    if (spiSercom == SERCOM0)
-      trig = SERCOM0_DMAC_ID_RX;
-    else if (spiSercom == SERCOM1)
-      trig = SERCOM1_DMAC_ID_RX;
-    else if (spiSercom == SERCOM2)
-      trig = SERCOM2_DMAC_ID_RX;
-    else if (spiSercom == SERCOM3)
-      trig = SERCOM3_DMAC_ID_RX;
-    else if (spiSercom == SERCOM4)
-      trig = SERCOM4_DMAC_ID_RX;
-    else if (spiSercom == SERCOM5)
-      trig = SERCOM5_DMAC_ID_RX;
-    else if (spiSercom == SERCOM6)
-      trig = SERCOM6_DMAC_ID_RX;
-    else if (spiSercom == SERCOM7)
-      trig = SERCOM7_DMAC_ID_RX;
-  #endif
-    DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_TRIGSRC(trig);
+    DMAC->CHCTRLB.reg =
+        DMAC_CHCTRLB_LVL(0) |
+        DMAC_CHCTRLB_EVOE |
+        DMAC_CHCTRLB_EVACT_TRIG |
+        DMAC_CHCTRLB_TRIGSRC(_spi->getDMAC_ID_RX());
+
     DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_ENABLE;
-    while (!DMAC->CHCTRLA.bit.ENABLE) {
-      ;  // wait for enable
-    }
+    while (!DMAC->CHCTRLA.bit.ENABLE) { ; }
 
-    // Set the transfer count: 4 bytes
-    DMAC->CHCTRLA.reg =
-        (DMAC->CHCTRLA.reg & ~DMAC_CHCTRLA_BEATSIZE_Msk) | DMAC_CHCTRLA_BEATSIZE_BYTE;
-    DMAC->CHINTENSET.reg = DMAC_CHINTENSET_TC;  // enable transfer complete interrupt
+    DMAC->CHINTENSET.reg = DMAC_CHINTENSET_TCMPL;
+
+#elif defined(__SAMD51__)
+    // SAMD51: channel registers accessed via DMAC->Channel[n] array
+    DmacChannel* ch = &DMAC->Channel[_dmaSamdChan];
+
+    // Disable channel during configuration
+    ch->CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;
+    while (ch->CHCTRLA.bit.ENABLE) { ; }
+
+    // Software reset
+    ch->CHCTRLA.reg = DMAC_CHCTRLA_SWRST;
+    while (ch->CHCTRLA.bit.SWRST) { ; }
+
+    // Set up descriptor (SAMD51 descriptor has BTCNT field at offset 2)
+    DMAC_BTCTRL_Type btctrl;
+    btctrl.reg = DMAC_BTCTRL_BEATSIZE_BYTE |
+                 DMAC_BTCTRL_SRCINC |
+                 DMAC_BTCTRL_DSTINC |
+                 DMAC_BTCTRL_VALID;
+    _dmaSamdDescriptor.BTCTRL = btctrl.reg;
+    _dmaSamdDescriptor.SRCADDR = (uint32_t)&(spiSercom->SPI.DATA.reg);
+    _dmaSamdDescriptor.DSTADDR = (uint32_t)_dmaData;
+    _dmaSamdDescriptor.DESCADDR = 0;
+
+    DMAC->BASEADDR.reg = (uint32_t)&_dmaSamdDescriptor;
+
+    // Configure channel control A: trigger source + trigger action
+    ch->CHCTRLA.reg =
+        DMAC_CHCTRLA_TRIGSRC(_spi->getDMAC_ID_RX()) |
+        DMAC_CHCTRLA_TRIGACT_TRANSACTION;
+
+    // Enable channel
+    ch->CHCTRLA.reg |= DMAC_CHCTRLA_ENABLE;
+    while (!ch->CHCTRLA.bit.ENABLE) { ; }
+
+    // Enable transfer complete interrupt
+    ch->CHINTENSET.reg = DMAC_CHINTENSET_TCMPL;
+#endif
   }
 
   void _dmaPollSAMD() {
-    if (!_dmaSamdActive) {
-      return;
-    }
-    // Check if the DMAC channel has completed the transfer
-    if (DMAC->CHINTFLAG.reg & DMAC_CHINTFLAG_TC) {
-      DMAC->CHINTFLAG.reg = DMAC_CHINTFLAG_TC;  // clear flag
+    if (!_dmaSamdActive) return;
+#if defined(__SAMD21__)
+    if (DMAC->CHINTFLAG.reg & DMAC_CHINTFLAG_TCMPL) {
+      DMAC->CHINTFLAG.reg = DMAC_CHINTFLAG_TCMPL;
       _dmaComplete(micros());
-      // Re-arm for next conversion
       _dmaStartSAMD();
     }
+#elif defined(__SAMD51__)
+    if (DMAC->Channel[_dmaSamdChan].CHINTFLAG.reg & DMAC_CHINTFLAG_TCMPL) {
+      DMAC->Channel[_dmaSamdChan].CHINTFLAG.reg = DMAC_CHINTFLAG_TCMPL;
+      _dmaComplete(micros());
+      _dmaStartSAMD();
+    }
+#endif
   }
 
   void _dmaStopSAMD() {
-    if (!_dmaSamdActive) {
-      return;
-    }
+    if (!_dmaSamdActive) return;
+#if defined(__SAMD21__)
     DMAC->CHID.reg = _dmaSamdChan;
     DMAC->CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;
-    while (DMAC->CHCTRLA.bit.ENABLE) {
-      ;  // wait for disable
-    }
-    DMAC->CHINTFLAG.reg = DMAC_CHINTFLAG_TC | DMAC_CHINTFLAG_SUSP | DMAC_CHINTFLAG_ERR;
-    _dmaSamdActive      = false;
+    while (DMAC->CHCTRLA.bit.ENABLE) { ; }
+    DMAC->CHINTFLAG.reg = DMAC_CHINTFLAG_TCMPL | DMAC_CHINTFLAG_SUSP;
+#elif defined(__SAMD51__)
+    DMAC->Channel[_dmaSamdChan].CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;
+    while (DMAC->Channel[_dmaSamdChan].CHCTRLA.bit.ENABLE) { ; }
+    DMAC->Channel[_dmaSamdChan].CHINTFLAG.reg = DMAC_CHINTFLAG_TCMPL | DMAC_CHINTFLAG_SUSP;
+#endif
+    _dmaSamdActive = false;
   }
 #endif  // ARDUINO_ARCH_SAMD
 
