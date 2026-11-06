@@ -69,8 +69,9 @@ includes its own test deltas.
 
 ## 8. `test/hil-smoke`
 
-- [ ] 8.1 Add HIL smoke example exercising LOCK/unlock, CONFIG0 VREF, CONFIG2 gain/boost, STATUS
-      bits, and voltage conversion; mark hardware-only and exclude from CI.
+- [x] 8.1 Add HIL smoke example exercising LOCK/unlock, CONFIG0 VREF, CONFIG2 gain/boost, STATUS
+      bits, and voltage conversion; marked hardware-only and excluded from CI. (real body compiled
+      only with `MCP_HIL_SMOKE` build flag on real hardware; empty sketch compiles in CI)
 
 ## 9. `chore(release): 0.2.0` commit at top
 

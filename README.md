@@ -98,6 +98,7 @@ MCP346xR/MCP356xR datasheets. Breaking changes:
 | `MCP3562_Mux_ExternalReference` | MCP3562 | Mux | External VREF |
 | `MCP3564_Mux_SingleEnded` | MCP3564 | Mux | Basic mux (24-bit) |
 | `MCP3564_Mux_GainOSR` | MCP3564 | Mux | Gain + oversampling |
+| `MCP3564_HIL_Smoke` | MCP3564 | Mux | Hardware-in-the-loop smoke test (bench only — no-ops without `MCP_HIL_SMOKE`) |
 
 ---
 
