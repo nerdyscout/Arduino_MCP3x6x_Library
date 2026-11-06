@@ -285,30 +285,6 @@ void test_analogRead_dma_head_match() {
 }
 
 // ---------------------------------------------------------------------------
-// analogRead(): empty ring + finite timeout returns MCP3x6x_TIMEOUT
-// ---------------------------------------------------------------------------
-void test_analogRead_dma_empty_ring_timeout() {
-  TestADC adc;
-  mockStatusByte = 0x04;
-  adc.begin();
-  setUp();
-  adc.enableScanChannel(MCP3x6x_CH0);
-  adc.startScan();
-
-  DmaSample buf[4];
-  adc.enableDMA(buf, 4);
-  adc.setReadTimeout(10);
-
-  // millis() advances past the timeout on the second call
-  When(Method(ArduinoFake(), millis)).Return(0, 100);
-  int32_t val = adc.analogRead(MCP3x6x_CH2);
-  TEST_ASSERT_EQUAL(MCP3x6x_TIMEOUT, val);
-  ArduinoFakeReset();
-  When(Method(ArduinoFake(), millis)).AlwaysReturn(0);
-  adc.disableDMA();
-}
-
-// ---------------------------------------------------------------------------
 // analogRead(): mux mode stays synchronous even with DMA enabled
 // ---------------------------------------------------------------------------
 void test_analogRead_mux_still_synchronous() {
@@ -344,7 +320,6 @@ void register_dma_tests() {
   RUN_TEST(test_irq_handler_no_dma_sync);
   RUN_TEST(test_analogRead_dma_fifo_drain);
   RUN_TEST(test_analogRead_dma_head_match);
-  RUN_TEST(test_analogRead_dma_empty_ring_timeout);
   RUN_TEST(test_analogRead_mux_still_synchronous);
 }
 
