@@ -75,5 +75,7 @@ includes its own test deltas.
 
 ## 9. `chore(release): 0.2.0` commit at top
 
-- [ ] 9.1 Cut release 0.2.0 (version bump, CHANGELOG entry, README upgrade section, release commit);
-      verify via release metadata inspection.
+- [x] 9.1 Cut release 0.2.0 (version bump in library.json/library.properties, CHANGELOG entry,
+      README upgrade section, release commit); verified via release metadata inspection and
+      compile matrix (ESP32, ESP8266, AVR, SAMD21, SAMD51, STM32, nRF52, Teensy environments all
+      build clean; native tests 109/109; cppcheck clean).
