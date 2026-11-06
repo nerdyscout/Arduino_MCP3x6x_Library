@@ -56,14 +56,15 @@ emptying the ring.
 The library SHALL enable DMA sampling for scan mode given a user buffer, its
 capacity, and a platform DMA channel selector, and SHALL reject enablement when
 capacity is zero, the platform has no DMA-capable engine, or the selected DMA
-channel conflicts with the MCLK timer channel.
+channel conflicts with the MCLK timer channel. DMA-capable engines exist only
+for ESP32 and SAMD; all other platforms reject enablement and stay synchronous.
 
 #### Scenario: Enable succeeded
-- **WHEN** DMA is enabled with capacity at least one on a DMA-capable platform
+- **WHEN** DMA is enabled with capacity at least one on ESP32 or SAMD
 - **THEN** subsequent scan-mode IRQ handling uses DMA
 
 #### Scenario: Enable rejected on unsupported platform
-- **WHEN** DMA is enabled on a platform without a DMA-capable SPI engine
+- **WHEN** DMA is enabled on a platform other than ESP32 or SAMD
 - **THEN** the call fails and the scan path stays synchronous
 
 ### Requirement: DMA disablement releases resources and MCLK tone
@@ -86,11 +87,12 @@ The library SHALL report whether DMA sampling is currently enabled.
 
 ### Requirement: Periodic sample population in scan mode
 The library SHALL populate the ring buffer with one sample per completed
-conversion when scan mode conversion is ongoing and DMA is enabled, without
-blocking the scan-mode IRQ handler.
+conversion when scan mode conversion is ongoing and DMA is enabled on ESP32 or
+SAMD, without blocking the scan-mode IRQ handler. On all other platforms DMA
+enablement fails and sampling stays synchronous.
 
 #### Scenario: Scan sampling with DMA
-- **WHEN** a scan-mode conversion completes while DMA is enabled
+- **WHEN** a scan-mode conversion completes while DMA is enabled on ESP32 or SAMD
 - **THEN** the scan-mode IRQ handler starts a non-blocking ADCDATA transfer and
   the completed sample is pushed into the ring buffer
 
