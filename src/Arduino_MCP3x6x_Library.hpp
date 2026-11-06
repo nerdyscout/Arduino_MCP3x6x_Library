@@ -5,7 +5,7 @@
  * @file Arduino_MCP3x6x_Library.hpp
  * @author Stefan Herold (stefan.herold@posteo.de)
  * @brief Library to support Microchip MCP3x6x/R 16/24bit ADCs
- * @version 0.1.0
+ * @version 0.2.0
  * @date 2026-03-23
  *
  * @copyright Copyright (c) 2026
@@ -102,8 +102,9 @@ const uint8_t MCP3x6x_CFG_OFFSET[3]    = {0x00, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_GAIN[3]      = {0x80, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_RESERVED1[3] = {0x90, 0x00, 0x00};  //!< default value
 const uint8_t MCP3x6x_CFG_RESERVED2    = 0x50;                //!< default value
-const uint8_t MCP3x6x_CFG_LOCK         = 0xA5;                //!< default value at POR (unlocked; 0xA5 = write access allowed)
-const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
+const uint8_t MCP3x6x_CFG_LOCK =
+    0xA5;  //!< default value at POR (unlocked; 0xA5 = write access allowed)
+const uint8_t MCP3x6x_CFG_CRCCFG[2] = {0x00, 0x00};  //!< default value
 #endif
 
 /**
@@ -111,9 +112,9 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
  *
  */
 struct DmaSample {
-  uint8_t channel;    //!< channel ID decoded from ADCDATA[31:28] (ID_SGNEXT_DATA)
-  int32_t value;      //!< sign-extended ADC value
-  uint32_t timestamp; //!< micros()/millis() when the sample was captured
+  uint8_t channel;     //!< channel ID decoded from ADCDATA[31:28] (ID_SGNEXT_DATA)
+  int32_t value;       //!< sign-extended ADC value
+  uint32_t timestamp;  //!< micros()/millis() when the sample was captured
 };
 
 /**
@@ -142,21 +143,21 @@ class DmaRingBuffer {
     if (_buf == nullptr || _count == 0) {
       return false;
     }
-    s = _buf[_head];
+    s     = _buf[_head];
     _head = (_head + 1) % _cap;
     _count--;
     return true;
   }
   size_t available() const { return _count; }
   void clear() {
-    _head = 0;
+    _head  = 0;
     _count = 0;
   }
 
  private:
-  DmaSample* _buf = nullptr;
-  size_t _cap = 0;
-  volatile size_t _head = 0;
+  DmaSample* _buf        = nullptr;
+  size_t _cap            = 0;
+  volatile size_t _head  = 0;
   volatile size_t _count = 0;
 };
 
@@ -164,12 +165,12 @@ class DmaRingBuffer {
  * @brief base class MCP3x6x
  *
  */
- template <const size_t _MAX_RESOLUTION, const size_t _MAX_CHANNELS>
- class MCP3x6x {
+template <const size_t _MAX_RESOLUTION, const size_t _MAX_CHANNELS>
+class MCP3x6x {
 #ifdef PIO_NATIVE_TESTING
   friend struct MCP3x6xTest;
 #endif
-  public:
+ public:
   /**
    * @brief ADC Operating Mode Selection
    *
@@ -278,15 +279,15 @@ class DmaRingBuffer {
    *
    */
   enum __attribute__((packed)) conv_mode {
-    CONTINUOUS = 3,       //!< Continuous Conversion mode or continuous conversion
-                          //!< cycle in SCAN mode
-    ONESHOT_STANDBY = 2,  //!< One-shot conversion or one-shot cycle in SCAN mode. It sets
-                          //!< ADC_MODE[1:0] to ‘10’ (standby) at the end of the conversion or
-                          //!< at the end of the conversion cycle in SCAN mode.
-    ONESHOT_SHUTDOWN = 0  //!<  One-shot conversion or one-shot cycle in SCAN mode. It sets
-                          //!<  ADC_MODE[1:0] to ‘0x’ (ADC Shutdown) at the end of the
-                          //!<  conversion or at the end of the conversion cycle in SCAN mode
-                          //!<  (default).
+    CONTINUOUS       = 3,  //!< Continuous Conversion mode or continuous conversion
+                           //!< cycle in SCAN mode
+    ONESHOT_STANDBY  = 2,  //!< One-shot conversion or one-shot cycle in SCAN mode. It sets
+                           //!< ADC_MODE[1:0] to ‘10’ (standby) at the end of the conversion or
+                           //!< at the end of the conversion cycle in SCAN mode.
+    ONESHOT_SHUTDOWN = 0   //!<  One-shot conversion or one-shot cycle in SCAN mode. It sets
+                           //!<  ADC_MODE[1:0] to ‘0x’ (ADC Shutdown) at the end of the
+                           //!<  conversion or at the end of the conversion cycle in SCAN mode
+                           //!<  (default).
   };
 
   /**
@@ -297,7 +298,7 @@ class DmaRingBuffer {
     ID_SGNEXT_DATA = 3,  //!< 32-bit (25-bit right justified data + Channel ID):
                          //!< CHID[3:0] + SGN extension (4 bits) + 24-bit ADC data.
                          //!< It allows overrange with the SGN extension.
-    SGNEXT_DATA = 2,     //!< 32-bit (25-bit right justified data): SGN extension (8-bit) +
+    SGNEXT_DATA    = 2,  //!< 32-bit (25-bit right justified data): SGN extension (8-bit) +
                          //!< 24-bit ADC data. It allows overrange with the SGN extension
     SGN_DATA_ZERO =
         1,        //!< 32-bit (24-bit left justified data): 24-bit ADC data 0x00 (8-bit).
@@ -355,11 +356,11 @@ class DmaRingBuffer {
  private:
   typedef union __attribute__((__packed__)) {
     struct {
-      bool por        : 1;  //!< status: power on reset (bit 0)
-      bool crccfg     : 1;  //!< status: crc error (bit 1)
-      bool dr         : 1;  //!< status: data ready (bit 2)
-      uint8_t addr    : 3;  //!< inverted device address ack (bits 5:3)
-      uint8_t        : 2;  //!< reserved, always 0 (bits 7:6)
+      bool por     : 1;  //!< status: power on reset (bit 0)
+      bool crccfg  : 1;  //!< status: crc error (bit 1)
+      bool dr      : 1;  //!< status: data ready (bit 2)
+      uint8_t addr : 3;  //!< inverted device address ack (bits 5:3)
+      uint8_t      : 2;  //!< reserved, always 0 (bits 7:6)
     };
     uint8_t raw = 0;
   } status_t;
@@ -459,11 +460,11 @@ class DmaRingBuffer {
   }
 
   volatile bool _dataAvailable = false;
-  float _reference = 2.4;
-  uint32_t _readTimeout = 0;
-  int16_t _tempOffset = 0;
-  uint16_t _tempSlope = 1150;
-    uint8_t _pinCS, _pinMISO, _pinMOSI, _pinCLK;  // SPI pins
+  float _reference             = 2.4;
+  uint32_t _readTimeout        = 0;
+  int16_t _tempOffset          = 0;
+  uint16_t _tempSlope          = 1150;
+  uint8_t _pinCS, _pinMISO, _pinMOSI, _pinCLK;  // SPI pins
   uint8_t _pinIRQ, _pinMCLK;
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -473,16 +474,16 @@ class DmaRingBuffer {
   // payload staging: engines clock the raw ADCDATA bytes here (wire order)
   uint8_t _dmaData[4] = {0};
   DmaRingBuffer _dmaRing;
-  bool _dmaEnabled = false;
+  bool _dmaEnabled    = false;
   uint8_t _dmaChannel = 0;
 
 #ifdef ARDUINO_ARCH_ESP32
   spi_device_handle_t _dmaEsp32Handle = nullptr;
-  spi_transaction_t   _dmaEsp32Trans  = {};
+  spi_transaction_t _dmaEsp32Trans    = {};
 #endif
 #ifdef ARDUINO_ARCH_SAMD
-  uint8_t _dmaSamdChan   = 0;
-  bool    _dmaSamdActive = false;
+  uint8_t _dmaSamdChan = 0;
+  bool _dmaSamdActive  = false;
 #endif
 
   /**
@@ -495,16 +496,16 @@ class DmaRingBuffer {
     uint8_t buffer[4];
     memcpy(buffer, _dmaData, 4);
     _reverse_array(buffer, 4);
-    int32_t value = _getValue((uint32_t&)buffer);
-    uint32_t raw = (uint32_t)value;
+    int32_t value   = _getValue((uint32_t&)buffer);
+    uint32_t raw    = (uint32_t)value;
     uint8_t channel = (uint8_t)_getChannel(raw);
     if (_config3.data_format == data_format::ID_SGNEXT_DATA) {
       value = (int32_t)((uint32_t)raw << 4) >> 4;
     }
     DmaSample s;
-    s.channel    = channel;
-    s.value      = value;
-    s.timestamp  = timestamp;
+    s.channel   = channel;
+    s.value     = value;
+    s.timestamp = timestamp;
     _dmaRing.push(s);
   }
 
@@ -532,7 +533,7 @@ class DmaRingBuffer {
 
   void _dmaStartEngine() {
 #ifdef PIO_NATIVE_TESTING
-    // no-op: native tests push directly via _dmaComplete()
+      // no-op: native tests push directly via _dmaComplete()
 #elif defined(ARDUINO_ARCH_ESP32)
     _dmaStartESP32();
 #elif defined(ARDUINO_ARCH_SAMD)
@@ -553,7 +554,7 @@ class DmaRingBuffer {
 
   void _dmaStopEngine() {
 #ifdef PIO_NATIVE_TESTING
-    // mock engine: nothing to release
+      // mock engine: nothing to release
 #elif defined(ARDUINO_ARCH_ESP32)
     _dmaStopESP32();
 #elif defined(ARDUINO_ARCH_SAMD)
@@ -566,14 +567,14 @@ class DmaRingBuffer {
   ///////////////////////////////////////////////////////////////////////////////
 #ifdef ARDUINO_ARCH_ESP32
   bool _dmaInitESP32(uint8_t dmaChannel) {
-    spi_host_device_t host = (dmaChannel == 1) ? SPI3_HOST : SPI2_HOST;
+    spi_host_device_t host               = (dmaChannel == 1) ? SPI3_HOST : SPI2_HOST;
     spi_device_interface_config_t devcfg = {};
-    devcfg.clock_speed_hz = 1000000;  // 1 MHz: safe default for ADCDATA reads
-    devcfg.mode = 0;
-    devcfg.spics_io_num = (int)_pinCS;
-    devcfg.queue_size = 1;
-    devcfg.flags = 0;
-    esp_err_t err = spi_bus_add_device(host, &devcfg, &_dmaEsp32Handle);
+    devcfg.clock_speed_hz                = 1000000;  // 1 MHz: safe default for ADCDATA reads
+    devcfg.mode                          = 0;
+    devcfg.spics_io_num                  = (int)_pinCS;
+    devcfg.queue_size                    = 1;
+    devcfg.flags                         = 0;
+    esp_err_t err                        = spi_bus_add_device(host, &devcfg, &_dmaEsp32Handle);
     return (err == ESP_OK);
   }
 
@@ -581,13 +582,13 @@ class DmaRingBuffer {
     if (!_dmaEsp32Handle) {
       return;
     }
-    uint8_t addr = MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA;
-    _dmaEsp32Trans = {};
-    _dmaEsp32Trans.length = 8;          // 1 byte: address/command
-    _dmaEsp32Trans.rxlength = 32;       // 4 bytes: ADCDATA payload
+    uint8_t addr             = MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA;
+    _dmaEsp32Trans           = {};
+    _dmaEsp32Trans.length    = 8;   // 1 byte: address/command
+    _dmaEsp32Trans.rxlength  = 32;  // 4 bytes: ADCDATA payload
     _dmaEsp32Trans.tx_buffer = &addr;
     _dmaEsp32Trans.rx_buffer = _dmaData;
-    _dmaEsp32Trans.flags = 0;
+    _dmaEsp32Trans.flags     = 0;
     spi_device_queue_trans(_dmaEsp32Handle, &_dmaEsp32Trans, portMAX_DELAY);
   }
 
@@ -596,7 +597,7 @@ class DmaRingBuffer {
       return;
     }
     spi_transaction_t* trans = nullptr;
-    esp_err_t err = spi_device_get_trans_result(_dmaEsp32Handle, &trans, 0);
+    esp_err_t err            = spi_device_get_trans_result(_dmaEsp32Handle, &trans, 0);
     if (err == ESP_OK && trans) {
       _dmaComplete(micros());
       // Re-arm for the next conversion: queue another transaction
@@ -618,18 +619,18 @@ class DmaRingBuffer {
   ///////////////////////////////////////////////////////////////////////////////
 #ifdef ARDUINO_ARCH_SAMD
   bool _dmaInitSAMD(uint8_t dmaChannel) {
-#if defined(__SAMD21__)
+  #if defined(__SAMD21__)
     if (dmaChannel > 7) {
       return false;
     }
-#elif defined(__SAMD51__)
+  #elif defined(__SAMD51__)
     if (dmaChannel > 11) {
       return false;
     }
-#else
+  #else
     return false;
-#endif
-    _dmaSamdChan = dmaChannel;
+  #endif
+    _dmaSamdChan   = dmaChannel;
     _dmaSamdActive = true;
     return true;
   }
@@ -656,10 +657,9 @@ class DmaRingBuffer {
       ;  // wait for reset
     }
 
-    DMAC->CHCTRLB.reg =
-        DMAC_CHCTRLB_LVL(0) |              // channel priority level 0
-        DMAC_CHCTRLB_EVOE |                // event output enable
-        DMAC_CHCTRLB_EVACT_TRIG;           // event action: trigger
+    DMAC->CHCTRLB.reg = DMAC_CHCTRLB_LVL(0) |     // channel priority level 0
+                        DMAC_CHCTRLB_EVOE |       // event output enable
+                        DMAC_CHCTRLB_EVACT_TRIG;  // event action: trigger
 
     // Source: SERCOM SPI data register (fixed address)
     DMAC->CHSRCADDR.reg = (uint32_t)&(spiSercom->SPI.DATA.reg);
@@ -671,24 +671,38 @@ class DmaRingBuffer {
 
     // Set up the trigger source: SERCOM DMAC ID RX
     uint8_t trig = 0;
-#if defined(__SAMD21__)
+  #if defined(__SAMD21__)
     // Map SERCOM instance to DMAC trigger ID
-    if (spiSercom == SERCOM0) trig = SERCOM0_DMAC_ID_RX;
-    else if (spiSercom == SERCOM1) trig = SERCOM1_DMAC_ID_RX;
-    else if (spiSercom == SERCOM2) trig = SERCOM2_DMAC_ID_RX;
-    else if (spiSercom == SERCOM3) trig = SERCOM3_DMAC_ID_RX;
-    else if (spiSercom == SERCOM4) trig = SERCOM4_DMAC_ID_RX;
-    else if (spiSercom == SERCOM5) trig = SERCOM5_DMAC_ID_RX;
-#elif defined(__SAMD51__)
-    if (spiSercom == SERCOM0) trig = SERCOM0_DMAC_ID_RX;
-    else if (spiSercom == SERCOM1) trig = SERCOM1_DMAC_ID_RX;
-    else if (spiSercom == SERCOM2) trig = SERCOM2_DMAC_ID_RX;
-    else if (spiSercom == SERCOM3) trig = SERCOM3_DMAC_ID_RX;
-    else if (spiSercom == SERCOM4) trig = SERCOM4_DMAC_ID_RX;
-    else if (spiSercom == SERCOM5) trig = SERCOM5_DMAC_ID_RX;
-    else if (spiSercom == SERCOM6) trig = SERCOM6_DMAC_ID_RX;
-    else if (spiSercom == SERCOM7) trig = SERCOM7_DMAC_ID_RX;
-#endif
+    if (spiSercom == SERCOM0)
+      trig = SERCOM0_DMAC_ID_RX;
+    else if (spiSercom == SERCOM1)
+      trig = SERCOM1_DMAC_ID_RX;
+    else if (spiSercom == SERCOM2)
+      trig = SERCOM2_DMAC_ID_RX;
+    else if (spiSercom == SERCOM3)
+      trig = SERCOM3_DMAC_ID_RX;
+    else if (spiSercom == SERCOM4)
+      trig = SERCOM4_DMAC_ID_RX;
+    else if (spiSercom == SERCOM5)
+      trig = SERCOM5_DMAC_ID_RX;
+  #elif defined(__SAMD51__)
+    if (spiSercom == SERCOM0)
+      trig = SERCOM0_DMAC_ID_RX;
+    else if (spiSercom == SERCOM1)
+      trig = SERCOM1_DMAC_ID_RX;
+    else if (spiSercom == SERCOM2)
+      trig = SERCOM2_DMAC_ID_RX;
+    else if (spiSercom == SERCOM3)
+      trig = SERCOM3_DMAC_ID_RX;
+    else if (spiSercom == SERCOM4)
+      trig = SERCOM4_DMAC_ID_RX;
+    else if (spiSercom == SERCOM5)
+      trig = SERCOM5_DMAC_ID_RX;
+    else if (spiSercom == SERCOM6)
+      trig = SERCOM6_DMAC_ID_RX;
+    else if (spiSercom == SERCOM7)
+      trig = SERCOM7_DMAC_ID_RX;
+  #endif
     DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_TRIGSRC(trig);
     DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_ENABLE;
     while (!DMAC->CHCTRLA.bit.ENABLE) {
@@ -696,8 +710,8 @@ class DmaRingBuffer {
     }
 
     // Set the transfer count: 4 bytes
-    DMAC->CHCTRLA.reg = (DMAC->CHCTRLA.reg & ~DMAC_CHCTRLA_BEATSIZE_Msk) |
-                        DMAC_CHCTRLA_BEATSIZE_BYTE;
+    DMAC->CHCTRLA.reg =
+        (DMAC->CHCTRLA.reg & ~DMAC_CHCTRLA_BEATSIZE_Msk) | DMAC_CHCTRLA_BEATSIZE_BYTE;
     DMAC->CHINTENSET.reg = DMAC_CHINTENSET_TC;  // enable transfer complete interrupt
   }
 
@@ -724,7 +738,7 @@ class DmaRingBuffer {
       ;  // wait for disable
     }
     DMAC->CHINTFLAG.reg = DMAC_CHINTFLAG_TC | DMAC_CHINTFLAG_SUSP | DMAC_CHINTFLAG_ERR;
-    _dmaSamdActive = false;
+    _dmaSamdActive      = false;
   }
 #endif  // ARDUINO_ARCH_SAMD
 
@@ -748,10 +762,10 @@ class DmaRingBuffer {
   union Config0 {
     struct {
       enum adc_mode adc : 2;  //!< ADC Operating Mode Selection
-      enum cs_sel bias  : 2;  //!< Current Source/Sink Selection Bits for Sensor Bias
-      enum clk_sel clk  : 2;  //!< Clock Selection
-      uint8_t cfg0      : 1;  //!< Full Shutdown Mode Enable (bit 6)
-      bool vref_sel     : 1;  //!< Internal Voltage Reference Selection (bit 7)
+      enum cs_sel bias : 2;   //!< Current Source/Sink Selection Bits for Sensor Bias
+      enum clk_sel clk : 2;   //!< Clock Selection
+      uint8_t cfg0  : 1;      //!< Full Shutdown Mode Enable (bit 6)
+      bool vref_sel : 1;      //!< Internal Voltage Reference Selection (bit 7)
     };
     uint8_t raw;  //!< raw access to register
     Config0(const uint8_t data) : raw(data) {}
@@ -765,7 +779,7 @@ class DmaRingBuffer {
    */
   union Config1 {
     struct {
-      uint8_t      : 2;  //!< reserved
+      uint8_t : 2;       //!< reserved
       enum osr osr : 4;  //!< Oversampling Ratio for Delta-Sigma A/D Conversion
       enum pre pre : 2;  //!< Prescaler Value Selection for AMCLK
     };
@@ -781,10 +795,10 @@ class DmaRingBuffer {
    */
   union Config2 {
     struct {
-      bool reserved     : 1;  //!< reserved, must always be '1' (bit 0)
-      bool az_ref      : 1;  //!< Auto-Zeroing Reference Buffer Setting (bit 1)
-      bool az_mux      : 1;  //!< Auto-Zeroing MUX Setting (bit 2)
-      enum gain gain   : 3;  //!< ADC Gain Selection (bits 5:3)
+      bool reserved : 1;     //!< reserved, must always be '1' (bit 0)
+      bool az_ref   : 1;     //!< Auto-Zeroing Reference Buffer Setting (bit 1)
+      bool az_mux   : 1;     //!< Auto-Zeroing MUX Setting (bit 2)
+      enum gain gain : 3;    //!< ADC Gain Selection (bits 5:3)
       enum boost boost : 2;  //!< ADC Bias Current Selection (bits 7:6)
     };
     uint8_t raw;  //!< raw access to register
@@ -799,13 +813,13 @@ class DmaRingBuffer {
    */
   union Config3 {
     struct {
-      bool en_gaincal              : 1;  //!< Enable Digital Gain Calibration
-      bool en_offcal               : 1;  //!< Enable Digital Offset Calibration
-      bool en_crccom               : 1;  //!< CRC Checksum Selection on Read Communications
-      bool crc_format              : 1;  //!< CRC Checksum Format Selection on Read
+      bool en_gaincal : 1;               //!< Enable Digital Gain Calibration
+      bool en_offcal  : 1;               //!< Enable Digital Offset Calibration
+      bool en_crccom  : 1;               //!< CRC Checksum Selection on Read Communications
+      bool crc_format : 1;               //!< CRC Checksum Format Selection on Read
                                          //!< Communications
       enum data_format data_format : 2;  //!< ADC Output Data Format Selection
-      enum conv_mode conv_mode     : 2;  //!< Conversion Mode Selection
+      enum conv_mode conv_mode : 2;      //!< Conversion Mode Selection
     };
     uint8_t raw;  //!< raw access to register
     Config3(const uint8_t data) : raw(data) {}
@@ -841,7 +855,7 @@ class DmaRingBuffer {
   union Mux {
     struct {
       enum mux vin_minus : 4;  //!< MUX_VIN- Input Selection
-      enum mux vin_plus  : 4;  //!< MUX_VIN+ Input Selection
+      enum mux vin_plus : 4;   //!< MUX_VIN+ Input Selection
     };
     uint8_t raw;  //!< raw access to register
     Mux(const uint8_t data = MCP3x6x_CFG_MUX) : raw(data) {}
@@ -868,7 +882,7 @@ class DmaRingBuffer {
       } channel;
       uint8_t unimplemented : 4;  //!< unimplemented: read as ‘0’
       bool reserved         : 1;  //!< reserved: should be set to ‘0‘
-      enum delay dly        : 3;  //!< delay time between each conversion during a scan cycle
+      enum delay dly : 3;         //!< delay time between each conversion during a scan cycle
     };
     uint8_t raw[3];  //!< raw access to register
     Scan(const uint8_t data[3] = MCP3x6x_CFG_SCAN) : raw{data[0], data[1], data[2]} {}
@@ -944,7 +958,7 @@ class DmaRingBuffer {
     int32_t value     : 25;                             //!< actual value of conversion
   } _adcdata = {.channelid = MCP3x6x_CH0, .value = 0};  //!< todo
 
-  public:
+ public:
   ///////////////////////////////////////////////////////////////////////////////
   // de/constructor
   ////////////////////////////////////////////////////////////////////////////////
@@ -959,9 +973,9 @@ class DmaRingBuffer {
    * @param theSPI
    * @param theSPISettings
    */
-  explicit MCP3x6x(uint8_t pinCS = SS, uint8_t pinMOSI = MOSI, uint8_t pinMISO = MISO, uint8_t pinCLK = SCK,
-          SPIClass* theSPI           = &SPI,
-          SPISettings theSPISettings = SPISettings())
+  explicit MCP3x6x(uint8_t pinCS = SS, uint8_t pinMOSI = MOSI, uint8_t pinMISO = MISO,
+                   uint8_t pinCLK = SCK, SPIClass* theSPI = &SPI,
+                   SPISettings theSPISettings = SPISettings())
       : _result{},
         _pinCS(pinCS),
         _pinMISO(pinMISO),
@@ -1054,13 +1068,19 @@ class DmaRingBuffer {
 
     uint8_t expected_id;
     if (_MAX_RESOLUTION == 16) {
-      if (_MAX_CHANNELS == 2)      expected_id = 0x8;
-      else if (_MAX_CHANNELS == 4) expected_id = 0x9;
-      else                         expected_id = 0xB;
+      if (_MAX_CHANNELS == 2)
+        expected_id = 0x8;
+      else if (_MAX_CHANNELS == 4)
+        expected_id = 0x9;
+      else
+        expected_id = 0xB;
     } else {
-      if (_MAX_CHANNELS == 2)      expected_id = 0xC;
-      else if (_MAX_CHANNELS == 4) expected_id = 0xD;
-      else                         expected_id = 0xF;
+      if (_MAX_CHANNELS == 2)
+        expected_id = 0xC;
+      else if (_MAX_CHANNELS == 4)
+        expected_id = 0xD;
+      else
+        expected_id = 0xF;
     }
 
     if (hw_id != expected_id) {
@@ -1076,11 +1096,11 @@ class DmaRingBuffer {
 
     if (reserved_c == 0x30) {
       _config0.vref_sel = 1;
-      _reference = 2.4f;
+      _reference        = 2.4f;
       write(_config0);
     } else {
       _config0.vref_sel = 0;
-      _reference = 0.0f;
+      _reference        = 0.0f;
     }
   }
 
@@ -1706,13 +1726,13 @@ class DmaRingBuffer {
   bool dataAvailable() { return _dataAvailable; }
 
   int32_t readADCDATA() {
-    size_t s = _adcReadSize();
+    size_t s          = _adcReadSize();
     uint8_t buffer[4] = {0};
     _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
     _reverse_array(buffer, s);
-    _dataAvailable = false;
-    int32_t value = _getValue((uint32_t&)buffer);
-    uint32_t raw   = (uint32_t)value;
+    _dataAvailable  = false;
+    int32_t value   = _getValue((uint32_t&)buffer);
+    uint32_t raw    = (uint32_t)value;
     uint8_t channel = (uint8_t)_getChannel(raw);
     if (_config3.data_format == data_format::ID_SGNEXT_DATA) {
       value = (int32_t)((uint32_t)raw << 4) >> 4;
@@ -1834,7 +1854,7 @@ class DmaRingBuffer {
     // Read the ADC data when IRQ is triggered
     read(&_adcdata);
     _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
-    _dataAvailable = true;
+    _dataAvailable                           = true;
   }
 
   /**
@@ -1961,8 +1981,8 @@ class DmaRingBuffer {
    */
   int32_t toVoltage(int32_t raw) {
     int64_t VREF_uV = (int64_t)(_reference * 1000000.0f);
-    int64_t num = (int64_t)raw * VREF_uV;
-    int64_t den = (int64_t)(1UL << (_MAX_RESOLUTION - 1));
+    int64_t num     = (int64_t)raw * VREF_uV;
+    int64_t den     = (int64_t)(1UL << (_MAX_RESOLUTION - 1));
 
     if (_config2.gain == GAIN_033) {
       num *= 3;
@@ -1994,11 +2014,11 @@ class DmaRingBuffer {
    */
   int16_t readTemperature() {
     uint32_t savedTimeout = _readTimeout;
-    _readTimeout = 0;
-    int32_t raw = analogRead(MCP3x6x_TEMP);
-    _readTimeout = savedTimeout;
+    _readTimeout          = 0;
+    int32_t raw           = analogRead(MCP3x6x_TEMP);
+    _readTimeout          = savedTimeout;
 
-    int32_t V_uV = toVoltage(raw);
+    int32_t V_uV          = toVoltage(raw);
 
     int32_t V_25_uV;
     if (_MAX_RESOLUTION == 16) {
@@ -2079,12 +2099,12 @@ class DmaRingBuffer {
    *
    */
   void startScan(enum irq_mode mode = IRQ_OPEN_DRAIN,
-                 data_format fmt  = data_format::ID_SGNEXT_DATA) {
-    _irq.en_fastcmd           = 1;
-    _irq.irq_mode             = (uint8_t)mode;
+                 data_format fmt    = data_format::ID_SGNEXT_DATA) {
+    _irq.en_fastcmd = 1;
+    _irq.irq_mode   = (uint8_t)mode;
     write(_irq);
-    _config3.data_format      = fmt;
-    _config3.conv_mode        = conv_mode::CONTINUOUS;
+    _config3.data_format = fmt;
+    _config3.conv_mode   = conv_mode::CONTINUOUS;
     write(_config3);
     _config0.adc = adc_mode::CONVERSION;
     write(_config0);
@@ -2096,11 +2116,11 @@ class DmaRingBuffer {
    *
    */
   void startScanOnce() {
-    _irq.en_fastcmd           = 1;
-    _irq.irq_mode             = (uint8_t)IRQ_OPEN_DRAIN;
+    _irq.en_fastcmd = 1;
+    _irq.irq_mode   = (uint8_t)IRQ_OPEN_DRAIN;
     write(_irq);
-    _config3.data_format      = data_format::ID_SGNEXT_DATA;
-    _config3.conv_mode        = conv_mode::ONESHOT_STANDBY;
+    _config3.data_format = data_format::ID_SGNEXT_DATA;
+    _config3.conv_mode   = conv_mode::ONESHOT_STANDBY;
     write(_config3);
     _config0.adc = adc_mode::CONVERSION;
     write(_config0);
@@ -2145,7 +2165,7 @@ class DmaRingBuffer {
    * @param ch
    * @return int32_t analog value
    */
-   int32_t analogRead(Mux chan = MCP3x6x_CH0) {
+  int32_t analogRead(Mux chan = MCP3x6x_CH0) {
     // MuxMode
     if (_scan.channel.raw == 0) {
       _mux = chan;
@@ -2160,7 +2180,7 @@ class DmaRingBuffer {
         }
       } while (!_status.dr);
 
-      _dataAvailable = false;
+      _dataAvailable                                  = false;
       return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
     }
 
@@ -2225,7 +2245,7 @@ class DmaRingBuffer {
    * @param pinN
    * @return int32_t
    */
-   int32_t analogReadDifferential(Mux pinP, Mux pinN) {
+  int32_t analogReadDifferential(Mux pinP, Mux pinN) {
     // Map differential inputs: each side's VIN+ selects its channel,
     // the opposite side selects the negative input. Any 4-bit selector is allowed.
     _mux.vin_plus  = pinP.vin_plus;
