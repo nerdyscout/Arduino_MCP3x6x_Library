@@ -104,6 +104,60 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
 #endif
 
 /**
+ * @brief single sample captured by the DMA engine
+ *
+ */
+struct DmaSample {
+  uint8_t channel;    //!< channel ID decoded from ADCDATA[31:28] (ID_SGNEXT_DATA)
+  int32_t value;      //!< sign-extended ADC value
+  uint32_t timestamp; //!< micros()/millis() when the sample was captured
+};
+
+/**
+ * @brief lock-free single-producer/single-consumer ring buffer for DMA samples
+ *
+ * The DMA completioninterrupt produces (push), the user context consumes
+ * (pop). Storage is caller-provided; no heap is used. Pushing into a full
+ * buffer drops the sample (returns false) — it never blocks.
+ */
+class DmaRingBuffer {
+ public:
+  void setup(DmaSample* buf, size_t cap) {
+    _buf = buf;
+    _cap = cap;
+    clear();
+  }
+  bool push(DmaSample s) {
+    if (_buf == nullptr || _count >= _cap) {
+      return false;
+    }
+    _buf[(_head + _count) % _cap] = s;
+    _count++;
+    return true;
+  }
+  bool pop(DmaSample& s) {
+    if (_buf == nullptr || _count == 0) {
+      return false;
+    }
+    s = _buf[_head];
+    _head = (_head + 1) % _cap;
+    _count--;
+    return true;
+  }
+  size_t available() const { return _count; }
+  void clear() {
+    _head = 0;
+    _count = 0;
+  }
+
+ private:
+  DmaSample* _buf = nullptr;
+  size_t _cap = 0;
+  volatile size_t _head = 0;
+  volatile size_t _count = 0;
+};
+
+/**
  * @brief base class MCP3x6x
  *
  */
@@ -361,32 +415,16 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
 
   //  status_t _transfer16(uint8_t *data, uint8_t addr);
   int32_t _getValue(int32_t raw) {
-    switch (_MAX_RESOLUTION) {
-      case 16:
-        switch (_config3.data_format) {
-          case (data_format::SGN_DATA_ZERO):
-            return raw >> 16;
-          case (data_format::SGN_DATA):
-            return (int32_t)(raw << 16) >> 16;
-          case (data_format::SGNEXT_DATA):
-          case (data_format::ID_SGNEXT_DATA):
-            return raw;
-        }
-        break;
-
-      case 24:
-        switch (_config3.data_format) {
-          case (data_format::SGN_DATA_ZERO):
-            return raw >> 8;
-          case (data_format::SGN_DATA):
-            return (int32_t)(raw << 8) >> 8;
-          case (data_format::SGNEXT_DATA):
-          case (data_format::ID_SGNEXT_DATA):
-            return raw;
-        }
-        break;
+    switch (_config3.data_format) {
+      case data_format::SGN_DATA_ZERO:
+        return raw >> (_MAX_RESOLUTION == 16 ? 16 : 8);
+      case data_format::SGN_DATA:
+        return (int32_t)(raw << (_MAX_RESOLUTION == 16 ? 16 : 8)) >>
+               (_MAX_RESOLUTION == 16 ? 16 : 8);
+      case data_format::SGNEXT_DATA:
+      case data_format::ID_SGNEXT_DATA:
+        return raw;
     }
-
     return -1;
   }
   int8_t _getChannel(uint32_t raw) {
@@ -402,6 +440,21 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     return -1;
   }
 
+  /**
+   * @brief number of bytes to read for ADCDATA based on resolution and format
+   *
+   * @return size_t number of bytes
+   */
+  size_t _adcReadSize() const {
+    switch (_MAX_RESOLUTION) {
+      case 16:
+        return _config3.data_format == data_format::SGN_DATA ? 2 : 4;
+      case 24:
+        return _config3.data_format == data_format::SGN_DATA ? 3 : 4;
+    }
+    return 4;
+  }
+
   volatile bool _dataAvailable = false;
   float _reference = 2.4;
   uint32_t _readTimeout = 0;
@@ -409,6 +462,108 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   uint16_t _tempSlope = 1150;
     uint8_t _pinCS, _pinMISO, _pinMOSI, _pinCLK;  // SPI pins
   uint8_t _pinIRQ, _pinMCLK;
+
+  ///////////////////////////////////////////////////////////////////////////////
+  // DMA
+  ////////////////////////////////////////////////////////////////////////////////
+
+  // payload staging: engines clock the raw ADCDATA bytes here (wire order)
+  uint8_t _dmaData[4] = {0};
+  DmaRingBuffer _dmaRing;
+  bool _dmaEnabled = false;
+  uint8_t _dmaChannel = 0;
+
+  /**
+   * @brief decode a completed DMA transfer into a sample and push it to the ring
+   *
+   * Mirrors readADCDATA() decode: big-endian wire bytes, _getValue() conversion,
+   * ID_SGNEXT_DATA channel nibble strip + sign extension.
+   */
+  void _dmaComplete(uint32_t timestamp) {
+    uint8_t buffer[4];
+    memcpy(buffer, _dmaData, 4);
+    _reverse_array(buffer, 4);
+    int32_t value = _getValue((uint32_t&)buffer);
+    uint32_t raw = (uint32_t)value;
+    uint8_t channel = (uint8_t)_getChannel(raw);
+    if (_config3.data_format == data_format::ID_SGNEXT_DATA) {
+      value = (int32_t)((uint32_t)raw << 4) >> 4;
+    }
+    DmaSample s;
+    s.channel    = channel;
+    s.value      = value;
+    s.timestamp  = timestamp;
+    _dmaRing.push(s);
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////
+  // DMA platform engines
+  ///////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * @brief initialize the platform DMA engine; false = not supported / conflict
+   */
+  bool _dmaInitEngine(uint8_t dmaChannel) {
+#ifdef PIO_NATIVE_TESTING
+    // native tests use a mock engine so ring/lifecycle logic is testable on host
+    (void)dmaChannel;
+    return true;
+#elif defined(ARDUINO_ARCH_ESP32)
+    return _dmaInitESP32(dmaChannel);
+#elif defined(ARDUINO_ARCH_SAMD)
+    return _dmaInitSAMD(dmaChannel);
+#elif defined(ARDUINO_ARCH_STM32)
+    return _dmaInitSTM32(dmaChannel);
+#elif defined(ARDUINO_ARCH_NRF52)
+    return _dmaInitNRF52(dmaChannel);
+#elif defined(ARDUINO_ARCH_TEENSY) && defined(__IMXRT1062__)
+    return _dmaInitTeensy(dmaChannel);
+#else
+    (void)dmaChannel;
+    return false;
+#endif
+  }
+
+  void _dmaStartEngine() {
+#ifdef PIO_NATIVE_TESTING
+    // no-op: native tests push directly via _dmaComplete()
+#elif defined(ARDUINO_ARCH_ESP32)
+    _dmaStartESP32();
+#elif defined(ARDUINO_ARCH_SAMD)
+    _dmaStartSAMD();
+#elif defined(ARDUINO_ARCH_STM32)
+    _dmaStartSTM32();
+#elif defined(ARDUINO_ARCH_NRF52)
+    _dmaStartNRF52();
+#elif defined(ARDUINO_ARCH_TEENSY) && defined(__IMXRT1062__)
+    _dmaStartTeensy();
+#endif
+  }
+
+  /**
+   * @brief pull finished transactions from the engine (only ESP32 needs polling)
+   */
+  void _dmaPollEngine() {
+#ifdef ARDUINO_ARCH_ESP32
+    _dmaPollESP32();
+#endif
+  }
+
+  void _dmaStopEngine() {
+#ifdef PIO_NATIVE_TESTING
+    // mock engine: nothing to release
+#elif defined(ARDUINO_ARCH_ESP32)
+    _dmaStopESP32();
+#elif defined(ARDUINO_ARCH_SAMD)
+    _dmaStopSAMD();
+#elif defined(ARDUINO_ARCH_STM32)
+    _dmaStopSTM32();
+#elif defined(ARDUINO_ARCH_NRF52)
+    _dmaStopNRF52();
+#elif defined(ARDUINO_ARCH_TEENSY) && defined(__IMXRT1062__)
+    _dmaStopTeensy();
+#endif
+  }
 
   SPIClass* _spi;            // SPI interface
   SPISettings _spiSettings;  // SPI settings
@@ -671,6 +826,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    *
    */
   ~MCP3x6x() {
+    if (_dmaEnabled) disableDMA();
     if (_pinIRQ) detachInterrupt(digitalPinToInterrupt(_pinIRQ));
     if (_pinMCLK) noTone(_pinMCLK);
     end();
@@ -1250,29 +1406,13 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @return status_t
    */
   status_t read(Adcdata* data) {
-    size_t s = 1;
-
-    switch (_MAX_RESOLUTION) {
-      case 16:
-        s = _config3.data_format == data_format::SGN_DATA ? 2 : 4;
-        break;
-      case 24:
-        s = _config3.data_format == data_format::SGN_DATA ? 3 : 4;
-        break;
-    }
-
+    size_t s = _adcReadSize();
     uint8_t buffer[4];
     memset(buffer, 0, 4);
-
-    //  while (status_dr()) {
     _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
-    //  }
-
     _reverse_array(buffer, s);
-
     data->channelid = _getChannel((uint32_t&)buffer);
     data->value     = _getValue((uint32_t&)buffer);
-
     return _status;
   }
 
@@ -1403,15 +1543,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   bool dataAvailable() { return _dataAvailable; }
 
   int32_t readADCDATA() {
-    size_t s = 1;
-    switch (_MAX_RESOLUTION) {
-      case 16:
-        s = _config3.data_format == data_format::SGN_DATA ? 2 : 4;
-        break;
-      case 24:
-        s = _config3.data_format == data_format::SGN_DATA ? 3 : 4;
-        break;
-    }
+    size_t s = _adcReadSize();
     uint8_t buffer[4] = {0};
     _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
     _reverse_array(buffer, s);
@@ -1420,7 +1552,6 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     uint32_t raw   = (uint32_t)value;
     uint8_t channel = (uint8_t)_getChannel(raw);
     if (_config3.data_format == data_format::ID_SGNEXT_DATA) {
-      // ID_SGNEXT_DATA: CH_ID[3:0] occupies bits [31:28]; sign-extend from bit 27.
       value = (int32_t)((uint32_t)raw << 4) >> 4;
     }
     _adcdata.value     = value;
@@ -1436,6 +1567,93 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   int8_t getLastChannel() { return _adcdata.channelid; }
 
   ///////////////////////////////////////////////////////////////////////////////
+  // DMA API (scan mode only; mux mode stays synchronous)
+  ////////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * @brief enable DMA-backed scan sampling
+   *
+   * Registers the platform DMA engine and prepares the ring buffer. DMA is
+   * rejected when capacity < 1, when the platform has no DMA-capable SPI
+   * engine (AVR, ESP8266), when the selected channel conflicts with MCLK, or
+   * when the engine fails to initialize.
+   *
+   * @param buffer user-provided sample storage (DMA writes here, ring holds
+   *               capacity*2 x enabled channels recommended)
+   * @param capacity ring capacity (>= 1)
+   * @param dmaChannel platform channel selector (0 = default; on ESP32 this
+   *        selects the SPI host: 0 = SPI2_HOST, 1 = SPI3_HOST)
+   * @return true DMA enabled; subsequent scan-mode conversions land in buffer
+   * @return false DMA not enabled; scan path stays synchronous
+   */
+  bool enableDMA(DmaSample* buffer, size_t capacity, uint8_t dmaChannel = 0) {
+    if (capacity < 1) {
+      return false;
+    }
+    if (_dmaEnabled) {
+      return false;
+    }
+    if (!_dmaInitEngine(dmaChannel)) {
+      return false;
+    }
+    _dmaRing.setup(buffer, capacity);
+    _dmaChannel = dmaChannel;
+    _dmaEnabled = true;
+    return true;
+  }
+
+  /**
+   * @brief get pointer to DMA staging buffer (for test access)
+   *
+   * @return uint8_t* pointer to the 4-byte ADCDATA staging buffer
+   */
+  uint8_t* dmaDataPtr() { return _dmaData; }
+
+  /**
+   * @brief disable DMA sampling and release platform resources (MCLK tone off)
+   */
+  void disableDMA() {
+    if (!_dmaEnabled) {
+      return;
+    }
+    _dmaEnabled = false;
+    _dmaRing.clear();
+    _dmaStopEngine();
+    if (_pinMCLK) noTone(_pinMCLK);
+  }
+
+  /**
+   * @brief report whether DMA sampling is enabled
+   */
+  bool isDMAEnabled() const { return _dmaEnabled; }
+
+  /**
+   * @brief number of DMA samples currently stored (0 when DMA disabled)
+   */
+  size_t samplesAvailable() {
+    if (!_dmaEnabled) {
+      return 0;
+    }
+    _dmaPollEngine();  // ESP32: pull completed transactions first
+    return _dmaRing.available();
+  }
+
+  /**
+   * @brief pop the oldest DMA sample
+   *
+   * @param sample receives the oldest stored sample
+   * @return true sample was returned
+   * @return false DMA disabled or no samples stored
+   */
+  bool readSample(DmaSample& sample) {
+    if (!_dmaEnabled) {
+      return false;
+    }
+    _dmaPollEngine();  // ESP32: pull completed transactions first
+    return _dmaRing.pop(sample);
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////
   //
   ////////////////////////////////////////////////////////////////////////////////
 
@@ -1444,6 +1662,12 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    *
    */
   void IRQ_handler() {
+    // DMA path: scan mode with DMA enabled reads ADCDATA non-blocking
+    if (_dmaEnabled && _scan.channel.raw != 0) {
+      _dmaStartEngine();
+      _dataAvailable = true;
+      return;
+    }
     // Read the ADC data when IRQ is triggered
     read(&_adcdata);
     _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
@@ -1458,19 +1682,6 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
   void setDataFormat(data_format format) {
     _config3.data_format = format;
     write(_config3);
-
-    switch (format) {
-      case data_format::SGN_DATA:
-      case data_format::SGN_DATA_ZERO:
-        //      _resolution--;
-        break;
-      case data_format::SGNEXT_DATA:
-      case data_format::ID_SGNEXT_DATA:
-        break;
-      default:
-        //      _resolution = -1;
-        break;
-    }
   }
 
   /**
@@ -1698,12 +1909,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @return true
    * @return false
    */
-  bool isContinuous() {
-    if (_config3.conv_mode == conv_mode::CONTINUOUS) {
-      return true;
-    }
-    return false;
-  }
+  bool isContinuous() { return _config3.conv_mode == conv_mode::CONTINUOUS; }
 
   /**
    * @brief start scan mode: configure IRQ pin and set ADC to Conversion
@@ -1795,7 +2001,34 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
       return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
     }
 
-    // ScanMode — return cached result without restarting scan cycle
+    // ScanMode — return cached result unless DMA backs the scan
+    if (_dmaEnabled) {
+      int16_t idx = -1;
+      for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
+        if (_channelID[i] == chan.raw) {
+          idx = (int16_t)i;
+          break;
+        }
+      }
+      if (idx < 0) {
+        return -1;
+      }
+      uint32_t start = millis();
+      for (;;) {
+        _dmaPollEngine();
+        DmaSample s;
+        // drain FIFO in order: consume other channels until requested appears
+        if (_dmaRing.pop(s)) {
+          if (s.channel == (uint8_t)idx) {
+            return s.value;
+          }
+          continue;
+        }
+        if (_readTimeout && (millis() - start) >= _readTimeout) {
+          return MCP3x6x_TIMEOUT;
+        }
+      }
+    }
     for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
       if (_channelID[i] == chan.raw) {
         _dataAvailable = false;

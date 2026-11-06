@@ -103,6 +103,7 @@ int runUnityTests(void) {
   register_scan_mode_tests();
   register_fastcmd_status_tests();
   register_misc_tests();
+  register_dma_tests();
   return UNITY_END();
 }
 

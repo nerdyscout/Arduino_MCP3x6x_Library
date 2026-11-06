@@ -70,6 +70,9 @@ struct MCP3x6xTest {
   static int8_t getChannel(T& adc, uint32_t raw) { return adc._getChannel(raw); }
 
   template <typename T>
+  static void dmaComplete(T& adc, uint32_t timestamp) { adc._dmaComplete(timestamp); }
+
+  template <typename T>
   static typename T::status_t fastcmd(T& adc, uint8_t cmd) { return adc._fastcmd(cmd); }
 
   template <typename T>
@@ -127,6 +130,7 @@ void register_analog_tests();
 void register_scan_mode_tests();
 void register_fastcmd_status_tests();
 void register_misc_tests();
+void register_dma_tests();
 
 // ---------------------------------------------------------------------------
 // Uniform entry point
