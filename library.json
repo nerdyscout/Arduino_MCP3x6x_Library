@@ -1,7 +1,7 @@
 {
     "name": "MCP3x6xR",
     "version": "0.1.0",
-    "description": "Library to support Microchip MPC3x6x/R 16/24bit analog to digital converters.",
+    "description": "Library to support Microchip MCP3x6xR 16/24bit analog to digital converters.",
     "keywords": "MCP3461R, MCP3462R, MCP3464R, MCP3561R, MCP3562R, MCP3564R, MCP3461, MCP3462, MCP3464, MCP3561, MCP3562, MCP3564",
     "repository": {
         "type": "git",

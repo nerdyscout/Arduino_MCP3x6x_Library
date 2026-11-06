@@ -65,6 +65,24 @@ if (mcp.available()) {
 }
 ```
 
+## Upgrading to 0.2.0
+
+Version 0.2.0 corrects several register-map and API mismatches against the
+MCP346xR/MCP356xR datasheets. Breaking changes:
+
+- The C wrapper `src/MCP3x6x.h` was removed (invalid `extern "C"` around a C++
+  template class). Include `Arduino_MCP3x6x_Library.hpp` directly.
+- `lock()` now locks the register map by default (writes `0x00`); `unlock()`
+  re-unlocks with the datasheet password `0xA5`.
+- `getMaxValue()` returns half scale `2^(N-1)` — the same formula
+  `getReference() / getMaxValue()` in the examples now yields correct fractions.
+- `analogReadDifferential(pinP, pinN)` maps the VIN+ channel of each selector.
+- `startScan()` configures continuous conversion; use `startScanOnce()` for a
+  single scan cycle that ends in standby.
+- CONFIG0/CONFIG2/STATUS bitfields now match the datasheet bit layout, so
+  register bytes written/read over SPI differ from 0.1.x (the corrections are
+  documented in the [CHANGELOG](CHANGELOG.md)).
+
 ## Examples
 
 | Example | ADC | Mode | What it shows |

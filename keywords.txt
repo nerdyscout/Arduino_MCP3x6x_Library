@@ -57,6 +57,10 @@ setDataFormat	KEYWORD2
 setConversionMode	KEYWORD2
 setAdcMode	KEYWORD2
 setClockSelection	KEYWORD2
+setTempOffset	KEYWORD2
+setTempSlope	KEYWORD2
+setReadTimeout	KEYWORD2
+getReadTimeout	KEYWORD2
 enableScanChannel	KEYWORD2
 disableScanChannel	KEYWORD2
 setAveraging	KEYWORD2
@@ -72,12 +76,19 @@ stopContinuous	KEYWORD2
 startContinuousDifferential	KEYWORD2
 isContinuous	KEYWORD2
 startScan	KEYWORD2
+startScanOnce	KEYWORD2
 singleEndedMode	KEYWORD2
 differentialMode	KEYWORD2
 isDifferential	KEYWORD2
 analogRead	KEYWORD2
 analogReadContinuous	KEYWORD2
 analogReadDifferential	KEYWORD2
+readADCDATA	KEYWORD2
+getLastChannel	KEYWORD2
+toVoltage	KEYWORD2
+readTemperature	KEYWORD2
+dataAvailable	KEYWORD2
+getDeviceAddress	KEYWORD2
 available	KEYWORD2
 read	KEYWORD2
 write	KEYWORD2
@@ -196,6 +207,21 @@ MCP3x6x_CH3	LITERAL1
 MCP3x6x_CH2	LITERAL1
 MCP3x6x_CH1	LITERAL1
 MCP3x6x_CH0	LITERAL1
+
+# differential pair macros
+MCP3x6x_DIFFD	LITERAL1
+MCP3x6x_DIFFC	LITERAL1
+MCP3x6x_DIFFB	LITERAL1
+MCP3x6x_DIFFA	LITERAL1
+
+# internal channel macros
+MCP3x6x_VCM	LITERAL1
+MCP3x6x_AVDD	LITERAL1
+MCP3x6x_TEMP	LITERAL1
+MCP3x6x_OFFSET	LITERAL1
+
+# misc macros
+MCP3x6x_TIMEOUT	LITERAL1
 
 # config defaults
 MCP3x6x_CFG_CONFIG0	LITERAL1
