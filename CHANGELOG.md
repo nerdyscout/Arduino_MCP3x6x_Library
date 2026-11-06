@@ -39,3 +39,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `CHANGELOG.md` (this file) and an upgrade section in the README.
+
+### Added (DMA-backed scan mode)
+
+- **DMA ring buffer**: `DmaSample`/`DmaRingBuffer` — lock-free SPSC ring in
+  user-provided memory, no heap, drop-on-overflow.
+- **DMA lifecycle API**: `enableDMA(buffer, capacity, dmaChannel)`,
+  `disableDMA()`, `isDMAEnabled()`, `samplesAvailable()`, `readSample()`.
+- **ESP32 engine**: ESP-IDF `spi_master` driver — `spi_device_queue_trans()`
+  for non-blocking ADCDATA reads, `spi_device_get_trans_result()` polling.
+- **SAMD engine**: SERCOM DMAC RX trigger — DMAC channel copies ADCDATA bytes
+  directly into the staging buffer on each conversion complete.
+- DMA scope: ESP32 (`ARDUINO_ARCH_ESP32`) and SAMD (`ARDUINO_ARCH_SAMD`)
+  only. All other platforms return `false` from `enableDMA()` and stay
+  synchronous. No stubs for STM32, nRF52, or Teensy.

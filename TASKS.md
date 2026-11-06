@@ -28,29 +28,26 @@ No usable remote issue/task tracker is currently available for this repository.
 ## Change: `dma-scan`
 
 - OpenSpec change: `openspec/changes/dma-scan/`
-- Project decisions (grilled 2026-11-06): complete DMA — native core + all five
-  platform engines (ESP32, SAMD21/51, STM32, nRF52, Teensy); CRC-16 deferred
-  per timing analysis; version stays **0.2.0** (CHANGELOG gains an *Added*
-  section, no bump); no hardware available — engines verified by compile
-  matrix; native-testable core verified by `pio test -e native_ci`.
+- Project decisions (grilled 2026-11-06): DMA for ESP32 + SAMD only; no stubs
+  for other controllers; CRC-16 deferred per timing analysis; version stays
+  **0.2.0** (CHANGELOG gains an *Added* section, no bump); no hardware
+  available — engines verified by compile matrix; native-testable core
+  verified by `pio test -e native_ci`.
 
 ### Execution items
 
 | # | Task ID | Title | Status | Priority | Owner | Effort |
 |---|---------|-------|--------|----------|-------|--------|
-| 1 | 1.1–1.3 | Core: `DmaSample` + `DmaRingBuffer` + members | In Progress | Critical | engineer | M |
-| 2 | 2.1–2.4 | DMA lifecycle API (enable/disable/state/samples) | Pending | Critical | engineer | M |
-| 3 | 3.1–3.5 | Scan-path integration (IRQ/completion/analogRead) | Pending | Critical | engineer | L |
-| 4 | 4.1, 4.2 | ESP32 engine (spi_master + LEDC MCLK) | Pending | High | engineer | L |
-| 5 | 5.1, 5.2 | SAMD21/51 engine (DMAC + TCC MCLK) | Pending | High | engineer | L |
-| 6 | 6.1, 6.2 | STM32 engine (HAL DMA + TIM MCLK) | Pending | High | engineer | L |
-| 7 | 7.1, 7.2 | nRF52 engine (SPIM EasyDMA + GPIOTE/PPI) | Pending | High | engineer | L |
-| 8 | 8.1, 8.2 | Teensy engine (LPSPI + DMAChannel) | Pending | High | engineer | L |
-| 9 | 9.1–9.4 | Packaging, docs, 0.2.0 CHANGELOG *Added* | Pending | Medium | engineer | S |
+| 1 | 1.1–1.3 | Core: `DmaSample` + `DmaRingBuffer` + members | Done | Critical | engineer | M |
+| 2 | 2.1–2.4 | DMA lifecycle API (enable/disable/state/samples) | Done | Critical | engineer | M |
+| 3 | 3.1–3.5 | Scan-path integration (IRQ/completion/analogRead) | Done | Critical | engineer | L |
+| 4 | 4.1, 4.2 | ESP32 engine (spi_master async transaction) | Done | High | engineer | L |
+| 5 | 5.1, 5.2 | SAMD21/51 engine (SERCOM DMAC RX trigger) | Done | High | engineer | L |
+| 6 | 9.1–9.4 | Packaging, docs, 0.2.0 CHANGELOG *Added* | Done | Medium | engineer | S |
 
 ### Next action
 
-Implement delivery-stack item 1 (core primitives) in `src/Arduino_MCP3x6x_Library.hpp`, then native tests for ring/lifecycle semantics.
+None — DMA delivery stack complete. Next: bench validation on real hardware.
 
 ## Backlog
 
