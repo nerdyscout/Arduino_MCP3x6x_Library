@@ -106,59 +106,7 @@ const uint8_t MCP3x6x_CFG_LOCK         = 0xA5;                //!< default value
 const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
 #endif
 
-/**
- * @brief single sample captured by the DMA engine
- *
- */
-struct DmaSample {
-  uint8_t channel;    //!< channel ID decoded from ADCDATA[31:28] (ID_SGNEXT_DATA)
-  int32_t value;      //!< sign-extended ADC value
-  uint32_t timestamp; //!< micros()/millis() when the sample was captured
-};
-
-/**
- * @brief lock-free single-producer/single-consumer ring buffer for DMA samples
- *
- * The DMA completioninterrupt produces (push), the user context consumes
- * (pop). Storage is caller-provided; no heap is used. Pushing into a full
- * buffer drops the sample (returns false) — it never blocks.
- */
-class DmaRingBuffer {
- public:
-  void setup(DmaSample* buf, size_t cap) {
-    _buf = buf;
-    _cap = cap;
-    clear();
-  }
-  bool push(DmaSample s) {
-    if (_buf == nullptr || _count >= _cap) {
-      return false;
-    }
-    _buf[(_head + _count) % _cap] = s;
-    _count++;
-    return true;
-  }
-  bool pop(DmaSample& s) {
-    if (_buf == nullptr || _count == 0) {
-      return false;
-    }
-    s = _buf[_head];
-    _head = (_head + 1) % _cap;
-    _count--;
-    return true;
-  }
-  size_t available() const { return _count; }
-  void clear() {
-    _head = 0;
-    _count = 0;
-  }
-
- private:
-  DmaSample* _buf = nullptr;
-  size_t _cap = 0;
-  volatile size_t _head = 0;
-  volatile size_t _count = 0;
-};
+#include "MCP3x6x_DMA.hpp"
 
 /**
  * @brief base class MCP3x6x
@@ -479,10 +427,18 @@ class DmaRingBuffer {
 #ifdef ARDUINO_ARCH_ESP32
   spi_device_handle_t _dmaEsp32Handle = nullptr;
   spi_transaction_t   _dmaEsp32Trans  = {};
+  bool _dmaInitESP32(uint8_t dmaChannel);
+  void _dmaStartESP32();
+  void _dmaPollESP32();
+  void _dmaStopESP32();
 #endif
 #ifdef ARDUINO_ARCH_SAMD
   uint8_t _dmaSamdChan   = 0;
   bool    _dmaSamdActive = false;
+  bool _dmaInitSAMD(uint8_t dmaChannel);
+  void _dmaStartSAMD();
+  void _dmaPollSAMD();
+  void _dmaStopSAMD();
 #endif
 
   /**
@@ -560,173 +516,6 @@ class DmaRingBuffer {
     _dmaStopSAMD();
 #endif
   }
-
-  ///////////////////////////////////////////////////////////////////////////////
-  // ESP32 DMA engine: ESP-IDF spi_master driver
-  ///////////////////////////////////////////////////////////////////////////////
-#ifdef ARDUINO_ARCH_ESP32
-  bool _dmaInitESP32(uint8_t dmaChannel) {
-    spi_host_device_t host = (dmaChannel == 1) ? SPI3_HOST : SPI2_HOST;
-    spi_device_interface_config_t devcfg = {};
-    devcfg.clock_speed_hz = 1000000;  // 1 MHz: safe default for ADCDATA reads
-    devcfg.mode = 0;
-    devcfg.spics_io_num = (int)_pinCS;
-    devcfg.queue_size = 1;
-    devcfg.flags = 0;
-    esp_err_t err = spi_bus_add_device(host, &devcfg, &_dmaEsp32Handle);
-    return (err == ESP_OK);
-  }
-
-  void _dmaStartESP32() {
-    if (!_dmaEsp32Handle) {
-      return;
-    }
-    uint8_t addr = MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA;
-    _dmaEsp32Trans = {};
-    _dmaEsp32Trans.length = 8;          // 1 byte: address/command
-    _dmaEsp32Trans.rxlength = 32;       // 4 bytes: ADCDATA payload
-    _dmaEsp32Trans.tx_buffer = &addr;
-    _dmaEsp32Trans.rx_buffer = _dmaData;
-    _dmaEsp32Trans.flags = 0;
-    spi_device_queue_trans(_dmaEsp32Handle, &_dmaEsp32Trans, portMAX_DELAY);
-  }
-
-  void _dmaPollESP32() {
-    if (!_dmaEsp32Handle) {
-      return;
-    }
-    spi_transaction_t* trans = nullptr;
-    esp_err_t err = spi_device_get_trans_result(_dmaEsp32Handle, &trans, 0);
-    if (err == ESP_OK && trans) {
-      _dmaComplete(micros());
-      // Re-arm for the next conversion: queue another transaction
-      _dmaStartESP32();
-    }
-  }
-
-  void _dmaStopESP32() {
-    if (_dmaEsp32Handle) {
-      spi_bus_remove_device(_dmaEsp32Handle);
-      _dmaEsp32Handle = nullptr;
-    }
-    _dmaEsp32Trans = {};
-  }
-#endif  // ARDUINO_ARCH_ESP32
-
-  ///////////////////////////////////////////////////////////////////////////////
-  // SAMD DMA engine: SERCOM DMAC RX trigger
-  ///////////////////////////////////////////////////////////////////////////////
-#ifdef ARDUINO_ARCH_SAMD
-  bool _dmaInitSAMD(uint8_t dmaChannel) {
-#if defined(__SAMD21__)
-    if (dmaChannel > 7) {
-      return false;
-    }
-#elif defined(__SAMD51__)
-    if (dmaChannel > 11) {
-      return false;
-    }
-#else
-    return false;
-#endif
-    _dmaSamdChan = dmaChannel;
-    _dmaSamdActive = true;
-    return true;
-  }
-
-  void _dmaStartSAMD() {
-    if (!_dmaSamdActive) {
-      return;
-    }
-    // Determine the SERCOM instance used by the SPI pins
-    Sercom* spiSercom = g_APinDescription[_pinCLK].ulSercom;
-    if (!spiSercom) {
-      return;
-    }
-    // Set up DMAC channel: source = SERCOM SPI DATA register, destination = _dmaData
-    // Trigger on SERCOM RX complete; transfer 4 bytes (ADCDATA)
-    DMAC->CHID.reg = _dmaSamdChan;
-    DMAC->CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;  // disable channel during config
-    while (DMAC->CHCTRLA.bit.ENABLE) {
-      ;  // wait for disable to complete
-    }
-
-    DMAC->CHCTRLA.reg = DMAC_CHCTRLA_SWRST;
-    while (DMAC->CHCTRLA.bit.SWRST) {
-      ;  // wait for reset
-    }
-
-    DMAC->CHCTRLB.reg =
-        DMAC_CHCTRLB_LVL(0) |              // channel priority level 0
-        DMAC_CHCTRLB_EVOE |                // event output enable
-        DMAC_CHCTRLB_EVACT_TRIG;           // event action: trigger
-
-    // Source: SERCOM SPI data register (fixed address)
-    DMAC->CHSRCADDR.reg = (uint32_t)&(spiSercom->SPI.DATA.reg);
-    // Destination: our staging buffer (incrementing address)
-    DMAC->CHDSTADDR.reg = (uint32_t)_dmaData;
-    // Buffer length: 4 bytes (ADCDATA)
-    DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_BEATSIZE_BYTE;
-    DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_SRCINC | DMAC_CHCTRLA_DSTINC;
-
-    // Set up the trigger source: SERCOM DMAC ID RX
-    uint8_t trig = 0;
-#if defined(__SAMD21__)
-    // Map SERCOM instance to DMAC trigger ID
-    if (spiSercom == SERCOM0) trig = SERCOM0_DMAC_ID_RX;
-    else if (spiSercom == SERCOM1) trig = SERCOM1_DMAC_ID_RX;
-    else if (spiSercom == SERCOM2) trig = SERCOM2_DMAC_ID_RX;
-    else if (spiSercom == SERCOM3) trig = SERCOM3_DMAC_ID_RX;
-    else if (spiSercom == SERCOM4) trig = SERCOM4_DMAC_ID_RX;
-    else if (spiSercom == SERCOM5) trig = SERCOM5_DMAC_ID_RX;
-#elif defined(__SAMD51__)
-    if (spiSercom == SERCOM0) trig = SERCOM0_DMAC_ID_RX;
-    else if (spiSercom == SERCOM1) trig = SERCOM1_DMAC_ID_RX;
-    else if (spiSercom == SERCOM2) trig = SERCOM2_DMAC_ID_RX;
-    else if (spiSercom == SERCOM3) trig = SERCOM3_DMAC_ID_RX;
-    else if (spiSercom == SERCOM4) trig = SERCOM4_DMAC_ID_RX;
-    else if (spiSercom == SERCOM5) trig = SERCOM5_DMAC_ID_RX;
-    else if (spiSercom == SERCOM6) trig = SERCOM6_DMAC_ID_RX;
-    else if (spiSercom == SERCOM7) trig = SERCOM7_DMAC_ID_RX;
-#endif
-    DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_TRIGSRC(trig);
-    DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_ENABLE;
-    while (!DMAC->CHCTRLA.bit.ENABLE) {
-      ;  // wait for enable
-    }
-
-    // Set the transfer count: 4 bytes
-    DMAC->CHCTRLA.reg = (DMAC->CHCTRLA.reg & ~DMAC_CHCTRLA_BEATSIZE_Msk) |
-                        DMAC_CHCTRLA_BEATSIZE_BYTE;
-    DMAC->CHINTENSET.reg = DMAC_CHINTENSET_TC;  // enable transfer complete interrupt
-  }
-
-  void _dmaPollSAMD() {
-    if (!_dmaSamdActive) {
-      return;
-    }
-    // Check if the DMAC channel has completed the transfer
-    if (DMAC->CHINTFLAG.reg & DMAC_CHINTFLAG_TC) {
-      DMAC->CHINTFLAG.reg = DMAC_CHINTFLAG_TC;  // clear flag
-      _dmaComplete(micros());
-      // Re-arm for next conversion
-      _dmaStartSAMD();
-    }
-  }
-
-  void _dmaStopSAMD() {
-    if (!_dmaSamdActive) {
-      return;
-    }
-    DMAC->CHID.reg = _dmaSamdChan;
-    DMAC->CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;
-    while (DMAC->CHCTRLA.bit.ENABLE) {
-      ;  // wait for disable
-    }
-    DMAC->CHINTFLAG.reg = DMAC_CHINTFLAG_TC | DMAC_CHINTFLAG_SUSP | DMAC_CHINTFLAG_ERR;
-    _dmaSamdActive = false;
-  }
-#endif  // ARDUINO_ARCH_SAMD
 
   SPIClass* _spi;            // SPI interface
   SPISettings _spiSettings;  // SPI settings
@@ -2254,5 +2043,8 @@ using MCP3564 = MCP3x6x<24, 8>;
 
 using MCP3465 = MCP3x6x<16, 2>;  // 2-channel UQFN variant
 using MCP3565 = MCP3x6x<24, 2>;  // 2-channel UQFN variant
+
+#include "MCP3x6x_DMA_ESP32.hpp"
+#include "MCP3x6x_DMA_SAMD.hpp"
 
 #endif  // SRC_ARDUINO_MCP3X6X_LIBRARY_HPP_
