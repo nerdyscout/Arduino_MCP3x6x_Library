@@ -15,5 +15,10 @@ repos:
     hooks:
 #    -   id: clang-format
 #        args: ["-style=file"]
-#    -   id: cpplint
+    -   id: cpplint
     -   id: cppcheck
+
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v0.13.0
+    hooks:
+    - id: reuse
