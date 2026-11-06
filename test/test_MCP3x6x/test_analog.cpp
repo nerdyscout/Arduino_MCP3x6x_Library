@@ -54,6 +54,10 @@ void test_analogRead_differential_waits_for_dr() {
   int32_t val = adc.analogReadDifferential(MCP3x6x_CH0, MCP3x6x_CH1);
   // Should have at least: write MUX + conversion + read ADCDATA
   TEST_ASSERT(spiAddrs.size() >= 3);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[0]);
+  // CH0 (VIN+) vs CH1 (VIN-) → MUX = 0x01 (DIFFA): VIN+ from each Mux selector
+  TEST_ASSERT_EQUAL(0x01, spiData[0][0]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_CONVERSION, spiAddrs[1]);
 }
 
 // ---------------------------------------------------------------------------

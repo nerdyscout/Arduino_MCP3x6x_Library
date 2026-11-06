@@ -1416,8 +1416,24 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     _transfer(buffer, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, s);
     _reverse_array(buffer, s);
     _dataAvailable = false;
-    return _getValue((uint32_t&)buffer);
+    int32_t value = _getValue((uint32_t&)buffer);
+    uint32_t raw   = (uint32_t)value;
+    uint8_t channel = (uint8_t)_getChannel(raw);
+    if (_config3.data_format == data_format::ID_SGNEXT_DATA) {
+      // ID_SGNEXT_DATA: CH_ID[3:0] occupies bits [31:28]; sign-extend from bit 27.
+      value = (int32_t)((uint32_t)raw << 4) >> 4;
+    }
+    _adcdata.value     = value;
+    _adcdata.channelid = channel;
+    return value;
   }
+
+  /**
+   * @brief get channel of the last ADC read result
+   *
+   * @return int8_t channel ID
+   */
+  int8_t getLastChannel() { return _adcdata.channelid; }
 
   ///////////////////////////////////////////////////////////////////////////////
   //
@@ -1577,7 +1593,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     if (_config2.gain == GAIN_033) {
       num *= 3;
     } else {
-      den *= (int64_t)(1UL << (uint8_t)_config2.gain);
+      den *= (int64_t)(1UL << (_config2.gain - 1));
     }
 
     return (int32_t)(num / den);
@@ -1639,7 +1655,7 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    *
    * @return uint32_t
    */
-  uint32_t getMaxValue() { return pow(2, _MAX_RESOLUTION); }
+  uint32_t getMaxValue() { return (uint32_t)1 << (_MAX_RESOLUTION - 1); }
 
   /**
    * @brief conversion finished
@@ -1699,6 +1715,23 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
     _irq.irq_mode             = (uint8_t)mode;
     write(_irq);
     _config3.data_format      = fmt;
+    _config3.conv_mode        = conv_mode::CONTINUOUS;
+    write(_config3);
+    _config0.adc = adc_mode::CONVERSION;
+    write(_config0);
+    conversion();
+  }
+
+  /**
+   * @brief start a single scan cycle (one-shot) and standby afterwards
+   *
+   */
+  void startScanOnce() {
+    _irq.en_fastcmd           = 1;
+    _irq.irq_mode             = (uint8_t)IRQ_OPEN_DRAIN;
+    write(_irq);
+    _config3.data_format      = data_format::ID_SGNEXT_DATA;
+    _config3.conv_mode        = conv_mode::ONESHOT_STANDBY;
     write(_config3);
     _config0.adc = adc_mode::CONVERSION;
     write(_config0);
@@ -1797,7 +1830,10 @@ const uint8_t MCP3x6x_CFG_CRCCFG[2]    = {0x00, 0x00};        //!< default value
    * @return int32_t
    */
    int32_t analogReadDifferential(Mux pinP, Mux pinN) {
-    _mux = ((uint8_t)pinP.raw << 4) | (uint8_t)pinN.raw;
+    // Map differential inputs: each side's VIN+ selects its channel,
+    // the opposite side selects the negative input. Any 4-bit selector is allowed.
+    _mux.vin_plus  = pinP.vin_plus;
+    _mux.vin_minus = pinN.vin_plus;
     write(_mux);
 
     conversion();

@@ -167,6 +167,43 @@ void test_startScan_defaults_match_original() {
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_CONVERSION, spiAddrs[3]);
 }
 
+// ---------------------------------------------------------------------------
+// startScan() sets CONV_MODE = CONTINUOUS in CONFIG3 (one write with data_format)
+// ---------------------------------------------------------------------------
+void test_startScan_sets_continuous_conv_mode() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+
+  adc.startScan();
+
+  TEST_ASSERT(spiAddrs.size() >= 4);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[1]);
+  // data_format = ID_SGNEXT_DATA (3) in bits[5:4], conv_mode = CONTINUOUS (3) in bits[7:6]
+  TEST_ASSERT_EQUAL(3, (spiData[1][0] >> 4) & 0x03);
+  TEST_ASSERT_EQUAL(3, (spiData[1][0] >> 6) & 0x03);
+}
+
+// ---------------------------------------------------------------------------
+// startScanOnce() — one-shot scan cycle: CONV_MODE = ONESHOT_STANDBY
+// ---------------------------------------------------------------------------
+void test_startScanOnce_sets_standby() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+
+  adc.startScanOnce();
+
+  TEST_ASSERT(spiAddrs.size() >= 4);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[0]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[1]);
+  // data_format = ID_SGNEXT_DATA (3) in bits[5:4], conv_mode = ONESHOT_STANDBY (2) in bits[7:6]
+  TEST_ASSERT_EQUAL(3, (spiData[1][0] >> 4) & 0x03);
+  TEST_ASSERT_EQUAL(2, (spiData[1][0] >> 6) & 0x03);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[2]);
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_CONVERSION, spiAddrs[3]);
+}
+
 #endif  // PIO_NATIVE_TESTING
 
 // ---------------------------------------------------------------------------
@@ -185,5 +222,7 @@ void register_scan_mode_tests() {
   RUN_TEST(test_startScan_custom_irq_mode);
   RUN_TEST(test_startScan_custom_data_format);
   RUN_TEST(test_startScan_defaults_match_original);
+  RUN_TEST(test_startScan_sets_continuous_conv_mode);
+  RUN_TEST(test_startScanOnce_sets_standby);
 #endif
 }

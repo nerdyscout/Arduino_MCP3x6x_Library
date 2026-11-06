@@ -46,12 +46,44 @@ void test_getReference() {
 // ---------------------------------------------------------------------------
 void test_getMaxValue_16bit() {
   TestADC adc;
-  TEST_ASSERT_EQUAL(65536, adc.getMaxValue());
+  TEST_ASSERT_EQUAL(32768, adc.getMaxValue());
 }
 
 void test_getMaxValue_24bit() {
   MCP3564 adc;
-  TEST_ASSERT_EQUAL(16777216, adc.getMaxValue());
+  TEST_ASSERT_EQUAL(8388608, adc.getMaxValue());
+}
+
+// ---------------------------------------------------------------------------
+// toVoltage() — datasheet conversion: V_uV = raw * VREF / 2^(N-1) / gain
+// ---------------------------------------------------------------------------
+void test_toVoltage_gain1_full_scale() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  adc.config2(false, TestADC::GAIN_1, TestADC::BOOST_2);
+  adc.setReference(2.4f);
+  // raw = 2^(N-1) at gain x1, VREF = 2.4V → 2.4V full scale
+  TEST_ASSERT_EQUAL(2400000, adc.toVoltage(32768));
+}
+
+void test_toVoltage_gain2_half_scale() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  adc.config2(false, TestADC::GAIN_2, TestADC::BOOST_2);
+  adc.setReference(2.4f);
+  TEST_ASSERT_EQUAL(1200000, adc.toVoltage(32768));
+}
+
+void test_toVoltage_gain033() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  adc.config2(false, TestADC::GAIN_033, TestADC::BOOST_2);
+  adc.setReference(2.4f);
+  // gain x1/3 → effective voltage is 3x the code-derived value
+  TEST_ASSERT_EQUAL(7200000, adc.toVoltage(32768));
 }
 
 // ---------------------------------------------------------------------------
@@ -192,6 +224,9 @@ void register_misc_tests() {
   RUN_TEST(test_getReference);
   RUN_TEST(test_getMaxValue_16bit);
   RUN_TEST(test_getMaxValue_24bit);
+  RUN_TEST(test_toVoltage_gain1_full_scale);
+  RUN_TEST(test_toVoltage_gain2_half_scale);
+  RUN_TEST(test_toVoltage_gain033);
   RUN_TEST(test_singleEndedMode);
   RUN_TEST(test_differentialMode);
   RUN_TEST(test_isDifferential_false);

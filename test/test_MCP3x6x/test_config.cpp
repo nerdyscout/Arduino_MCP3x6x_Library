@@ -331,6 +331,43 @@ void test_ADCDATA_read_24bit_3bytes() {
 }
 
 // ---------------------------------------------------------------------------
+// readADCDATA() / getLastChannel() — ID_SGNEXT_DATA channel strip + sign extension
+// ---------------------------------------------------------------------------
+void test_readADCDATA_id_sgnnext_strips_channel() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  adc.config3(false, false, false, TestADC::ID_SGNEXT_DATA, TestADC::CONTINUOUS);
+  mockReadSequence = {0x20, 0x00, 0x00, 0x64};  // big-endian: CH_ID=2 in bits[31:28], value=100 in [27:0]
+  int32_t val = adc.readADCDATA();
+  // CH_ID nibble must be stripped; value sign-extended from bit 27
+  TEST_ASSERT_EQUAL(100, val);
+  TEST_ASSERT_EQUAL(2, (int)adc.getLastChannel());
+}
+
+void test_readADCDATA_id_sgnnext_negative_value() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  adc.config3(false, false, false, TestADC::ID_SGNEXT_DATA, TestADC::CONTINUOUS);
+  // CH_ID=5, value=-1: raw = 0x5FFFFFFF (sign extension fills bits[27:16]) → after strip: -1
+  mockReadSequence = {0x5F, 0xFF, 0xFF, 0xFF};
+  int32_t val = adc.readADCDATA();
+  TEST_ASSERT_EQUAL(-1, val);
+  TEST_ASSERT_EQUAL(5, (int)adc.getLastChannel());
+}
+
+void test_readADCDATA_sgn_data_unchanged() {
+  TestADC adc;
+  adc.begin();
+  setUp();
+  // default data_format (SGN_DATA) → 2-byte read, plain sign extension (no channel bits)
+  mockReadSequence = {0xFF, 0xF8};  // big-endian 16-bit value -8
+  int32_t val = adc.readADCDATA();
+  TEST_ASSERT_EQUAL(-8, val);
+}
+
+// ---------------------------------------------------------------------------
 // config2() az_ref parameter
 // ---------------------------------------------------------------------------
 void test_config2_az_ref_true() {
@@ -432,5 +469,8 @@ void register_config_tests() {
   RUN_TEST(test_read_Mux);
   RUN_TEST(test_ADCDATA_read_16bit_2bytes);
   RUN_TEST(test_ADCDATA_read_24bit_3bytes);
+  RUN_TEST(test_readADCDATA_id_sgnnext_strips_channel);
+  RUN_TEST(test_readADCDATA_id_sgnnext_negative_value);
+  RUN_TEST(test_readADCDATA_sgn_data_unchanged);
 #endif
 }
