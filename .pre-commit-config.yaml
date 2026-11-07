@@ -33,7 +33,7 @@ repos:
       always_run: true
     - id: test-coverage-floor
       name: Enforce test coverage ratchet (never fall below last floor)
-      entry: bash -c 'pio test -e native_ci --project-conf platformio_ci.ini > /dev/null 2>&1 && coverage=$(gcovr --filter src/Arduino_MCP3x6x_Library.hpp --print-summary 2>/dev/null | awk "/^TOTAL/ {print int($2)}"); if [ -n "$coverage" ]; then floor=$(cat .coverage-floor 2>/dev/null || echo 0); if [ "$coverage" -lt "$floor" ]; then echo "Coverage $coverage% below floor $floor%" && exit 1; else echo "$coverage" > .coverage-floor && git add .coverage-floor; fi; fi'
+      entry: bash -c 'pio test -e native_ci --project-conf platformio_ci.ini > /dev/null 2>&1 && coverage=$(gcov -b src/Arduino_MCP3x6x_Library.hpp 2>/dev/null | grep "Lines executed" | awk "{print int(\$4)}" | tr -d "%"); if [ -n "$coverage" ]; then floor=$(cat .coverage-floor 2>/dev/null || echo 0); if [ "$coverage" -lt "$floor" ]; then echo "Coverage $coverage% below floor $floor%" && exit 1; else echo "$coverage" > .coverage-floor && git add .coverage-floor; fi; fi'
       language: system
       pass_filenames: false
       always_run: true
