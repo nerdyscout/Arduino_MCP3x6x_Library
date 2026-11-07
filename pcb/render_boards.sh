@@ -15,7 +15,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-CONFIG="$SCRIPT_DIR/render.kibot.yaml"
+RENDER_CONFIG="$SCRIPT_DIR/render.kibot.yaml"
+FAB_CONFIG="$SCRIPT_DIR/fab.kibot.yaml"
 
 # board name -> kicad_pcb path (relative to repo root)
 declare -A BOARDS=(
@@ -34,10 +35,14 @@ for board in "${!BOARDS[@]}"; do
   fi
 
   echo "render $board top -> $board_dir"
-  kibot -b "$pcb_file" -c "$CONFIG" -d "$board_dir" board_render_top
+  kibot -b "$pcb_file" -c "$RENDER_CONFIG" -d "$board_dir" board_render_top
 
   echo "render $board bottom -> $board_dir"
-  kibot -b "$pcb_file" -c "$CONFIG" -d "$board_dir" board_render_bottom
+  kibot -b "$pcb_file" -c "$RENDER_CONFIG" -d "$board_dir" board_render_bottom
+
+  echo "fab $board -> $board_dir/fab"
+  kibot -b "$pcb_file" -c "$FAB_CONFIG" -d "$board_dir"
 done
 
 echo "done: renders next to each .kicad_pcb (Feather_top.svg, Feather_bottom.svg, ...)"
+echo "done: fab outputs in pcb/<board>/fab/ (<board>_fab.zip, gerbers, bom, cpl)"
