@@ -352,7 +352,7 @@ class MCP3x6x {
    * @brief IRQ/MDAT Pin Configuration
    *
    */
-  enum __attribute__((packed)) irq_mode : uint8_t {
+  enum irq_mode : uint8_t {
     IRQ_OFF            = 0,  //!< Hi-Z (pin disabled)
     IRQ_OPEN_DRAIN     = 1,  //!< IRQ output, open drain, active low
     IRQ_PUSH_PULL_LOW  = 2,  //!< IRQ output, push-pull, active low
