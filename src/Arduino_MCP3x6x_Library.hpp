@@ -1103,7 +1103,9 @@ class MCP3x6x {
         _offset(MCP3x6x_CFG_OFFSET),
         _gain(MCP3x6x_CFG_GAIN),
         _lock(MCP3x6x_CFG_LOCK),
-        _crccfg(MCP3x6x_CFG_CRCCFG) {}
+        _crccfg(MCP3x6x_CFG_CRCCFG),
+        _status{},
+        _dmaSamdDescriptor{} {}
 
   /**
    * @brief Destroy the MCP3x6x object

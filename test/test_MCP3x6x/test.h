@@ -6,6 +6,7 @@
 
 #ifdef PIO_NATIVE_TESTING
   #include <ArduinoFake.h>
+// cppcheck-suppress syntaxError
 using namespace fakeit;
 #else
   #include <Arduino.h>
