@@ -849,10 +849,9 @@ class MCP3x6x {
       bool en_stp        : 1;  //!< Enable Conversion Start Interrupt Output
       bool en_fastcmd    : 1;  //!< Enable Fast Commands in the COMMAND Byte
       uint8_t irq_mode   : 2;  //!< Configuration for the IRQ/MDAT Pin
-      bool por_status    : 1;  //!< POR Status Flag
-      bool crccfg_status : 1;  //!< CRC Error Status Flag Bit for Internal
-                               //!< Registers
-      bool dr_status     : 1;  //!< Data Ready Status Flag
+      bool               : 1;  //!< reserved (POR_STATUS, read-only)
+      bool               : 1;  //!< reserved (CRCCFG_STATUS, read-only)
+      bool               : 1;  //!< reserved (DR_STATUS, read-only)
       bool               : 1;  //!< unimplemented
     };
     uint8_t raw;  //!< raw access to register
@@ -1609,6 +1608,9 @@ class MCP3x6x {
     _reverse_array(buffer, s);
     data->channelid = _getChannel((uint32_t&)buffer);
     data->value     = _getValue((uint32_t&)buffer);
+    if (_config3.data_format == data_format::ID_SGNEXT_DATA) {
+        data->value = (int32_t)((uint32_t)data->value << 4) >> 4;
+    }
     return _status;
   }
 
@@ -1982,9 +1984,13 @@ class MCP3x6x {
   /**
    * @brief get SPI device address from last status byte
    *
+   * The STATUS byte echoes the device address as STAT[5:4] = DEV_ADDR[1:0]
+   * (STAT[3] duplicates STAT[4]). This method extracts DEV_ADDR[1:0] without
+   * inversion per datasheet Section 6.2.6.
+   *
    * @return uint8_t device address (0-3)
    */
-  uint8_t getDeviceAddress() { return (~_status.addr) & 0x07; }
+  uint8_t getDeviceAddress() const { return (_status.addr >> 1) & 0x03; }
 
   /**
    * @brief convert raw ADC value to microvolts
@@ -2191,7 +2197,7 @@ class MCP3x6x {
         if (_readTimeout && (millis() - start) >= _readTimeout) {
           return MCP3x6x_TIMEOUT;
         }
-      } while (!_status.dr);
+      } while (_status.dr);
 
       _dataAvailable                                  = false;
       return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
@@ -2272,7 +2278,7 @@ class MCP3x6x {
       if (_readTimeout && (millis() - start) >= _readTimeout) {
         return MCP3x6x_TIMEOUT;
       }
-    } while (!_status.dr);
+    } while (_status.dr);
     return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
   }
 };

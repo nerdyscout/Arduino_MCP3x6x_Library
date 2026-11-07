@@ -25,6 +25,29 @@ No usable remote issue/task tracker is currently available for this repository.
 | 8 | 8.1 | `test/hil-smoke` | Done | `24a81c0` |
 | 9 | 9.1 | `chore(release): 0.2.0` | Done | `3d28d04` |
 
+## Change: `datasheet-alignment`
+
+- OpenSpec change: `openspec/changes/datasheet-alignment/`
+- Fixes register-map and ADC API behavior to match MCP3461/2/4R and
+  MCP3561/2/4R datasheets (DS20006404C, DS20006181C).
+- Implemented on `develop`, not yet pushed.
+
+### Execution items
+
+| # | Task ID | Title | Status | Commit |
+|---|---------|-------|--------|--------|
+| 1 | 1.1 | `getDeviceAddress()`: return `(_status.addr >> 1) & 0x03` instead of inverted `~_status.addr & 0x07` | Done | |
+| 2 | 2.1 | IRQ register status bits (`por_status`, `crccfg_status`, `dr_status`) made read-only; removed from writable `Irq` union | Done | |
+| 3 | 3.1 | Chip ID detection: keep RESERVED3-based approach (STATUS DEV_ADDR field only 2 bits, insufficient for 4-bit chip IDs) | Deferred | |
+| 4 | 4.1 | CONFIG0 write: add TADC_SETUP delay (52 µs) after write per datasheet §5.16.3 | Done | |
+| 5 | 5.1 | Full Reset: set `_lock.raw = MCP3x6x_CFG_LOCK (0xA5)` after reset command | Done | |
+| 6 | 6.1 | `analogRead()` mux mode: change `while (!_status.dr)` to `while (_status.dr)` (DR_STATUS active-low) | Done | |
+| 7 | 7.1 | `read(Adcdata*)`: apply ID_SGNEXT_DATA sign extension matching `readADCDATA()` | Done | |
+
+### Next action
+
+Commit datasheet-alignment changes to `develop`, then verify with `pio test -e native_ci` and `cppcheck`.
+
 ## Change: `dma-scan`
 
 - OpenSpec change: `openspec/changes/dma-scan/`

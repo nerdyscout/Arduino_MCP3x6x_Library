@@ -422,9 +422,9 @@ void test_irq_enum_written() {
 
 void test_getDeviceAddress() {
   TestADC adc;
-  mockStatusByte = 0x30;  // addr bits [5:3] = 110 (inverted 1 → device address 01)
+  mockStatusByte = 0x30;  // STATUS byte bits [5:3] = 110 → DEV_ADDR[1:0] = 11 (binary) = 3
   adc.begin();
-  TEST_ASSERT_EQUAL(1, adc.getDeviceAddress());
+  TEST_ASSERT_EQUAL(3, adc.getDeviceAddress());
 }
 
 #endif  // PIO_NATIVE_TESTING
