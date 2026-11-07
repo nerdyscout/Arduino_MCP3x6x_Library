@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Stefan Herold
+// Copyright (c) 2026 nerdyscout
 
 /**
  * @file Arduino_MCP3x6x_Library.hpp
- * @author Stefan Herold (stefan.herold@posteo.de)
+ * @author nerdyscout (nerdyscout@posteo.de)
  * @brief Library to support Microchip MCP3x6x/R 16/24bit ADCs
  * @version 0.2.0
  * @date 2026-03-23
@@ -487,7 +487,7 @@ class MCP3x6x {
   // DMAC descriptor (16-byte aligned, in SRAM)
   struct __attribute__((aligned(16))) DmacDescriptor {
     uint16_t BTCTRL;
-    uint8_t  reserved[2];
+    uint8_t reserved[2];
     uint32_t SRCADDR;
     uint32_t DSTADDR;
     uint32_t DESCADDR;
@@ -576,12 +576,12 @@ class MCP3x6x {
   ///////////////////////////////////////////////////////////////////////////////
 #ifdef ARDUINO_ARCH_ESP32
   bool _dmaInitESP32(uint8_t dmaChannel) {
-    // ESP32-C3 has only 2 SPI hosts; ESP32/ESP32-S2/S3 have 3
-#if defined(ARDUINO_ARCH_ESP32) && !defined(CONFIG_IDF_TARGET_ESP32C3)
+      // ESP32-C3 has only 2 SPI hosts; ESP32/ESP32-S2/S3 have 3
+  #if defined(ARDUINO_ARCH_ESP32) && !defined(CONFIG_IDF_TARGET_ESP32C3)
     spi_host_device_t host = (dmaChannel == 1) ? SPI3_HOST : SPI2_HOST;
-#else
+  #else
     spi_host_device_t host = SPI2_HOST;  // ESP32-C3: only SPI2_HOST available
-#endif
+  #endif
     spi_device_interface_config_t devcfg = {};
     devcfg.clock_speed_hz                = 1000000;  // 1 MHz: safe default for ADCDATA reads
     devcfg.mode                          = 0;
@@ -633,13 +633,13 @@ class MCP3x6x {
   ///////////////////////////////////////////////////////////////////////////////
 #ifdef ARDUINO_ARCH_SAMD
   bool _dmaInitSAMD(uint8_t dmaChannel) {
-#if defined(__SAMD21__)
+  #if defined(__SAMD21__)
     if (dmaChannel > 7) return false;
-#elif defined(__SAMD51__)
+  #elif defined(__SAMD51__)
     if (dmaChannel > 11) return false;
-#else
+  #else
     return false;
-#endif
+  #endif
     _dmaSamdChan   = dmaChannel;
     _dmaSamdActive = true;
     return true;
@@ -650,107 +650,115 @@ class MCP3x6x {
 
     // Get SERCOM pointer from SPI class (public API)
     uint8_t sercomIndex = _spi->getSercomIndex();
-    Sercom* spiSercom = reinterpret_cast<Sercom*>(0x42000000UL + sercomIndex * 0x400UL);
+    Sercom* spiSercom   = reinterpret_cast<Sercom*>(0x42000000UL + sercomIndex * 0x400UL);
     if (!spiSercom) return;
 
-#if defined(__SAMD21__)
+  #if defined(__SAMD21__)
     // SAMD21: select channel via CHID, then access channel registers directly
     DMAC->CHID.reg = _dmaSamdChan;
     DMAC->CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;
-    while (DMAC->CHCTRLA.bit.ENABLE) { ; }
+    while (DMAC->CHCTRLA.bit.ENABLE) {
+      ;
+    }
     DMAC->CHCTRLA.reg = DMAC_CHCTRLA_SWRST;
-    while (DMAC->CHCTRLA.bit.SWRST) { ; }
+    while (DMAC->CHCTRLA.bit.SWRST) {
+      ;
+    }
 
     // Set up descriptor
-    _dmaSamdDescriptor.BTCTRL = DMAC_BTCTRL_BEATSIZE_BYTE |
-                                DMAC_BTCTRL_SRCINC |
-                                DMAC_BTCTRL_DSTINC |
-                                DMAC_BTCTRL_VALID;
-    _dmaSamdDescriptor.SRCADDR = (uint32_t)&(spiSercom->SPI.DATA.reg);
-    _dmaSamdDescriptor.DSTADDR = (uint32_t)_dmaData;
+    _dmaSamdDescriptor.BTCTRL =
+        DMAC_BTCTRL_BEATSIZE_BYTE | DMAC_BTCTRL_SRCINC | DMAC_BTCTRL_DSTINC | DMAC_BTCTRL_VALID;
+    _dmaSamdDescriptor.SRCADDR  = (uint32_t)&(spiSercom->SPI.DATA.reg);
+    _dmaSamdDescriptor.DSTADDR  = (uint32_t)_dmaData;
     _dmaSamdDescriptor.DESCADDR = 0;
 
-    DMAC->BASEADDR.reg = (uint32_t)&_dmaSamdDescriptor;
+    DMAC->BASEADDR.reg          = (uint32_t)&_dmaSamdDescriptor;
 
-    DMAC->CHCTRLB.reg =
-        DMAC_CHCTRLB_LVL(0) |
-        DMAC_CHCTRLB_EVOE |
-        DMAC_CHCTRLB_EVACT_TRIG |
-        DMAC_CHCTRLB_TRIGSRC(_spi->getDMAC_ID_RX());
+    DMAC->CHCTRLB.reg = DMAC_CHCTRLB_LVL(0) | DMAC_CHCTRLB_EVOE | DMAC_CHCTRLB_EVACT_TRIG |
+                        DMAC_CHCTRLB_TRIGSRC(_spi->getDMAC_ID_RX());
 
     DMAC->CHCTRLA.reg |= DMAC_CHCTRLA_ENABLE;
-    while (!DMAC->CHCTRLA.bit.ENABLE) { ; }
+    while (!DMAC->CHCTRLA.bit.ENABLE) {
+      ;
+    }
 
     DMAC->CHINTENSET.reg = DMAC_CHINTENSET_TCMPL;
 
-#elif defined(__SAMD51__)
+  #elif defined(__SAMD51__)
     // SAMD51: channel registers accessed via DMAC->Channel[n] array
     DmacChannel* ch = &DMAC->Channel[_dmaSamdChan];
 
     // Disable channel during configuration
     ch->CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;
-    while (ch->CHCTRLA.bit.ENABLE) { ; }
+    while (ch->CHCTRLA.bit.ENABLE) {
+      ;
+    }
 
     // Software reset
     ch->CHCTRLA.reg = DMAC_CHCTRLA_SWRST;
-    while (ch->CHCTRLA.bit.SWRST) { ; }
+    while (ch->CHCTRLA.bit.SWRST) {
+      ;
+    }
 
     // Set up descriptor (SAMD51 descriptor has BTCNT field at offset 2)
     DMAC_BTCTRL_Type btctrl;
-    btctrl.reg = DMAC_BTCTRL_BEATSIZE_BYTE |
-                 DMAC_BTCTRL_SRCINC |
-                 DMAC_BTCTRL_DSTINC |
-                 DMAC_BTCTRL_VALID;
-    _dmaSamdDescriptor.BTCTRL = btctrl.reg;
-    _dmaSamdDescriptor.SRCADDR = (uint32_t)&(spiSercom->SPI.DATA.reg);
-    _dmaSamdDescriptor.DSTADDR = (uint32_t)_dmaData;
+    btctrl.reg =
+        DMAC_BTCTRL_BEATSIZE_BYTE | DMAC_BTCTRL_SRCINC | DMAC_BTCTRL_DSTINC | DMAC_BTCTRL_VALID;
+    _dmaSamdDescriptor.BTCTRL   = btctrl.reg;
+    _dmaSamdDescriptor.SRCADDR  = (uint32_t)&(spiSercom->SPI.DATA.reg);
+    _dmaSamdDescriptor.DSTADDR  = (uint32_t)_dmaData;
     _dmaSamdDescriptor.DESCADDR = 0;
 
-    DMAC->BASEADDR.reg = (uint32_t)&_dmaSamdDescriptor;
+    DMAC->BASEADDR.reg          = (uint32_t)&_dmaSamdDescriptor;
 
     // Configure channel control A: trigger source + trigger action
     ch->CHCTRLA.reg =
-        DMAC_CHCTRLA_TRIGSRC(_spi->getDMAC_ID_RX()) |
-        DMAC_CHCTRLA_TRIGACT_TRANSACTION;
+        DMAC_CHCTRLA_TRIGSRC(_spi->getDMAC_ID_RX()) | DMAC_CHCTRLA_TRIGACT_TRANSACTION;
 
     // Enable channel
     ch->CHCTRLA.reg |= DMAC_CHCTRLA_ENABLE;
-    while (!ch->CHCTRLA.bit.ENABLE) { ; }
+    while (!ch->CHCTRLA.bit.ENABLE) {
+      ;
+    }
 
     // Enable transfer complete interrupt
     ch->CHINTENSET.reg = DMAC_CHINTENSET_TCMPL;
-#endif
+  #endif
   }
 
   void _dmaPollSAMD() {
     if (!_dmaSamdActive) return;
-#if defined(__SAMD21__)
+  #if defined(__SAMD21__)
     if (DMAC->CHINTFLAG.reg & DMAC_CHINTFLAG_TCMPL) {
       DMAC->CHINTFLAG.reg = DMAC_CHINTFLAG_TCMPL;
       _dmaComplete(micros());
       _dmaStartSAMD();
     }
-#elif defined(__SAMD51__)
+  #elif defined(__SAMD51__)
     if (DMAC->Channel[_dmaSamdChan].CHINTFLAG.reg & DMAC_CHINTFLAG_TCMPL) {
       DMAC->Channel[_dmaSamdChan].CHINTFLAG.reg = DMAC_CHINTFLAG_TCMPL;
       _dmaComplete(micros());
       _dmaStartSAMD();
     }
-#endif
+  #endif
   }
 
   void _dmaStopSAMD() {
     if (!_dmaSamdActive) return;
-#if defined(__SAMD21__)
+  #if defined(__SAMD21__)
     DMAC->CHID.reg = _dmaSamdChan;
     DMAC->CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;
-    while (DMAC->CHCTRLA.bit.ENABLE) { ; }
+    while (DMAC->CHCTRLA.bit.ENABLE) {
+      ;
+    }
     DMAC->CHINTFLAG.reg = DMAC_CHINTFLAG_TCMPL | DMAC_CHINTFLAG_SUSP;
-#elif defined(__SAMD51__)
+  #elif defined(__SAMD51__)
     DMAC->Channel[_dmaSamdChan].CHCTRLA.reg &= ~DMAC_CHCTRLA_ENABLE;
-    while (DMAC->Channel[_dmaSamdChan].CHCTRLA.bit.ENABLE) { ; }
+    while (DMAC->Channel[_dmaSamdChan].CHCTRLA.bit.ENABLE) {
+      ;
+    }
     DMAC->Channel[_dmaSamdChan].CHINTFLAG.reg = DMAC_CHINTFLAG_TCMPL | DMAC_CHINTFLAG_SUSP;
-#endif
+  #endif
     _dmaSamdActive = false;
   }
 #endif  // ARDUINO_ARCH_SAMD
@@ -846,13 +854,13 @@ class MCP3x6x {
    */
   union Irq {
     struct {
-      bool en_stp        : 1;  //!< Enable Conversion Start Interrupt Output
-      bool en_fastcmd    : 1;  //!< Enable Fast Commands in the COMMAND Byte
-      uint8_t irq_mode   : 2;  //!< Configuration for the IRQ/MDAT Pin
-      bool               : 1;  //!< reserved (POR_STATUS, read-only)
-      bool               : 1;  //!< reserved (CRCCFG_STATUS, read-only)
-      bool               : 1;  //!< reserved (DR_STATUS, read-only)
-      bool               : 1;  //!< unimplemented
+      bool en_stp      : 1;  //!< Enable Conversion Start Interrupt Output
+      bool en_fastcmd  : 1;  //!< Enable Fast Commands in the COMMAND Byte
+      uint8_t irq_mode : 2;  //!< Configuration for the IRQ/MDAT Pin
+      bool             : 1;  //!< reserved (POR_STATUS, read-only)
+      bool             : 1;  //!< reserved (CRCCFG_STATUS, read-only)
+      bool             : 1;  //!< reserved (DR_STATUS, read-only)
+      bool             : 1;  //!< unimplemented
     };
     uint8_t raw;  //!< raw access to register
     Irq(const uint8_t data) : raw(data) {}
@@ -1609,7 +1617,7 @@ class MCP3x6x {
     data->channelid = _getChannel((uint32_t&)buffer);
     data->value     = _getValue((uint32_t&)buffer);
     if (_config3.data_format == data_format::ID_SGNEXT_DATA) {
-        data->value = (int32_t)((uint32_t)data->value << 4) >> 4;
+      data->value = (int32_t)((uint32_t)data->value << 4) >> 4;
     }
     return _status;
   }
@@ -1877,9 +1885,9 @@ class MCP3x6x {
    *
    * @param format
    */
-  void setDataFormat(data_format format) {
+  status_t setDataFormat(data_format format) {
     _config3.data_format = format;
-    write(_config3);
+    return write(_config3);
   }
 
   /**
@@ -1887,9 +1895,9 @@ class MCP3x6x {
    *
    * @param mode
    */
-  void setConversionMode(conv_mode mode) {
+  status_t setConversionMode(conv_mode mode) {
     _config3.conv_mode = mode;
-    write(_config3);
+    return write(_config3);
   }
 
   /**
@@ -1897,9 +1905,9 @@ class MCP3x6x {
    *
    * @param mode
    */
-  void setAdcMode(adc_mode mode) {
+  status_t setAdcMode(adc_mode mode) {
     _config0.adc = mode;
-    write(_config0);
+    return write(_config0);
   }
 
   /**
@@ -1907,9 +1915,9 @@ class MCP3x6x {
    *
    * @param clk
    */
-  void setClockSelection(clk_sel clk) {
+  status_t setClockSelection(clk_sel clk) {
     _config0.clk = clk;
-    write(_config0);
+    return write(_config0);
   }
 
   /**
@@ -1917,14 +1925,14 @@ class MCP3x6x {
    *
    * @param ch
    */
-  void enableScanChannel(Mux chan) {
+  status_t enableScanChannel(Mux chan) {
     for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
       if (_channelID[i] == chan.raw) {
         bitSet(_scan.channel.raw, i);
         break;
       }
     }
-    write(_scan);
+    return write(_scan);
   }
 
   /**
@@ -1932,14 +1940,14 @@ class MCP3x6x {
    *
    * @param ch
    */
-  void disableScanChannel(Mux chan) {
+  status_t disableScanChannel(Mux chan) {
     for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
       if (_channelID[i] == chan.raw) {
         bitClear(_scan.channel.raw, i);
         break;
       }
     }
-    write(_scan);
+    return write(_scan);
   }
 
   /**
@@ -1947,12 +1955,12 @@ class MCP3x6x {
    *
    * @param rate
    */
-  void setAveraging(osr rate) {
+  status_t setAveraging(osr rate) {
     _config1.osr = rate;
-    write(_config1);
+    return write(_config1);
   }
 
-  void setOversamplingRatio(osr rate) { setAveraging(rate); }
+  status_t setOversamplingRatio(osr rate) { return setAveraging(rate); }
 
   void setResolution(size_t bits) {}  // not applicable for fixed-resolution external ADC
 
@@ -1963,15 +1971,16 @@ class MCP3x6x {
    *
    * @param vref
    */
-  void setReference(float vref = 0.0) {
+  status_t setReference(float vref = 0.0) {
     if (vref == 0.0) {
       vref              = 2.4;
       _config0.vref_sel = 1;
     } else {
       _config0.vref_sel = 0;
     }
-    write(_config0);
-    _reference = vref;
+    status_t ret = write(_config0);
+    _reference   = vref;
+    return ret;
   }
 
   /**
@@ -2117,55 +2126,55 @@ class MCP3x6x {
    * @brief start scan mode: configure IRQ pin and set ADC to Conversion
    *
    */
-  void startScan(enum irq_mode mode = IRQ_OPEN_DRAIN,
-                 data_format fmt    = data_format::ID_SGNEXT_DATA) {
-    _irq.en_fastcmd = 1;
-    _irq.irq_mode   = (uint8_t)mode;
-    write(_irq);
+  status_t startScan(enum irq_mode mode = IRQ_OPEN_DRAIN,
+                     data_format fmt    = data_format::ID_SGNEXT_DATA) {
+    _irq.en_fastcmd      = 1;
+    _irq.irq_mode        = (uint8_t)mode;
+    status_t ret         = write(_irq);
     _config3.data_format = fmt;
     _config3.conv_mode   = conv_mode::CONTINUOUS;
-    write(_config3);
-    _config0.adc = adc_mode::CONVERSION;
-    write(_config0);
-    conversion();
+    ret                  = write(_config3);
+    _config0.adc         = adc_mode::CONVERSION;
+    ret                  = write(_config0);
+    return conversion();
   }
 
   /**
    * @brief start a single scan cycle (one-shot) and standby afterwards
    *
    */
-  void startScanOnce() {
-    _irq.en_fastcmd = 1;
-    _irq.irq_mode   = (uint8_t)IRQ_OPEN_DRAIN;
-    write(_irq);
+  status_t startScanOnce() {
+    _irq.en_fastcmd      = 1;
+    _irq.irq_mode        = (uint8_t)IRQ_OPEN_DRAIN;
+    status_t ret         = write(_irq);
     _config3.data_format = data_format::ID_SGNEXT_DATA;
     _config3.conv_mode   = conv_mode::ONESHOT_STANDBY;
-    write(_config3);
-    _config0.adc = adc_mode::CONVERSION;
-    write(_config0);
-    conversion();
+    ret                  = write(_config3);
+    _config0.adc         = adc_mode::CONVERSION;
+    ret                  = write(_config0);
+    return conversion();
   }
 
   /**
    * @brief set single ended mode
    *
    */
-  void singleEndedMode() {
+  status_t singleEndedMode() {
     // Configure for single-ended mode by setting VIN- to AGND
     _mux.vin_minus = MUX_AGND;
-    write(_mux);
+    return write(_mux);
   }
 
   /**
    * @brief set differential mode
    *
    */
-  void differentialMode() {
+  status_t differentialMode() {
     // Configure for differential mode by setting VIN- to a channel
     // Default to CH0-CH1 differential pair
     _mux.vin_plus  = MUX_CH0;
     _mux.vin_minus = MUX_CH1;
-    write(_mux);
+    return write(_mux);
   }
 
   /**

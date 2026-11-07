@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Stefan Herold
+// Copyright (c) 2026 nerdyscout
 //
 // MCP3562 (24-bit, 4ch) — differential scan mode
 // Scans differential pair DIFFA via IRQ handler, prints voltage reading.
@@ -26,7 +26,7 @@ void setup() {
 
 void loop() {
   int32_t adcdata = mcp.analogRead(MCP3x6x_DIFFA);
-  double voltage = adcdata * mcp.getReference() / mcp.getMaxValue();
+  double voltage  = adcdata * mcp.getReference() / mcp.getMaxValue();
   Serial.print("voltage: ");
   Serial.println(voltage, 10);
   delay(1000);

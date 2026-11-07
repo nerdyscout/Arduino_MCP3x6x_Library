@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Stefan Herold
+// Copyright (c) 2026 nerdyscout
 
 #include "test.h"
 
@@ -15,9 +15,9 @@ void test_configure_writes_irq() {
   adc.configure(MCP3x6x_CFG_CONFIG0, MCP3x6x_CFG_CONFIG1, MCP3x6x_CFG_CONFIG2, MCP3x6x_CFG_CONFIG3,
                 0x00, MCP3x6x_CFG_MUX, MCP3x6x_CFG_SCAN, MCP3x6x_CFG_TIMER, MCP3x6x_CFG_OFFSET,
                 MCP3x6x_CFG_GAIN, MCP3x6x_CFG_LOCK, MCP3x6x_CFG_CRCCFG);
-  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[0]);   // unlock
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[0]);  // unlock
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_IRQ, spiAddrs[1]);
-  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[2]);   // re-lock
+  TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_LOCK, spiAddrs[2]);  // re-lock
 }
 
 // ---------------------------------------------------------------------------
@@ -338,8 +338,9 @@ void test_readADCDATA_id_sgnnext_strips_channel() {
   adc.begin();
   setUp();
   adc.config3(false, false, false, TestADC::ID_SGNEXT_DATA, TestADC::CONTINUOUS);
-  mockReadSequence = {0x20, 0x00, 0x00, 0x64};  // big-endian: CH_ID=2 in bits[31:28], value=100 in [27:0]
-  int32_t val = adc.readADCDATA();
+  mockReadSequence = {0x20, 0x00, 0x00,
+                      0x64};  // big-endian: CH_ID=2 in bits[31:28], value=100 in [27:0]
+  int32_t val      = adc.readADCDATA();
   // CH_ID nibble must be stripped; value sign-extended from bit 27
   TEST_ASSERT_EQUAL(100, val);
   TEST_ASSERT_EQUAL(2, (int)adc.getLastChannel());
@@ -352,7 +353,7 @@ void test_readADCDATA_id_sgnnext_negative_value() {
   adc.config3(false, false, false, TestADC::ID_SGNEXT_DATA, TestADC::CONTINUOUS);
   // CH_ID=5, value=-1: raw = 0x5FFFFFFF (sign extension fills bits[27:16]) → after strip: -1
   mockReadSequence = {0x5F, 0xFF, 0xFF, 0xFF};
-  int32_t val = adc.readADCDATA();
+  int32_t val      = adc.readADCDATA();
   TEST_ASSERT_EQUAL(-1, val);
   TEST_ASSERT_EQUAL(5, (int)adc.getLastChannel());
 }
@@ -363,7 +364,7 @@ void test_readADCDATA_sgn_data_unchanged() {
   setUp();
   // default data_format (SGN_DATA) → 2-byte read, plain sign extension (no channel bits)
   mockReadSequence = {0xFF, 0xF8};  // big-endian 16-bit value -8
-  int32_t val = adc.readADCDATA();
+  int32_t val      = adc.readADCDATA();
   TEST_ASSERT_EQUAL(-8, val);
 }
 
@@ -400,7 +401,8 @@ void test_config2_boost_gain_boost2() {
   adc.config2(false, TestADC::GAIN_1, TestADC::BOOST_2);
   TEST_ASSERT_EQUAL(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG2, spiAddrs[0]);
   TEST_ASSERT_EQUAL(1, spiData.size());
-  TEST_ASSERT_EQUAL(0x89, spiData[0][0]);  // BOOST=2 (x1) in bits 7:6, GAIN=1 (x1) in bits 5:3, RESERVED=1
+  TEST_ASSERT_EQUAL(
+      0x89, spiData[0][0]);  // BOOST=2 (x1) in bits 7:6, GAIN=1 (x1) in bits 5:3, RESERVED=1
 }
 
 void test_irq_enum_values() {

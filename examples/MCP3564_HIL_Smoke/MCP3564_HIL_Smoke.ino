@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Stefan Herold
+// Copyright (c) 2026 nerdyscout
 //
 // MCP3564 — hardware-in-the-loop (HIL) smoke test.
 //

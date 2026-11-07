@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Stefan Herold
+// Copyright (c) 2026 nerdyscout
 
 #include "test.h"
 
@@ -40,9 +40,9 @@ void test_ring_overflow_drops() {
   DmaSample buf[2];
   DmaRingBuffer ring;
   ring.setup(buf, 2);
-  DmaSample first = {1, 10, 0};
+  DmaSample first  = {1, 10, 0};
   DmaSample second = {2, 20, 0};
-  DmaSample third = {3, 30, 0};
+  DmaSample third  = {3, 30, 0};
   TEST_ASSERT_TRUE(ring.push(first));
   TEST_ASSERT_TRUE(ring.push(second));
   TEST_ASSERT_FALSE(ring.push(third));  // dropped, not blocked
