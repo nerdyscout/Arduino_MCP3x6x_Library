@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Stefan Herold
+// Copyright (c) 2026 nerdyscout
 //
 // MCP3564 (24-bit, 8ch) — mux mode with gain and oversampling.
 // config2(GAIN_16) amplifies small signals, setAveraging(OSR_512) reduces noise.

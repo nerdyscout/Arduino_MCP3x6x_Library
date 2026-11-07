@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Stefan Herold
+// Copyright (c) 2026 nerdyscout
 
 #ifndef TEST_INIT_H_
 #define TEST_INIT_H_
 
 #ifdef PIO_NATIVE_TESTING
   #include <ArduinoFake.h>
-  using namespace fakeit;
+using namespace fakeit;
 #else
   #include <Arduino.h>
   #include <SPI.h>
 #endif
 
 #include <unity.h>
+
 #include <algorithm>
 #include <cstring>
 #include <vector>
@@ -24,13 +25,13 @@
 // ---------------------------------------------------------------------------
 #ifdef PIO_NATIVE_TESTING
   #define FOR_EACH_ADC(M) M(MCP3461) M(MCP3462) M(MCP3464) M(MCP3561) M(MCP3562) M(MCP3564)
-  using TestADC = MCP3461;
+using TestADC = MCP3461;
 #else
   #ifndef TEST_ADC_TYPE
     #error "Define TEST_ADC_TYPE for hardware testing (e.g. -DTEST_ADC_TYPE=MCP3564)"
   #endif
   #define FOR_EACH_ADC(M) M(TEST_ADC_TYPE)
-  using TestADC = TEST_ADC_TYPE;
+using TestADC = TEST_ADC_TYPE;
 #endif
 
 // ---------------------------------------------------------------------------
@@ -64,16 +65,24 @@ T* createADC() {
 #ifdef PIO_NATIVE_TESTING
 struct MCP3x6xTest {
   template <typename T>
-  static int32_t getValue(T& adc, int32_t raw) { return adc._getValue(raw); }
+  static int32_t getValue(T& adc, int32_t raw) {
+    return adc._getValue(raw);
+  }
 
   template <typename T>
-  static int8_t getChannel(T& adc, uint32_t raw) { return adc._getChannel(raw); }
+  static int8_t getChannel(T& adc, uint32_t raw) {
+    return adc._getChannel(raw);
+  }
 
   template <typename T>
-  static void dmaComplete(T& adc, uint32_t timestamp) { adc._dmaComplete(timestamp); }
+  static void dmaComplete(T& adc, uint32_t timestamp) {
+    adc._dmaComplete(timestamp);
+  }
 
   template <typename T>
-  static typename T::status_t fastcmd(T& adc, uint8_t cmd) { return adc._fastcmd(cmd); }
+  static typename T::status_t fastcmd(T& adc, uint8_t cmd) {
+    return adc._fastcmd(cmd);
+  }
 
   template <typename T>
   using Adcdata = typename T::Adcdata;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Stefan Herold
+// Copyright (c) 2026 nerdyscout
 //
 // MCP3464 (16-bit, 8ch) — continuous scan mode.
 // Scans CH0-CH1 continuously via IRQ, reads with analogReadContinuous().
@@ -30,8 +30,8 @@ void loop() {
   int32_t adcdata0 = mcp.analogReadContinuous(MCP3x6x_CH0);
   int32_t adcdata1 = mcp.analogReadContinuous(MCP3x6x_CH1);
 
-  double voltage0 = adcdata0 * mcp.getReference() / mcp.getMaxValue();
-  double voltage1 = adcdata1 * mcp.getReference() / mcp.getMaxValue();
+  double voltage0  = adcdata0 * mcp.getReference() / mcp.getMaxValue();
+  double voltage1  = adcdata1 * mcp.getReference() / mcp.getMaxValue();
 
   Serial.print("voltage0: ");
   Serial.println(voltage0, 10);

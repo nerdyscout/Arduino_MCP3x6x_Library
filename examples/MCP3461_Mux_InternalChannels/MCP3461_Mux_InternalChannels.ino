@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Stefan Herold
+// Copyright (c) 2026 nerdyscout
 //
 // MCP3461 (16-bit, 2ch) — read internal temperature sensor and AVDD voltage.
 // No external wiring needed — purely diagnostic.
@@ -21,8 +21,8 @@ void setup() {
 }
 
 void loop() {
-  int32_t temp = mcp.analogRead(MCP3x6x_TEMP);
-  int32_t avdd = mcp.analogRead(MCP3x6x_AVDD);
+  int32_t temp   = mcp.analogRead(MCP3x6x_TEMP);
+  int32_t avdd   = mcp.analogRead(MCP3x6x_AVDD);
 
   double voltage = avdd * mcp.getReference() / mcp.getMaxValue();
 

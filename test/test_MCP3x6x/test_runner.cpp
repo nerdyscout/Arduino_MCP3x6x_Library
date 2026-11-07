@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Stefan Herold
+// Copyright (c) 2026 nerdyscout
 
 #include "test.h"
 
@@ -8,8 +8,8 @@
 // ---------------------------------------------------------------------------
 std::vector<uint8_t> spiAddrs;
 std::vector<std::vector<uint8_t>> spiData;
-uint8_t mockStatusByte    = 0x00;
-uint8_t lastSpiAddress    = 0x00;
+uint8_t mockStatusByte = 0x00;
+uint8_t lastSpiAddress = 0x00;
 std::vector<uint8_t> mockReadSequence;
 
 bool digitalWriteCalled   = false;
