@@ -1,0 +1,46 @@
+name: Build Doxygen
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen
+
+      - name: Build documentation
+        run: doxygen Doxyfile
+
+      - name: Check for Doxygen warnings
+        run: |
+          if [ -s docs/doxygen-warnings.txt ]; then
+            # Filter out pre-existing doxygen parsing issue with __attribute__((packed)) on enums
+            grep -v "Found ';' while parsing initializer list" docs/doxygen-warnings.txt > docs/doxygen-warnings-filtered.txt || true
+            if [ -s docs/doxygen-warnings-filtered.txt ]; then
+              echo "::error::Doxygen warnings found:"
+              cat docs/doxygen-warnings-filtered.txt
+              exit 1
+            fi
+            echo "No new Doxygen warnings (only pre-existing parser issue at line 360)"
+          fi
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs

@@ -1,106 +1,61 @@
-# Arduino MCP3x6x/R Library [![build](https://github.com/nerdyscout/Arduino_MCP3x6x_Library/actions/workflows/build.yml/badge.svg)](https://github.com/nerdyscout/Arduino_MCP3x6x_Library/actions/workflows/build.yml)
+# Arduino MCP3x6x Library
 
-Supports Microchip 16-bit [MCP3461R/MCP3462R/MCP3464R](https://www.microchip.com/en-us/product/MCP3461r) and 24-bit [MCP3561R/MCP3562R/MCP3564R](https://www.microchip.com/en-us/product/MCP3561r) analog-to-digital converters.
+Arduino library for Microchip MCP346xR / MCP356xR 16/24-bit SAR analog-to-digital converters over SPI.
 
-Without the `R` in the name seems to be early hardware versions which are [not recommended for designs](https://www.microchip.com/en-us/product/MCP3464) anymore. As they do have a subset of features this lib should mostly work as well.
+## Supported devices
 
-## Supported Boards
+- MCP3461R / MCP3462R / MCP3464R (16-bit)
+- MCP3561R / MCP3562R / MCP3564R (24-bit)
 
-This project builds with multiple MCU architectures (ESP32, ESP8266, AVR, SAMD, STM32, nRF52, Teensy), but only SAMD21 is personally tested.
+## Installation
 
-## Operating Modes
+Use the Arduino Library Manager and search for **MCP3x6xR**, or clone this repository into your `libraries` folder:
 
-The library supports two operating modes — both use the same constructor:
-
-```cpp
-explicit MCP3x6x(uint8_t pinCS = SS, uint8_t pinMOSI = MOSI, uint8_t pinMISO = MISO,
-                  uint8_t pinCLK = SCK, SPIClass *theSPI = &SPI,
-                  SPISettings theSPISettings = SPISettings())
+```sh
+git clone https://github.com/nerdyscout/Arduino_MCP3x6x_Library.git \
+  ~/Arduino/libraries/MCP3x6xR
 ```
 
-### Mux Mode (simple)
-
-Behaves like Arduino's `analogRead()`. Select a channel, trigger a conversion, wait, return the value. No interrupts needed.
+## Quick example
 
 ```cpp
-MCP3561 mcp;
+#include "Arduino_MCP3x6x_Library.hpp"
+
+MCP3461 mcp;
 
 void setup() {
+  Serial.begin(115200);
   mcp.begin();
 }
+
 void loop() {
-  int32_t val = mcp.analogRead(MCP3x6x_CH0);
-  double v = val * mcp.getReference() / mcp.getMaxValue();
+  int32_t raw  = mcp.analogRead(MCP3x6x_CH0);
+  double volt  = raw * mcp.getReference() / mcp.getMaxValue();
+  Serial.println(volt, 6);
+  delay(1000);
 }
 ```
 
-### Scan Mode (advanced)
+More examples are in the `examples/` folder covering single-ended, differential, scan, and streaming modes.
 
-The ADC cycles through a list of enabled channels continuously. An IRQ pin fires each time a conversion completes, and `IRQ_handler()` reads and caches the result. `analogRead()` in scan mode returns cached values with no SPI delay.
+## Breakout PCBs
 
-```cpp
-MCP3561 mcp;
+Breakout PCBs for this project live in the `pcb/` folder, with KiCad sources for Adafruit, Arduino, and Sparkfun-style boards.
 
-void mcp_wrapper() { mcp.IRQ_handler(); }
+| Board | Top | Bottom |
+| --- | --- | --- |
+| Adafruit Feather | ![Feather top](pcb/Adafruit/Feather_top.svg) | ![Feather bottom](pcb/Adafruit/Feather_bottom.svg) |
+| Arduino Uno | ![Uno top](pcb/Arduino/Uno_top.svg) | ![Uno bottom](pcb/Arduino/Uno_bottom.svg) |
+| Sparkfun ProMicro | ![ProMicro top](pcb/Sparkfun/ProMicro_top.svg) | ![ProMicro bottom](pcb/Sparkfun/ProMicro_bottom.svg) |
 
-void setup() {
-  mcp.begin();
-  mcp.attachIRQ(6, mcp_wrapper);      // wire IRQ pin
-  mcp.attachMCLK(9);                   // generate master clock
-  mcp.enableScanChannel(MCP3x6x_CH0);   // add channels to scan
-  mcp.enableScanChannel(MCP3x6x_CH1);
-  mcp.startScan();                      // configure ADC + start cycle
-}
-void loop() {
-  int32_t val0 = mcp.analogRead(MCP3x6x_CH0);  // cached, non-blocking
-  int32_t val1 = mcp.analogRead(MCP3x6x_CH1);
-}
-```
+## Documentation
 
-Scan mode also supports non-blocking polling without `analogRead()`:
+Full API reference is generated with Doxygen and hosted at:
 
-```cpp
-if (mcp.dataAvailable()) {
-  int32_t val = mcp.readADCDATA();  // clears dataAvailable()
-}
-```
+https://nerdyscout.github.io/Arduino_MCP3x6x_Library/
 
-## Upgrading to 0.2.0
+Build locally with `doxygen Doxyfile`.
 
-Version 0.2.0 corrects several register-map and API mismatches against the
-MCP346xR/MCP356xR datasheets. Breaking changes:
+## License
 
-- The C wrapper `src/MCP3x6x.h` was removed (invalid `extern "C"` around a C++
-  template class). Include `Arduino_MCP3x6x_Library.hpp` directly.
-- `lock()` now locks the register map by default (writes `0x00`); `unlock()`
-  re-unlocks with the datasheet password `0xA5`.
-- `getMaxValue()` returns half scale `2^(N-1)` — the same formula
-  `getReference() / getMaxValue()` in the examples now yields correct fractions.
-- `analogReadDifferential(pinP, pinN)` maps the VIN+ channel of each selector.
-- `startScan()` configures continuous conversion; use `startScanOnce()` for a
-  single scan cycle that ends in standby.
-- CONFIG0/CONFIG2/STATUS bitfields now match the datasheet bit layout, so
-  register bytes written/read over SPI differ from 0.1.x (the corrections are
-  documented in the [CHANGELOG](CHANGELOG.md)).
-
-## Examples
-
-| Example | ADC | Mode | What it shows |
-|---------|-----|------|---------------|
-| `MCP3461_Mux_SingleEnded` | MCP3461 | Mux | Basic single-ended read |
-| `MCP3461_Mux_InternalChannels` | MCP3461 | Mux | TEMP sensor + AVDD voltage |
-| `MCP3462_Scan_SingleEnded` | MCP3462 | Scan | Basic scan mode |
-| `MCP3462_Scan_Stream` | MCP3462 | Scan | Non-blocking polling (`dataAvailable()` / `readADCDATA()`) |
-| `MCP3464_Mux_Differential` | MCP3464 | Mux | Differential pair |
-| `MCP3464_Scan_Continuous` | MCP3464 | Scan | Continuous conversion |
-| `MCP3561_Scan_SingleEnded` | MCP3561 | Scan | Basic scan (24-bit) |
-| `MCP3562_Scan_Differential` | MCP3562 | Scan | Differential scan |
-| `MCP3562_Mux_ExternalReference` | MCP3562 | Mux | External VREF |
-| `MCP3564_Mux_SingleEnded` | MCP3564 | Mux | Basic mux (24-bit) |
-| `MCP3564_Mux_GainOSR` | MCP3564 | Mux | Gain + oversampling |
-| `MCP3564_HIL_Smoke` | MCP3564 | Mux | Hardware-in-the-loop smoke test (bench only — no-ops without `MCP_HIL_SMOKE`) |
-
----
-
-see also:
-  - https://github.com/fhnw-ise-qcrypt/mcp3564
+MIT — see `LICENSES/`.

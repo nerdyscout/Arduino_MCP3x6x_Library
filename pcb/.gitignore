@@ -1,3 +1,6 @@
 # kicad
 fp-info-*
 *-backup*
+fp-lib-table*
+sym-lib-table*
+**/.history/

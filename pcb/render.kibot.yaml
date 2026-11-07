@@ -1,0 +1,24 @@
+# KiBot config — 2D board renders (top + bottom) for README preview
+#
+# Output filenames use kibot native %f.%x (pcb basename + extension).
+# KiCad variables ${DATE} and ${VERSION} are defined in each board's
+# .kicad_pro (text_variables) and .kicad_pcb (title block date/rev),
+# so they appear on the rendered board image itself rather than in
+# the filename.
+kibot:
+  version: 1
+globals:
+  use_os_env_for_expand: true
+outputs:
+  - name: board_render_top
+    type: pcbdraw
+    dir: ./
+    options:
+      bottom: false
+      output: '%f_top.%x'
+  - name: board_render_bottom
+    type: pcbdraw
+    dir: ./
+    options:
+      bottom: true
+      output: '%f_bottom.%x'
