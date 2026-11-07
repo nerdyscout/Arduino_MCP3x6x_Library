@@ -1,0 +1,40 @@
+name: PlatformIO CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Run PlatformIO unit tests (native)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PlatformIO
+        run: |
+          pip3 install platformio
+
+      - name: Run unit tests (native env)
+        run: pio test -c platformio_ci.ini -e native_ci
+
+  examples:
+    name: Build all examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PlatformIO
+        run: |
+          pip3 install platformio
+
+      - name: Build all examples
+        run: |
+          chmod +x examples/build.sh
+          ./examples/build.sh
