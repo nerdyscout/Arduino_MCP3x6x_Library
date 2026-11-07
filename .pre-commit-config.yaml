@@ -22,3 +22,18 @@ repos:
     rev: v0.13.0
     hooks:
     - id: reuse
+
+  - repo: local
+    hooks:
+    - id: native-tests
+      name: Run native unit tests
+      entry: pio test -e native_ci --project-conf platformio_ci.ini
+      language: system
+      pass_filenames: false
+      always_run: true
+    - id: test-coverage-floor
+      name: Enforce test coverage floor (80%)
+      entry: bash -c 'pio test -e native_ci --project-conf platformio_ci.ini > /dev/null 2>&1 && gcovr --filter src/Arduino_MCP3x6x_Library.hpp --print-summary --fail-under-line 80 2>/dev/null || (echo "Test coverage floor not met or coverage tooling unavailable" && exit 1)'
+      language: system
+      pass_filenames: false
+      always_run: true
