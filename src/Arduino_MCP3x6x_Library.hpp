@@ -1123,6 +1123,13 @@ class MCP3x6x {
   ////////////////////////////////////////////////////////////////////////////////
 
   // setup SPI
+  /**
+   * @brief initialize SPI and reset the ADC
+   *
+   * @return true on success, false if reset or chip ID validation failed
+   *
+   * @ingroup init
+   */
   bool begin() {
 #if defined(ARDUINO_ARCH_ESP32)  // init SPI of ESP32
     _spi->begin(_pinCS, _pinMISO, _pinMOSI, _pinCLK);
@@ -1220,6 +1227,25 @@ class MCP3x6x {
    */
   void end() { _spi->end(); }
 
+  /**
+   * @brief write all configuration registers to device
+   *
+   * @param config0  ADC operating mode, bias, VREF selection
+   * @param config1  conversion mode, oversampling ratio, data format
+   * @param config2  gain, offset calibration settings
+   * @param config3  data format, channel ID, scan settings
+   * @param irq      IRQ configuration
+   * @param mux      channel multiplexer selection
+   * @param scan     channel scan settings
+   * @param timer    conversion timer settings
+   * @param offset   offset calibration value
+   * @param gain     gain calibration value
+   * @param lock     lock register
+   * @param crccfg   CRC configuration
+   * @return status_t
+   *
+   * @ingroup config
+   */
   void configure(Config0 config0, Config1 config1, Config2 config2, Config3 config3, Irq irq,
                  Mux mux, Scan scan, Timer timer, Offset offset, Gain gain, Lock lock,
                  Crccfg crccfg) {
@@ -1736,6 +1762,13 @@ class MCP3x6x {
   // read registers
   ////////////////////////////////////////////////////////////////////////////////
 
+  /**
+   * @brief read device status register
+   *
+   * @return byte raw status register contents
+   *
+   * @ingroup status
+   */
   inline byte status() { return _status.raw; }
 
   /**
@@ -2145,10 +2178,30 @@ class MCP3x6x {
     return write(_config1);
   }
 
+  /**
+   * @brief set oversampling ratio
+   *
+   * @param rate  Oversampling ratio (see osr enum)
+   * @return status_t
+   *
+   * @ingroup calibration
+   */
   status_t setOversamplingRatio(osr rate) { return setAveraging(rate); }
 
+  /**
+   * @brief set ADC resolution in bits
+   *
+   * @param bits  resolution in bits
+   * @note not applicable for fixed-resolution external ADC
+   */
   void setResolution(size_t bits) {}  // not applicable for fixed-resolution external ADC
 
+  /**
+   * @brief set analog read resolution in bits
+   *
+   * @param bits  resolution in bits
+   * @note not applicable for fixed-resolution external ADC
+   */
   void analogReadResolution(size_t bits) {}  // not applicable for fixed-resolution external ADC
 
   /**
