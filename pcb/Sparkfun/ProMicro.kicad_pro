@@ -745,7 +745,10 @@
       "ProMicro"
     ]
   ],
-  "text_variables": {},
+  "text_variables": {
+    "DATE": "2026-11-07",
+    "VERSION": "0.2.0"
+  },
   "tuning_profiles": {
     "meta": {
       "version": 0

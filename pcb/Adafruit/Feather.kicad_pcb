@@ -9,7 +9,8 @@
 	(paper "A4")
 	(title_block
 		(title "Adafruit Feather MCP3x62R Breakout")
-		(date "2023-10-10")
+		(date "2026-11-07")
+		(rev "0.2.0")
 		(company "nerdyscout")
 		(comment 1 "https://github.com/nerdyscout/Arduino_MCP3x6x_Library/pcb/Adafruit")
 		(comment 2 "FEATHER")

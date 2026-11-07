@@ -9,7 +9,8 @@
 	(paper "A4")
 	(title_block
 		(title "Arduino Uno MCP3x6xR Breakout")
-		(date "2023-10-10")
+		(date "2026-11-07")
+		(rev "0.2.0")
 		(company "nerdyscout")
 		(comment 1 "https://github.com/nerdyscout/Arduino_MCP3x6x_Library/pcb/Arduino")
 		(comment 2 "UNO")
