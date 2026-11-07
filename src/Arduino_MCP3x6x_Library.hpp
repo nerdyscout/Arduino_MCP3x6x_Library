@@ -10,6 +10,46 @@
  *
  * @copyright Copyright (c) 2026
  *
+ * @mainpage Arduino MCP3x6x Library
+ *
+ * @section intro_sec Introduction
+ * Arduino library for Microchip MCP346xR / MCP356xR 16/24-bit SAR
+ * analog-to-digital converters over SPI.
+ *
+ * Supported devices:
+ * - MCP3461R / MCP3462R / MCP3464R (16-bit)
+ * - MCP3561R / MCP3562R / MCP3564R (24-bit)
+ *
+ * @section install_sec Installation
+ * Use the Arduino Library Manager and search for **MCP3x6xR**, or clone this
+ * repository into your `libraries` folder:
+ *
+ * @code{.sh}
+ *   git clone https://github.com/nerdyscout/Arduino_MCP3x6x_Library.git \
+ *     ~/Arduino/libraries/MCP3x6xR
+ * @endcode
+ *
+ * @section example_sec Quick Example
+ *
+ * @code{.cpp}
+ *   #include "Arduino_MCP3x6x_Library.hpp"
+ *   MCP3461 mcp;
+ *   mcp.begin();
+ *   int32_t raw  = mcp.analogRead(MCP3x6x_CH0);
+ *   double volt  = raw * mcp.getReference() / mcp.getMaxValue();
+ * @endcode
+ *
+ * @section api_sec API Reference
+ * - @ref init "Initialization" — begin(), end(), reset()
+ * - @ref config "Configuration" — config0() … config3(), lock(), unlock()
+ * - @ref pins "Pin assignment" — attachIRQ(), attachMCLK()
+ * - @ref conversion "Conversion & reading" — analogRead(), startScan(), startContinuous()
+ * - @ref status "Status & information" — status_dr(), dataAvailable(), toVoltage()
+ * - @ref calibration "Calibration" — offset(), gain(), setTempOffset(), setTempSlope()
+ * - @ref lowpower "Low-power modes" — standby(), shutdown(), full_shutdown()
+ *
+ * Full API reference is generated with Doxygen and hosted at:
+ * https://nerdyscout.github.io/Arduino_MCP3x6x_Library/
  */
 
 #ifndef SRC_ARDUINO_MCP3X6X_LIBRARY_HPP_
@@ -162,8 +202,53 @@ class DmaRingBuffer {
 };
 
 /**
+ * @defgroup init Initialization
+ * @brief begin(), end(), reset() — initialize and manage the ADC.
+ *
+ * @defgroup config Configuration registers
+ * @brief config0() … config3(), irq(), mux(), scan(), timer(), lock(), unlock(), crccfg() —
+ *        program the MCP3x6x/R configuration registers.
+ *
+ * @defgroup pins Pin assignment
+ * @brief attachIRQ(), attachMCLK() — connect IRQ and MCLK pins.
+ *
+ * @defgroup conversion Conversion & reading
+ * @brief analogRead(), analogReadContinuous(), analogReadDifferential(),
+ *        readADCDATA(), startContinuous(), stopContinuous(), startScan(),
+ *        startScanOnce(), singleEndedMode(), differentialMode() — trigger and
+ *        retrieve conversions.
+ *
+ * @defgroup status Status & information
+ * @brief status_dr(), status_crccfg(), status_por(), dataAvailable(),
+ *        isComplete(), isContinuous(), isDifferential(), toVoltage(),
+ *        getReference(), getMaxValue(), getReadTimeout(), setReadTimeout()
+ *        — query conversion status and device parameters.
+ *
+ * @defgroup calibration Calibration
+ * @brief offset(), gain(), setTempOffset(), setTempSlope(), setAveraging(),
+ *        setOversamplingRatio() — calibration and offset/gain adjustment.
+ *
+ * @defgroup lowpower Low-power modes
+ * @brief standby(), shutdown(), full_shutdown() — reduce power consumption.
+ *
+ * @defgroup dma DMA support
+ * @brief attachDMA(), dmaAvailable(), dmaRead() — direct memory access for
+ *        high-speed continuous conversion (ESP32 only).
+ *
+ * @defgroup version Version info
+ * @brief getDeviceAddress(), available(), read(), write(), peek(), flush()
+ *        — low-level SPI access and device identification.
+ */
+
+/**
  * @brief base class MCP3x6x
  *
+ * Template base class for Microchip MCP346xR / MCP356xR ADCs.
+ *
+ * @tparam _MAX_RESOLUTION maximum ADC resolution in bits (16 or 24)
+ * @tparam _MAX_CHANNELS   maximum number of input channels (1, 2, or 4)
+ *
+ * @ingroup init config pins conversion status calibration lowpower dma version
  */
 template <const size_t _MAX_RESOLUTION, const size_t _MAX_CHANNELS>
 class MCP3x6x {
@@ -986,12 +1071,14 @@ class MCP3x6x {
   /**
    * @brief Construct a new MCP3x6x object
    *
-   * @param pinCS
-   * @param pinMOSI
-   * @param pinMISO
-   * @param pinCLK
-   * @param theSPI
-   * @param theSPISettings
+   * @param pinCS       SPI chip-select pin (default SS)
+   * @param pinMOSI     SPI MOSI pin (default MOSI)
+   * @param pinMISO     SPI MISO pin (default MISO)
+   * @param pinCLK      SPI clock pin (default SCK)
+   * @param theSPI      SPI bus interface (default &SPI)
+   * @param theSPISettings SPI transaction settings (default SPISettings())
+   *
+   * @ingroup init
    */
   explicit MCP3x6x(uint8_t pinCS = SS, uint8_t pinMOSI = MOSI, uint8_t pinMISO = MISO,
                    uint8_t pinCLK = SCK, SPIClass* theSPI = &SPI,
@@ -1127,6 +1214,7 @@ class MCP3x6x {
   /**
    * @brief end communication
    *
+   * @ingroup init
    */
   void end() { _spi->end(); }
 
@@ -1190,8 +1278,10 @@ class MCP3x6x {
   /**
    * @brief attaches pin to interrupt callback function
    *
-   * @param pinIRQ
-   * @param callback
+   * @param pinIRQ    IRQ input pin number
+   * @param callback  interrupt service routine called on falling edge
+   *
+   * @ingroup pins
    */
   void attachIRQ(const uint8_t pinIRQ, void (*callback)(void)) {
     _pinIRQ = pinIRQ;
@@ -1200,9 +1290,11 @@ class MCP3x6x {
   }
 
   /**
-   * @brief attached pin to clock generator
+   * @brief attaches pin to clock generator
    *
-   * @param pinMCLK
+   * @param pinMCLK   MCLK output pin number (generates 4.9152 MHz master clock)
+   *
+   * @ingroup pins
    */
   void attachMCLK(const uint8_t pinMCLK) {
     _pinMCLK = pinMCLK;
@@ -1221,10 +1313,13 @@ class MCP3x6x {
   /**
    * @brief write register CONFIG0 to device
    *
-   * @param adc
-   * @param bias
-   * @param clk
-   * @param vref_sel
+   * @param adc      ADC operating mode (CONVERSION, STANDBY, SHUTDOWN)
+   * @param bias     Sensor bias current source selection
+   * @param clk      Clock source selection
+   * @param vref_sel Enable internal voltage reference
+   * @param cfg0     Config0 raw bit (default 0)
+   *
+   * @ingroup config
    */
   void config0(enum adc_mode adc, enum cs_sel bias, enum clk_sel clk, bool vref_sel,
                bool cfg0 = 0) {
@@ -1240,8 +1335,10 @@ class MCP3x6x {
   /**
    * @brief write register CONFIG1 to device
    *
-   * @param osr
-   * @param pre
+   * @param osr  Oversampling ratio for delta-sigma conversion
+   * @param pre  Prescaler value selection for AMCLK
+   *
+   * @ingroup config
    */
   void config1(enum osr osr, enum pre pre) {
     _config1.osr = osr;
@@ -1252,9 +1349,12 @@ class MCP3x6x {
   /**
    * @brief write register CONFIG2 to device
    *
-   * @param az_mux
-   * @param gain
-   * @param boost
+   * @param az_mux  Auto-zero mux enable
+   * @param gain    PGA gain selection
+   * @param boost   Boost mode selection
+   * @param az_ref  Auto-zero reference enable (default false)
+   *
+   * @ingroup config
    */
   void config2(bool az_mux, enum gain gain, enum boost boost, bool az_ref = false) {
     _config2.az_mux = az_mux;
@@ -1267,11 +1367,13 @@ class MCP3x6x {
   /**
    * @brief write register CONFIG3 to device
    *
-   * @param gaincal
-   * @param offcal
-   * @param crccom
-   * @param data_format
-   * @param conv_mode
+   * @param gaincal    Enable gain calibration
+   * @param offcal     Enable offset calibration
+   * @param crccom     Enable CRC on communications
+   * @param data_format ADC output data format selection
+   * @param conv_mode  Conversion mode (continuous, one-shot standby, one-shot shutdown)
+   *
+   * @ingroup config
    */
   void config3(bool gaincal, bool offcal, bool crccom, enum data_format data_format,
                enum conv_mode conv_mode) {
@@ -1286,10 +1388,11 @@ class MCP3x6x {
   /**
    * @brief write register IRQ to device
    *
-   * @param stp
-   * @param fastcmd
-   * @param por_status
-   * @param irq_mode
+   * @param stp      Stop conversion on IRQ
+   * @param fastcmd  Enable fast command mode
+   * @param mode     IRQ mode selection
+   *
+   * @ingroup config
    */
   void irq(bool stp, bool fastcmd, enum irq_mode mode) {
     _irq.en_stp     = stp;
@@ -1301,8 +1404,10 @@ class MCP3x6x {
   /**
    * @brief write register MUX to device
    *
-   * @param minus
-   * @param plus
+   * @param minus  Negative input channel selection
+   * @param plus   Positive input channel selection
+   *
+   * @ingroup config
    */
   void mux(enum mux minus, enum mux plus) {
     _mux.vin_minus = minus;
@@ -1313,13 +1418,16 @@ class MCP3x6x {
   /**
    * @brief write register SCAN to device
    *
-   * @param single_ended
-   * @param differential
-   * @param temp
-   * @param avdd
-   * @param vcm
-   * @param offset
-   * @param dly
+   * @param single_ended  Bitmask of single-ended channels
+   * @param differential  Bitmask of differential channel pairs
+   * @param temp          Include temperature sensor in scan
+   * @param avdd          Include AVDD in scan
+   * @param vcm           Include VCM in scan
+   * @param offset        Include offset calibration in scan
+   * @param dly           Delay between conversions in scan cycle
+   *
+   * @ingroup config
+   * @see startScan(), startScanOnce(), enableScanChannel(), disableScanChannel()
    */
   void scan(byte single_ended, byte differential, bool temp, bool avdd, bool vcm, bool offset,
             enum delay dly) {
@@ -1336,7 +1444,9 @@ class MCP3x6x {
   /**
    * @brief write register TIMER to device
    *
-   * @param timer
+   * @param timer  Pointer to 3-byte timer value
+   *
+   * @ingroup config
    */
   void timer(uint8_t* timer) {
     _timer = timer;
@@ -1346,7 +1456,9 @@ class MCP3x6x {
   /**
    * @brief write register OFFSET to device
    *
-   * @param offset
+   * @param offset  Pointer to 3-byte offset calibration value
+   *
+   * @ingroup calibration
    */
   void offset(uint8_t* offset) {
     _offset = offset;
@@ -1356,7 +1468,9 @@ class MCP3x6x {
   /**
    * @brief write register GAIN to device
    *
-   * @param gain
+   * @param gain  Pointer to 3-byte gain calibration value
+   *
+   * @ingroup calibration
    */
   void gain(uint8_t* gain) {
     _gain = gain;
@@ -1367,8 +1481,12 @@ class MCP3x6x {
    * @brief write register LOCK to device (key: 0xA5 unlocks the register map,
    *        any other value locks it)
    *
-   * @param key lock key / lock value (default 0x00 = locked)
+   * @param key  lock key / lock value (default 0x00 = locked)
    * @return status_t
+   *
+   * @ingroup config
+   * @warning Writing any value other than 0xA5 locks the register map until
+   *          the correct unlock key is written.
    */
   status_t lock(uint8_t key = 0x00) {
     _lock.raw = key;
@@ -1379,13 +1497,18 @@ class MCP3x6x {
    * @brief write register LOCK to unlock device (uses the datasheet key 0xA5)
    *
    * @return status_t
+   *
+   * @ingroup config
+   * @see lock()
    */
   status_t unlock() { return lock(MCP3x6x_CFG_LOCK); }
 
   /**
    * @brief write register CRCCFG to device
    *
-   * @param crccfg
+   * @param crccfg  CRC configuration value
+   *
+   * @ingroup config
    */
   void crccfg(uint16_t crccfg) {
     _crccfg.value = crccfg;
@@ -1399,24 +1522,30 @@ class MCP3x6x {
   /**
    * @brief data ready status of latest communication
    *
-   * @return true
-   * @return false
+   * @return true  data is ready
+   * @return false  data is not ready
+   *
+   * @ingroup status
    */
   inline constexpr bool status_dr() { return !_status.dr; }
 
   /**
    * @brief crccfg status of latest communication
    *
-   * @return true
-   * @return false
+   * @return true  CRC configuration is valid
+   * @return false  CRC configuration is invalid
+   *
+   * @ingroup status
    */
   inline constexpr bool status_crccfg() { return !_status.crccfg; }
 
   /**
    * @brief power on reset status of latest communication
    *
-   * @return true
-   * @return false
+   * @return true  POR occurred
+   * @return false  no POR
+   *
+   * @ingroup status
    */
   inline constexpr bool status_por() { return !_status.por; }
 
@@ -1425,22 +1554,25 @@ class MCP3x6x {
   ////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * @brief Fast Command
+   * @brief Fast Command — Start conversion
    *
+   * @ingroup conversion
    * @return status_t
    */
   inline status_t conversion() { return _fastcmd(MCP3x6x_CMD_CONVERSION); }
 
   /**
-   * @brief Fast Command
+   * @brief Fast Command — Enter standby mode
    *
+   * @ingroup lowpower
    * @return status_t
    */
   inline status_t standby() { return _fastcmd(MCP3x6x_CMD_STANDBY); }
 
   /**
-   * @brief Fast Command
+   * @brief Fast Command — Enter shutdown mode
    *
+   * @ingroup lowpower
    * @return status_t
    */
   inline status_t shutdown() { return _fastcmd(MCP3x6x_CMD_SHUTDOWN); }
@@ -1448,6 +1580,7 @@ class MCP3x6x {
   /**
    * @brief Fast Command — Full Shutdown (lowest power)
    *
+   * @ingroup lowpower
    * @warning Datasheet errata: AVDD and DVDD must drop below 100 mV before
    *          power is reapplied after Full Shutdown, otherwise CHIPID bits
    *          may be corrupted.
@@ -1456,8 +1589,9 @@ class MCP3x6x {
   inline status_t full_shutdown() { return _fastcmd(MCP3x6x_CMD_FULL_SHUTDOWN); }
 
   /**
-   * @brief Fast Command
+   * @brief Fast Command — Reset ADC
    *
+   * @ingroup init
    * @return status_t
    */
   inline status_t reset() {
@@ -1746,8 +1880,24 @@ class MCP3x6x {
   // data access
   ////////////////////////////////////////////////////////////////////////////////
 
+  /**
+   * @brief report whether a new conversion result is available
+   *
+   * @return true  new data available since last read
+   * @return false  no new data
+   *
+   * @ingroup status
+   */
   bool dataAvailable() { return _dataAvailable; }
 
+  /**
+   * @brief read raw ADC data from the last conversion
+   *
+   * @return int32_t sign-extended ADC value
+   *
+   * @ingroup conversion
+   * @see dataAvailable(), getLastChannel(), toVoltage()
+   */
   int32_t readADCDATA() {
     size_t s          = _adcReadSize();
     uint8_t buffer[4] = {0};
@@ -1864,8 +2014,13 @@ class MCP3x6x {
   ////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * @brief handler
+   * @brief interrupt request handler
    *
+   * Call this from your ISR when the ADC IRQ fires. In DMA+scan mode it starts
+   * the DMA engine; otherwise it reads ADCDATA and marks data as available.
+   *
+   * @ingroup status
+   * @see dataAvailable(), readADCDATA(), attachIRQ()
    */
   void IRQ_handler() {
     // DMA path: scan mode with DMA enabled reads ADCDATA non-blocking
@@ -1883,7 +2038,11 @@ class MCP3x6x {
   /**
    * @brief Set the Data Format
    *
-   * @param format
+   * @param format  ADC output data format (see data_format enum)
+   * @return status_t
+   *
+   * @ingroup config
+   * @see config3()
    */
   status_t setDataFormat(data_format format) {
     _config3.data_format = format;
@@ -1893,7 +2052,11 @@ class MCP3x6x {
   /**
    * @brief Set the Conversion Mode
    *
-   * @param mode
+   * @param mode  Conversion mode (CONTINUOUS, ONESHOT_STANDBY, ONESHOT_SHUTDOWN)
+   * @return status_t
+   *
+   * @ingroup config
+   * @see config3(), startContinuous(), stopContinuous()
    */
   status_t setConversionMode(conv_mode mode) {
     _config3.conv_mode = mode;
@@ -1901,9 +2064,13 @@ class MCP3x6x {
   }
 
   /**
-   * @brief Set the Adc Mode object
+   * @brief Set the ADC operating mode
    *
-   * @param mode
+   * @param mode  ADC mode (CONVERSION, STANDBY, SHUTDOWN)
+   * @return status_t
+   *
+   * @ingroup config
+   * @see config0()
    */
   status_t setAdcMode(adc_mode mode) {
     _config0.adc = mode;
@@ -1911,9 +2078,13 @@ class MCP3x6x {
   }
 
   /**
-   * @brief Set the Clock Selection object
+   * @brief Set the Clock Selection
    *
-   * @param clk
+   * @param clk  Clock source (INTERN_OUTPUT, INTERN, EXTERN)
+   * @return status_t
+   *
+   * @ingroup config
+   * @see config0()
    */
   status_t setClockSelection(clk_sel clk) {
     _config0.clk = clk;
@@ -1923,7 +2094,11 @@ class MCP3x6x {
   /**
    * @brief enable scanning on given channel
    *
-   * @param ch
+   * @param chan  channel to add to scan list
+   * @return status_t
+   *
+   * @ingroup config
+   * @see scan(), disableScanChannel(), startScan()
    */
   status_t enableScanChannel(Mux chan) {
     for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
@@ -1938,7 +2113,11 @@ class MCP3x6x {
   /**
    * @brief disable scanning of given channel
    *
-   * @param ch
+   * @param chan  channel to remove from scan list
+   * @return status_t
+   *
+   * @ingroup config
+   * @see scan(), enableScanChannel(), startScan()
    */
   status_t disableScanChannel(Mux chan) {
     for (size_t i = 0; i < sizeof(_channelID) / sizeof(_channelID[0]); i++) {
@@ -1953,7 +2132,11 @@ class MCP3x6x {
   /**
    * @brief set oversampling rate
    *
-   * @param rate
+   * @param rate  Oversampling ratio (see osr enum)
+   * @return status_t
+   *
+   * @ingroup calibration
+   * @see config1(), setOversamplingRatio()
    */
   status_t setAveraging(osr rate) {
     _config1.osr = rate;
@@ -1969,7 +2152,11 @@ class MCP3x6x {
   /**
    * @brief set reference voltage
    *
-   * @param vref
+   * @param vref  reference voltage in volts (0.0 = use internal 2.4 V)
+   * @return status_t
+   *
+   * @ingroup calibration
+   * @see config0(), getReference()
    */
   status_t setReference(float vref = 0.0) {
     if (vref == 0.0) {
@@ -1986,7 +2173,10 @@ class MCP3x6x {
   /**
    * @brief get reference voltage
    *
-   * @return float
+   * @return float reference voltage in volts
+   *
+   * @ingroup status
+   * @see setReference()
    */
   float getReference() { return _reference; }
 
@@ -1998,14 +2188,19 @@ class MCP3x6x {
    * inversion per datasheet Section 6.2.6.
    *
    * @return uint8_t device address (0-3)
+   *
+   * @ingroup status
    */
   uint8_t getDeviceAddress() const { return (_status.addr >> 1) & 0x03; }
 
   /**
    * @brief convert raw ADC value to microvolts
    *
-   * @param raw
-   * @return int32_t voltage in microvolts
+   * @param raw  raw sign-extended ADC value from readADCDATA() or analogRead()
+   * @return int32_t voltage in microvolts (µV)
+   *
+   * @ingroup status
+   * @see readADCDATA(), analogRead(), getReference(), getMaxValue()
    */
   int32_t toVoltage(int32_t raw) {
     int64_t VREF_uV = (int64_t)(_reference * 1000000.0f);
@@ -2024,14 +2219,20 @@ class MCP3x6x {
   /**
    * @brief set analogRead timeout in milliseconds
    *
-   * @param ms timeout (0 = disabled)
+   * @param ms  timeout in ms (0 = disabled, blocking reads wait indefinitely)
+   *
+   * @ingroup init
+   * @see getReadTimeout(), analogRead()
    */
   void setReadTimeout(uint32_t ms) { _readTimeout = ms; }
 
   /**
    * @brief get analogRead timeout in milliseconds
    *
-   * @return uint32_t
+   * @return uint32_t timeout in ms
+   *
+   * @ingroup init
+   * @see setReadTimeout()
    */
   uint32_t getReadTimeout() { return _readTimeout; }
 
@@ -2039,6 +2240,9 @@ class MCP3x6x {
    * @brief read temperature sensor and return centi-Celsius
    *
    * @return int16_t temperature in 0.01°C (e.g. 2550 = 25.50°C)
+   *
+   * @ingroup calibration
+   * @see analogRead(), toVoltage(), setTempOffset(), setTempSlope()
    */
   int16_t readTemperature() {
     uint32_t savedTimeout = _readTimeout;
@@ -2061,35 +2265,52 @@ class MCP3x6x {
   /**
    * @brief set temperature offset calibration (centi-Celsius)
    *
-   * @param offset_cC
+   * @param offset_cC  temperature offset in 0.01°C
+   *
+   * @ingroup calibration
+   * @see readTemperature(), setTempSlope()
    */
   void setTempOffset(int16_t offset_cC) { _tempOffset = offset_cC; }
 
   /**
-   * @brief set temperature slope calibration (uV/°C)
+   * @brief set temperature slope calibration (µV/°C)
    *
-   * @param slope_uV_per_C
+   * @param slope_uV_per_C  temperature slope in µV per °C
+   *
+   * @ingroup calibration
+   * @see readTemperature(), setTempOffset()
    */
   void setTempSlope(uint16_t slope_uV_per_C) { _tempSlope = slope_uV_per_C; }
 
   /**
-   * @brief get maximal value
+   * @brief get maximal value for the ADC resolution
    *
-   * @return uint32_t
+   * @return uint32_t 2^(_MAX_RESOLUTION - 1), i.e. half-scale for signed data
+   *
+   * @ingroup status
+   * @see toVoltage(), getReference()
    */
   uint32_t getMaxValue() { return (uint32_t)1 << (_MAX_RESOLUTION - 1); }
 
   /**
    * @brief conversion finished
    *
-   * @return true
-   * @return false
+   * @return true  conversion complete and data ready
+   * @return false  conversion in progress
+   *
+   * @ingroup status
+   * @see status_dr(), dataAvailable()
    */
   bool isComplete() { return status_dr(); }
 
   /**
    * @brief starts a continuous conversion cycle
    *
+   * Configures continuous conversion mode and triggers the first conversion.
+   * Use analogRead() to read results without re-triggering.
+   *
+   * @ingroup conversion
+   * @see stopContinuous(), setConversionMode(), conversion()
    */
   void startContinuous() {
     setConversionMode(conv_mode::CONTINUOUS);
@@ -2099,6 +2320,10 @@ class MCP3x6x {
   /**
    * @brief stops a continuous conversion cycle
    *
+   * Switches to one-shot standby mode and sends the standby command.
+   *
+   * @ingroup conversion
+   * @see startContinuous(), setConversionMode(), standby()
    */
   void stopContinuous() {
     setConversionMode(conv_mode::ONESHOT_STANDBY);
@@ -2108,6 +2333,10 @@ class MCP3x6x {
   /**
    * @brief starts a continuous conversion cycle on differential channels
    *
+   * Configures differential input mode and starts continuous conversion.
+   *
+   * @ingroup conversion
+   * @see differentialMode(), startContinuous()
    */
   void startContinuousDifferential() {
     differentialMode();
@@ -2115,16 +2344,28 @@ class MCP3x6x {
   }
 
   /**
-   * @brief checks if continuois mode is set
+   * @brief checks if continuous mode is set
    *
-   * @return true
-   * @return false
+   * @return true  continuous conversion mode active
+   * @return false  one-shot mode active
+   *
+   * @ingroup status
+   * @see startContinuous(), stopContinuous()
    */
   bool isContinuous() { return _config3.conv_mode == conv_mode::CONTINUOUS; }
 
   /**
    * @brief start scan mode: configure IRQ pin and set ADC to Conversion
    *
+   * Enables continuous conversion with IRQ-driven data ready signalling.
+   * Call IRQ_handler() from your ISR to process conversions.
+   *
+   * @param mode   IRQ pin mode (IRQ_OPEN_DRAIN, IRQ_PUSH_PULL)
+   * @param fmt    ADC output data format
+   * @return status_t
+   *
+   * @ingroup conversion
+   * @see startScanOnce(), stopContinuous(), IRQ_handler(), attachIRQ()
    */
   status_t startScan(enum irq_mode mode = IRQ_OPEN_DRAIN,
                      data_format fmt    = data_format::ID_SGNEXT_DATA) {
@@ -2142,6 +2383,12 @@ class MCP3x6x {
   /**
    * @brief start a single scan cycle (one-shot) and standby afterwards
    *
+   * Performs one scan across enabled channels, then enters standby mode.
+   *
+   * @return status_t
+   *
+   * @ingroup conversion
+   * @see startScan(), stopContinuous(), standby()
    */
   status_t startScanOnce() {
     _irq.en_fastcmd      = 1;
@@ -2158,6 +2405,12 @@ class MCP3x6x {
   /**
    * @brief set single ended mode
    *
+   * Configures the MUX for single-ended inputs (VIN- = AGND).
+   *
+   * @return status_t
+   *
+   * @ingroup conversion
+   * @see differentialMode(), mux()
    */
   status_t singleEndedMode() {
     // Configure for single-ended mode by setting VIN- to AGND
@@ -2168,6 +2421,12 @@ class MCP3x6x {
   /**
    * @brief set differential mode
    *
+   * Configures the MUX for differential inputs (default CH0-CH1 pair).
+   *
+   * @return status_t
+   *
+   * @ingroup conversion
+   * @see singleEndedMode(), mux(), startContinuousDifferential()
    */
   status_t differentialMode() {
     // Configure for differential mode by setting VIN- to a channel
@@ -2180,8 +2439,11 @@ class MCP3x6x {
   /**
    * @brief returns mode
    *
-   * @return true if differential mode is set
-   * @return false if single ended mode is set
+   * @return true  differential mode is set (different plus/minus channels)
+   * @return false  single-ended mode is set
+   *
+   * @ingroup status
+   * @see differentialMode(), singleEndedMode()
    */
   bool isDifferential() {
     return (_mux.vin_plus < 8 && _mux.vin_minus < 8 && _mux.vin_plus != _mux.vin_minus);
@@ -2190,8 +2452,15 @@ class MCP3x6x {
   /**
    * @brief returns analog value of given channel
    *
-   * @param ch
-   * @return int32_t analog value
+   * In mux mode (scan not active): configures the MUX, triggers a conversion,
+   * and blocks until data is ready (respecting the read timeout).
+   * In scan mode: returns the cached result for the channel.
+   *
+   * @param chan  channel to read (MCP3x6x_CH0 … MCP3x6x_CH7, or internal channels)
+   * @return int32_t sign-extended ADC value, or MCP3x6x_TIMEOUT on timeout
+   *
+   * @ingroup conversion
+   * @see readADCDATA(), toVoltage(), setReadTimeout(), startScan()
    */
   int32_t analogRead(Mux chan = MCP3x6x_CH0) {
     // MuxMode
@@ -2250,10 +2519,13 @@ class MCP3x6x {
   }
 
   /**
-   * @brief read
+   * @brief read cached result for a channel in continuous mode
    *
-   * @param ch
-   * @return int32_t
+   * @param chan  channel to read
+   * @return int32_t cached ADC value, or -1 if not in continuous mode / channel not found
+   *
+   * @ingroup conversion
+   * @see startContinuous(), isContinuous(), analogRead()
    */
   int32_t analogReadContinuous(Mux chan) {
     if (isContinuous()) {
@@ -2267,11 +2539,17 @@ class MCP3x6x {
   }
 
   /**
-   * @brief mux
+   * @brief read differential voltage between two channels
    *
-   * @param pinP
-   * @param pinN
-   * @return int32_t
+   * Configures the MUX for the pinP/pinN differential pair, triggers a
+   * conversion, and blocks until data is ready.
+   *
+   * @param pinP  positive input channel selector
+   * @param pinN  negative input channel selector
+   * @return int32_t sign-extended differential ADC value, or MCP3x6x_TIMEOUT on timeout
+   *
+   * @ingroup conversion
+   * @see differentialMode(), analogRead(), toVoltage()
    */
   int32_t analogReadDifferential(Mux pinP, Mux pinN) {
     // Map differential inputs: each side's VIN+ selects its channel,
