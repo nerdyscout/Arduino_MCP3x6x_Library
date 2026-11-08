@@ -15,7 +15,6 @@ using namespace fakeit;
 
 #include <unity.h>
 
-#include <algorithm>
 #include <cstring>
 #include <vector>
 
@@ -141,6 +140,8 @@ void register_scan_mode_tests();
 void register_fastcmd_status_tests();
 void register_misc_tests();
 void register_dma_tests();
+void register_hil_smoke_tests();
+void register_chipid_diag_tests();
 
 // ---------------------------------------------------------------------------
 // Uniform entry point
