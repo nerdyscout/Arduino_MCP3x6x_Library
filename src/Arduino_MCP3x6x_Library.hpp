@@ -1187,8 +1187,8 @@ class MCP3x6x {
     uint8_t reserved_e[2] = {0, 0};
     _transfer(reserved_e, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_RESERVED3, sizeof(reserved_e));
     // Read 16-bit value from RESERVED_E (matches Linux driver mcp3564_read_16bits),
-    // extract chip-ID nibble from low 4 bits (big-endian: byte[1] is low byte)
-    uint8_t hw_id = reserved_e[1] & 0x0F;
+    // extract chip-ID nibble from low 4 bits of first byte (big-endian: byte[0] is high byte)
+    uint8_t hw_id = reserved_e[0] & 0x0F;
 
     uint8_t expected_id;
     if (_MAX_RESOLUTION == 16) {
@@ -2323,6 +2323,24 @@ class MCP3x6x {
     }
 
     return (int16_t)((int64_t)(V_uV - V_25_uV) * 100 / (int64_t)_tempSlope + 2500 + _tempOffset);
+  }
+
+  /**
+   * @brief read temperature sensor and return temperature in Celsius
+   *
+   * Saves the current MUX channel, switches to the temperature sensor,
+   * reads the temperature, then restores the previous MUX channel.
+   *
+   * @return double temperature in degrees Celsius
+   *
+   * @ingroup calibration
+   * @see readTemperature(), setTempOffset(), setTempSlope()
+   */
+  double getTemperature() {
+    Mux savedMux = _mux;
+    int16_t temp_cC = readTemperature();
+    _mux = savedMux;
+    return temp_cC / 100.0;
   }
 
   /**
