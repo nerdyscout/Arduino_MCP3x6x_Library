@@ -1104,8 +1104,11 @@ class MCP3x6x {
         _gain(MCP3x6x_CFG_GAIN),
         _lock(MCP3x6x_CFG_LOCK),
         _crccfg(MCP3x6x_CFG_CRCCFG),
-        _status{},
-        _dmaSamdDescriptor{} {}
+        _status{}
+#ifdef ARDUINO_ARCH_SAMD
+        , _dmaSamdDescriptor{}
+#endif
+        {}
 
   /**
    * @brief Destroy the MCP3x6x object
@@ -1166,6 +1169,9 @@ class MCP3x6x {
       return false;
     }
 
+    // Wait for reset to complete (matches Linux driver mcp3564_config: mdelay(1))
+    delay(20);
+
     // chip ID validation
     if (!_validateChipID()) {
       return false;
@@ -1178,9 +1184,11 @@ class MCP3x6x {
   }
 
   bool _validateChipID() {
-    uint8_t reserved_e = 0;
-    _transfer(&reserved_e, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_RESERVED3, sizeof(reserved_e));
-    uint8_t hw_id = reserved_e & 0x0F;
+    uint8_t reserved_e[2] = {0, 0};
+    _transfer(reserved_e, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_RESERVED3, sizeof(reserved_e));
+    // Read 16-bit value from RESERVED_E (matches Linux driver mcp3564_read_16bits),
+    // extract chip-ID nibble from low 4 bits (big-endian: byte[1] is low byte)
+    uint8_t hw_id = reserved_e[1] & 0x0F;
 
     uint8_t expected_id;
     if (_MAX_RESOLUTION == 16) {
