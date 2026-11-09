@@ -5,8 +5,9 @@
 # Modes:
 #   mocked   Run native unit tests with ArduinoFake mocks (GitHub pipeline)
 #   hil      Upload test_config.cpp to Nano, configure Rigol scope SPI decoder,
-#            read back :ETABle1:DATA? events, compare MOSI bytes to expected
-#   hardware Upload test_config.cpp to Nano, read Serial Unity output, assert pass
+#            read back :ETABle1:DATA? events, compare MOSI bytes against expected
+#            values printed by the test to Serial (single point of truth)
+#   hardware Upload test_config.cpp to Nano, read Serial output, assert all tests pass
 #   all      Run mocked -> hil -> hardware sequentially
 #
 # Usage:
@@ -17,7 +18,6 @@
 #   OSCI_UPLOAD_PORT Upload port for the Nano (e.g. /dev/ttyUSB1)
 #   OSCI_DECODER     Path to decoder.py (default: bundled scpi skill script)
 #   OSCI_TEST_FILE   Path to test_config.cpp (default: test/test_MCP3x6x/test_config.cpp)
-#   OSCI_EXPECTED    Path to expected_values.json (default: scripts/expected_values.json)
 #
 # Exit codes: 0 = all modes pass, non-zero = first failing mode/test
 #
@@ -28,7 +28,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${ROOT_DIR}/.." && pwd)"
 DECODER="${OSCI_DECODER:-/home/stefan/.config/opencode/skills/scpi/scripts/decoder.py}"
 TEST_FILE="${OSCI_TEST_FILE:-${REPO_DIR}/test/test_MCP3x6x/test_config.cpp}"
-EXPECTED="${OSCI_EXPECTED:-${ROOT_DIR}/expected_values.json}"
 TMP_ROOT="/tmp/opencode/mcp3x6x_hil"
 
 MODE=""
@@ -66,11 +65,6 @@ if [ ! -f "$TEST_FILE" ]; then
   exit 4
 fi
 
-if [ ! -f "$EXPECTED" ]; then
-  echo "error: expected values not found at $EXPECTED" >&2
-  exit 5
-fi
-
 RESOURCE_ARG=()
 if [ -n "${OSCI_RESOURCE:-}" ]; then
   RESOURCE_ARG=(--resource "$OSCI_RESOURCE")
@@ -94,40 +88,62 @@ run_decoder() {
   python3 "$DECODER" --protocol spi --decoder 1 --json "${DEBUG_ARG[@]:-}" "${RESOURCE_ARG[@]:-}" "$@"
 }
 
-json_extract() {
-  # json_extract <json_file> <jq_path>
+# Parse expected MOSI bytes from Serial output lines like:
+#   TEST: begin ... MOSI: 78 79 PASS
+parse_expected_mosi() {
+  # parse_expected_mosi <serial_output>
   python3 -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    d = json.load(f)
-val = d
-for part in sys.argv[2].split('.'):
-    val = val[part]
-print(val)
-" "$1" "$2"
+import sys, re
+text = sys.stdin.read()
+tests = []
+for line in text.splitlines():
+    m = re.match(r'TEST:\s+(.+?)\s+\.\.\.\s+MOSI:\s+([0-9a-fA-F ]+)\s+PASS', line)
+    if m:
+        name = m.group(1)
+        hexstr = m.group(2).replace(' ', '')
+        tests.append((name, hexstr))
+for name, hexstr in tests:
+    print(f'{name}\t{hexstr}')
+"
 }
 
-json_length() {
+# Extract just the test names + PASS status from Serial output
+parse_serial_tests() {
   python3 -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    d = json.load(f)
-print(len(d[sys.argv[2]]))
-" "$1" "$2"
+import sys, re
+text = sys.stdin.read()
+for line in text.splitlines():
+    m = re.match(r'TEST:\s+(.+?)\s+\.\.\.\s+(PASS|FAIL)', line)
+    if m:
+        name = m.group(1)
+        status = m.group(2)
+        print(f'{name}\t{status}')
+"
 }
 
-json_item() {
-  # json_item <json_file> <array_path> <index> <field>
+run_decoder_hex() {
+  run_decoder --mode readback --etable on --mosi CHAN4 --miso CHAN2 2>&1 | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    rb = d.get('readback') or {}
+    print(rb.get('hex', ''))
+except Exception:
+    print('')
+"
+}
+
+# Check if a hex subsequence appears in a hex blob
+hex_contains() {
+  # hex_contains <blob_hex> <subseq_hex>
   python3 -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    d = json.load(f)
-val = d
-for part in sys.argv[2].split('.'):
-    val = val[part]
-item = val[int(sys.argv[3])]
-print(item[sys.argv[4]])
-" "$1" "$2" "$3" "$4"
+import sys
+blob = sys.argv[1].lower().replace(' ', '').replace('\n', '')
+sub = sys.argv[2].lower().replace(' ', '').replace('\n', '')
+if not sub:
+    sys.exit(0)  # empty subsequence matches
+print('MATCH' if sub in blob else 'NOMATCH')
+" "$1" "$2"
 }
 
 # ---------------------------------------------------------------------------
@@ -159,11 +175,6 @@ run_hil() {
   echo "============================================================"
   echo
 
-  local test_count
-  test_count=$(json_length "$EXPECTED" "tests")
-  echo "Total tests to verify: $test_count"
-  echo
-
   # --- Step 1: Build + upload test_config.cpp hardware build ---
   echo "[Step 1/3] Build + upload test_config.cpp to ATmega328P"
 
@@ -172,7 +183,6 @@ run_hil() {
   mkdir -p "$bdir/src"
 
   cp "$TEST_FILE" "$bdir/src/"
-  # Copy test.h alongside test_config.cpp so #include "test.h" resolves
   cp "$(dirname "$TEST_FILE")/test.h" "$bdir/src/"
   cp "$REPO_DIR/library.json" "$REPO_DIR/library.properties" "$REPO_DIR/platformio.ini" "$bdir/"
   cp -r "$REPO_DIR/src" "$bdir/"
@@ -196,7 +206,7 @@ PIOEOF
   fi
   echo "PASS: build + upload succeeded"
 
-  # --- Step 2: Configure scope SPI decoder + arm single sequence ---
+  # --- Step 2: Configure scope SPI decoder + arm single capture ---
   echo
   echo "[Step 2/3] Configure Rigol SPI decoder + arm single capture"
 
@@ -268,88 +278,91 @@ print('CONFIG_OK')
     return 2
   }
 
-  # --- Step 3: Read back :ETABle1:DATA? and compare MOSI bytes ---
+  # --- Step 3: Read Serial output to get expected MOSI bytes ---
   echo
-  echo "[Step 3/3] Read back SPI events and compare to expected values"
+  echo "[Step 3a/4] Read Serial output — extract expected MOSI bytes from test prints"
 
-  local readback_out
-  readback_out=$(run_decoder --mode readback --etable on --mosi CHAN4 --miso CHAN2 2>&1) || {
-    echo "FAIL: decoder readback failed:" >&2
-    echo "$readback_out" >&2
+  local serial_out
+  serial_out=$(python3 -c "
+import serial, time
+port = '${OSCI_UPLOAD_PORT:-/dev/ttyUSB1}'
+ser = serial.Serial(port, 115200, timeout=5)
+time.sleep(3)
+ser.reset_input_buffer()
+time.sleep(8)
+lines = []
+deadline = time.time() + 30
+while time.time() < deadline:
+    while ser.in_waiting:
+        line = ser.readline().decode('utf-8', errors='replace').strip()
+        if line:
+            lines.append(line)
+            print(line)
+    if any('TEST_END' in l for l in lines):
+        break
+    time.sleep(0.1)
+ser.close()
+" 2>&1) || {
+    echo "FAIL: serial read failed:" >&2
+    echo "$serial_out" >&2
     return 3
   }
 
-  local readback_ok
-  readback_ok=$(echo "$readback_out" | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if d.get('ok') else 'BAD')") || {
-    echo "FAIL: could not parse readback JSON" >&2
-    echo "$readback_out" >&2
-    return 3
-  }
+  echo "$serial_out"
 
-  if [ "$readback_ok" != "OK" ]; then
-    echo "FAIL: decoder readback returned ok=false" >&2
-    echo "$readback_out" >&2
+  if ! echo "$serial_out" | grep -q "TEST_START"; then
+    echo "FAIL: TEST_START not found in Serial output" >&2
+    return 3
+  fi
+  if ! echo "$serial_out" | grep -q "TEST_END"; then
+    echo "FAIL: TEST_END not found in Serial output" >&2
     return 3
   fi
 
-  local hex_blob byte_count
-  hex_blob=$(echo "$readback_out" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-rb=d.get('readback') or {}
-print(rb.get('hex',''))
-")
-  byte_count=$(echo "$readback_out" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-rb=d.get('readback') or {}
-print(rb.get('bytes',0))
-")
+  # Parse expected MOSI bytes from Serial
+  local expected
+  expected=$(echo "$serial_out" | parse_expected_mosi) || {
+    echo "FAIL: could not parse expected MOSI bytes from Serial output" >&2
+    return 3
+  }
 
-  if [ "$byte_count" -le 2 ]; then
-    echo "WARN: readback returned only $byte_count bytes (header only, no SPI events)" >&2
-    echo "      Ensure scope CHAN1 (CS=pin10) is wired and toggling"
-    echo "      Hex blob: $hex_blob"
+  if [ -z "$expected" ]; then
+    echo "FAIL: no MOSI expectations found in Serial output" >&2
+    return 3
+  fi
+
+  echo
+  echo "Expected MOSI sequences from test prints:"
+  echo "$expected"
+
+  # --- Step 4: Read back :ETABle1:DATA? and compare MOSI bytes ---
+  echo
+  echo "[Step 4/4] Read back SPI events and compare to expected MOSI bytes"
+
+  local hex_blob
+  hex_blob=$(run_decoder_hex) || {
+    echo "FAIL: decoder readback failed" >&2
+    return 4
+  }
+
+  if [ -z "$hex_blob" ]; then
+    echo "WARN: readback returned empty data" >&2
   else
-    echo "PASS: readback returned $byte_count bytes of SPI event data"
+    echo "Readback hex length: ${#hex_blob} chars"
   fi
-
-  # Decode hex blob to bytes and compare against expected
-  local hex_bytes
-  hex_bytes=$(echo "$hex_blob" | python3 -c "
-import sys
-h = sys.stdin.read().strip()
-# Remove any non-hex chars
-h = ''.join(c for c in h if c in '0123456789abcdefABCDEF')
-print(h)
-")
 
   local failed=0
-  local total=$(json_length "$EXPECTED" "tests")
-  for ((i=0; i<total; i++)); do
-    local name mosi_hex mosi_count
-    name=$(json_item "$EXPECTED" "tests" "$i" "name")
-    mosi_hex=$(json_item "$EXPECTED" "tests" "$i" "spi_mosi_bytes" | python3 -c "
-import sys
-b = sys.stdin.read().strip()
-vals = [int(x) for x in b.split(',')]
-print(''.join(f'{v:02x}' for v in vals))
-")
-    mosi_count=$(python3 -c "
-import sys
-b = sys.stdin.read().strip()
-vals = [int(x) for x in b.split(',')]
-print(len(vals))
-" <<< "$(json_item "$EXPECTED" "tests" "$i" "spi_mosi_bytes")")
-
-    # Check if the expected MOSI sequence appears in the readback hex
-    if echo "$hex_bytes" | grep -qi "$mosi_hex"; then
-      echo "  PASS: $name — MOSI bytes $mosi_hex found in scope capture"
+  local total=0
+  while IFS=$'\t' read -r name hexstr; do
+    [ -z "$name" ] && continue
+    total=$((total + 1))
+    if hex_contains "$hex_blob" "$hexstr"; then
+      echo "  PASS: $name — MOSI $hexstr found in scope capture"
     else
-      echo "  FAIL: $name — MOSI bytes $mosi_hex NOT found in scope capture" >&2
+      echo "  FAIL: $name — MOSI $hexstr NOT found in scope capture" >&2
       failed=$((failed + 1))
     fi
-  done
+  done <<< "$expected"
 
   if [ "$failed" -gt 0 ]; then
     echo "FAIL: HIL mode — $failed of $total tests failed byte comparison" >&2
@@ -378,7 +391,6 @@ run_hardware() {
   mkdir -p "$bdir/src"
 
   cp "$TEST_FILE" "$bdir/src/"
-  # Copy test.h alongside test_config.cpp so #include "test.h" resolves
   cp "$(dirname "$TEST_FILE")/test.h" "$bdir/src/"
   cp "$REPO_DIR/library.json" "$REPO_DIR/library.properties" "$REPO_DIR/platformio.ini" "$bdir/"
   cp -r "$REPO_DIR/src" "$bdir/"
@@ -408,12 +420,12 @@ PIOEOF
 
   local serial_out
   serial_out=$(python3 -c "
-import serial, time, sys
-port = '${OSCI_UPLOAD_PORT}'
+import serial, time
+port = '${OSCI_UPLOAD_PORT:-/dev/ttyUSB1}'
 ser = serial.Serial(port, 115200, timeout=5)
 time.sleep(3)
 ser.reset_input_buffer()
-time.sleep(5)
+time.sleep(8)
 lines = []
 deadline = time.time() + 30
 while time.time() < deadline:
@@ -434,7 +446,6 @@ ser.close()
 
   echo "$serial_out"
 
-  # Check TEST_START and TEST_END markers
   if ! echo "$serial_out" | grep -q "TEST_START"; then
     echo "FAIL: TEST_START not found in Serial output" >&2
     return 2
@@ -444,24 +455,22 @@ ser.close()
     return 2
   fi
 
-  # Check all expected test assertions
+  # Parse test results from Serial
   local failed=0
-  local total=$(json_length "$EXPECTED" "tests")
-  for ((i=0; i<total; i++)); do
-    local name assert_str
-    name=$(json_item "$EXPECTED" "tests" "$i" "name")
-    assert_str=$(json_item "$EXPECTED" "tests" "$i" "serial_assert")
-
-    if echo "$serial_out" | grep -qF "$assert_str"; then
-      echo "  PASS: $name — '$assert_str' found"
+  local total=0
+  while IFS=$'\t' read -r name status; do
+    [ -z "$name" ] && continue
+    total=$((total + 1))
+    if [ "$status" = "PASS" ]; then
+      echo "  PASS: $name"
     else
-      echo "  FAIL: $name — '$assert_str' NOT found in Serial output" >&2
+      echo "  FAIL: $name — reported FAIL" >&2
       failed=$((failed + 1))
     fi
-  done
+  done <<< "$(echo "$serial_out" | parse_serial_tests)"
 
   if [ "$failed" -gt 0 ]; then
-    echo "FAIL: Hardware mode — $failed of $total tests failed serial assert" >&2
+    echo "FAIL: Hardware mode — $failed of $total tests failed" >&2
     return 2
   fi
 

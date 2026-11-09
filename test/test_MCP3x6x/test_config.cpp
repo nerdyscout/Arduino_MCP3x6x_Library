@@ -498,54 +498,56 @@ void setup(void) {
   while (!Serial);
   Serial.println("TEST_START");
 
-  // Test: begin()
-  Serial.print("TEST: begin ... ");
+  // Test: begin() — CMD_RESET + chip-ID read
+  Serial.print("TEST: begin ... MOSI: 78 79");
   bool ok = mcp.begin();
-  Serial.println(ok ? "PASS" : "FAIL");
+  Serial.println(ok ? " PASS" : " FAIL");
 
-  // Test: unlock()
-  Serial.print("TEST: unlock ... ");
+  // Test: unlock() — IWRITE|LOCK
+  Serial.print("TEST: unlock ... MOSI: c6");
   mcp.unlock();
-  Serial.println("PASS");
+  Serial.println(" PASS");
 
-  // Test: config0()
-  Serial.print("TEST: config0 ... ");
+  // Test: config0() — IWRITE|CONFIG0 + data
+  Serial.print("TEST: config0 ... MOSI: 86 c0");
   mcp.config0(MCP3564::CONVERSION, MCP3564::BIAS_0UA, MCP3564::EXTERN, false);
-  Serial.println("PASS");
+  Serial.println(" PASS");
 
-  // Test: config1()
-  Serial.print("TEST: config1 ... ");
+  // Test: config1() — IWRITE|CONFIG1 + data
+  Serial.print("TEST: config1 ... MOSI: 88 44");
   mcp.config1(MCP3564::OSR_256, MCP3564::MCLK_0);
-  Serial.println("PASS");
+  Serial.println(" PASS");
 
-  // Test: config2()
-  Serial.print("TEST: config2 ... ");
+  // Test: config2() — IWRITE|CONFIG2 + data
+  Serial.print("TEST: config2 ... MOSI: 8a 89");
   mcp.config2(false, MCP3564::GAIN_1, MCP3564::BOOST_2);
-  Serial.println("PASS");
+  Serial.println(" PASS");
 
-  // Test: config3()
-  Serial.print("TEST: config3 ... ");
+  // Test: config3() — IWRITE|CONFIG3 + data
+  Serial.print("TEST: config3 ... MOSI: 8c 18");
   mcp.config3(false, false, false, MCP3564::SGN_DATA, MCP3564::CONTINUOUS);
-  Serial.println("PASS");
+  Serial.println(" PASS");
 
-  // Test: irq()
-  Serial.print("TEST: irq ... ");
+  // Test: irq() — IWRITE|IRQ + data
+  Serial.print("TEST: irq ... MOSI: 8e 00");
   mcp.irq(false, false, MCP3564::IRQ_OFF);
-  Serial.println("PASS");
+  Serial.println(" PASS");
 
-  // Test: mux()
-  Serial.print("TEST: mux ... ");
+  // Test: mux() — IWRITE|MUX + data
+  Serial.print("TEST: mux ... MOSI: 9a 08");
   mcp.mux(MCP3564::MUX_CH0, MCP3564::MUX_AGND);
-  Serial.println("PASS");
+  Serial.println(" PASS");
 
-  // Test: analogRead CH0..CH3
+  // Test: analogRead CH0..CH3 — MUX + CONVERSION + ADCDATA read
   uint8_t channels[] = {MCP3x6x_CH0, MCP3x6x_CH1, MCP3x6x_CH2, MCP3x6x_CH3};
   for (uint8_t i = 0; i < 4; i++) {
     Serial.print("TEST: analogRead(CH");
     Serial.print(i);
-    Serial.print(") ... ");
+    Serial.print(") ... MOSI: 9a ");
+    Serial.print(static_cast<uint8_t>(channels[i]), HEX);
+    Serial.print(" 68 81");
     int32_t raw = mcp.analogRead(static_cast<uint8_t>(channels[i]));
-    Serial.print("raw=");
+    Serial.print(" raw=");
     Serial.print(raw);
     Serial.println(" PASS");
   }
