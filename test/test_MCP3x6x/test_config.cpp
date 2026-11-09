@@ -498,6 +498,13 @@ void setup(void) {
 
   Serial.begin(115200);
   while (!Serial);
+
+  // Configure GPIO pins as outputs so digitalWrite() drives them properly
+  pinMode(4, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
+
   Serial.println("TEST_START");
 
   // Test: begin() — CMD_RESET + chip-ID read
@@ -569,9 +576,14 @@ void loop(void) {
   if (!g_begin_ok) {
     // Chip not responding — still generate SPI traffic for scope capture:
     // dummy CS toggle + transfer on every loop iteration.
-    digitalWrite(SS, LOW);
-    SPI.transfer(0x00);
-    digitalWrite(SS, HIGH);
+    digitalWrite(4, LOW);
+    delayMicroseconds(100);
+    digitalWrite(5, HIGH);
+    digitalWrite(6, HIGH);
+    delayMicroseconds(100);
+    digitalWrite(5, LOW);
+    digitalWrite(6, LOW);
+    digitalWrite(4, HIGH);
     delay(200);
     return;
   }
