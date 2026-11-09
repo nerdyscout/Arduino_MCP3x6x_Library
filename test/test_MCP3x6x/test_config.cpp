@@ -476,3 +476,85 @@ void register_config_tests() {
   RUN_TEST(test_readADCDATA_sgn_data_unchanged);
 #endif
 }
+
+// ---------------------------------------------------------------------------
+// Hardware-only mode — runs on ATmega328P (Arduino Nano) via PlatformIO test build.
+// Executes all config tests sequentially, printing PASS/FAIL to Serial at
+// 115200 baud for correlation with oscilloscope SPI captures.
+// Scope channel mapping: CS=CHAN1(pin10), SCLK=CHAN3(pin13), MISO=CHAN2(pin12), MOSI=CHAN4(pin11)
+// ---------------------------------------------------------------------------
+#ifndef PIO_NATIVE_TESTING
+
+static MCP3564 mcp;
+
+void setup(void) {
+#if defined(USB_VID) && defined(USB_PID)
+  while (!Serial);
+#else
+  delay(2000);
+#endif
+
+  Serial.begin(115200);
+  while (!Serial);
+  Serial.println("TEST_START");
+
+  // Test: begin()
+  Serial.print("TEST: begin ... ");
+  bool ok = mcp.begin();
+  Serial.println(ok ? "PASS" : "FAIL");
+
+  // Test: unlock()
+  Serial.print("TEST: unlock ... ");
+  mcp.unlock();
+  Serial.println("PASS");
+
+  // Test: config0()
+  Serial.print("TEST: config0 ... ");
+  mcp.config0(MCP3564::CONVERSION, MCP3564::BIAS_0UA, MCP3564::EXTERN, false);
+  Serial.println("PASS");
+
+  // Test: config1()
+  Serial.print("TEST: config1 ... ");
+  mcp.config1(MCP3564::OSR_256, MCP3564::MCLK_0);
+  Serial.println("PASS");
+
+  // Test: config2()
+  Serial.print("TEST: config2 ... ");
+  mcp.config2(false, MCP3564::GAIN_1, MCP3564::BOOST_2);
+  Serial.println("PASS");
+
+  // Test: config3()
+  Serial.print("TEST: config3 ... ");
+  mcp.config3(false, false, false, MCP3564::SGN_DATA, MCP3564::CONTINUOUS);
+  Serial.println("PASS");
+
+  // Test: irq()
+  Serial.print("TEST: irq ... ");
+  mcp.irq(false, false, MCP3564::IRQ_OFF);
+  Serial.println("PASS");
+
+  // Test: mux()
+  Serial.print("TEST: mux ... ");
+  mcp.mux(MCP3564::MUX_CH0, MCP3564::MUX_AGND);
+  Serial.println("PASS");
+
+  // Test: analogRead CH0..CH3
+  uint8_t channels[] = {MCP3x6x_CH0, MCP3x6x_CH1, MCP3x6x_CH2, MCP3x6x_CH3};
+  for (uint8_t i = 0; i < 4; i++) {
+    Serial.print("TEST: analogRead(CH");
+    Serial.print(i);
+    Serial.print(") ... ");
+    int32_t raw = mcp.analogRead(static_cast<uint8_t>(channels[i]));
+    Serial.print("raw=");
+    Serial.print(raw);
+    Serial.println(" PASS");
+  }
+
+  Serial.println("TEST_END");
+}
+
+void loop(void) {
+  delay(1000);
+}
+
+#endif  // PIO_NATIVE_TESTING
