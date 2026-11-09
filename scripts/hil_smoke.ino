@@ -34,14 +34,14 @@ static void printStatus(const char* where) {
 }
 
 void setup() {
+  Serial.begin(115200);
+
 #if defined(USB_VID) && defined(USB_PID)
   while (!Serial);
 #else
   delay(2000);
 #endif
 
-  Serial.begin(115200);
-  while (!Serial);
   Serial.println(__FILE__);
 
   Serial.print("begin() ... ");
