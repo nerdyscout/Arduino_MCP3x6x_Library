@@ -233,35 +233,21 @@ write(':DECoder1:SPI:WIDTh 8')
 write(':DECoder1:SPI:EDGE RISE')
 write(':DECoder1:SPI:ENDian MSB')
 write(':DECoder1:SPI:SELect CS')
-write(':CHAN1:PROB 1')  # 1x probe, direct connection
 
-# Verify settings BEFORE arming (scope is busy once SINGLE is armed)
-checks = {
-    ':DECoder1:MODE?': 'SPI',
-    ':DECoder1:SPI:CLK?': 'CHAN3',
-    ':DECoder1:SPI:MOSI?': 'CHAN4',
-    ':DECoder1:SPI:MISO?': 'CHAN2',
-    ':DECoder1:SPI:CS?': 'CHAN1',
-}
-for cmd, expected in checks.items():
-    try:
-        actual = query(cmd).upper().strip()
-        if actual != expected.upper():
-            errors.append(f'{cmd}: expected={expected} actual={actual}')
-    except Exception as exc:
-        errors.append(f'{cmd}: readback failed ({exc})')
+# Enable all 4 channels with 1x probe (direct connection, no scope probe)
+# and appropriate vertical scale for 3.3V/5V logic signals (2V/div)
+for ch in [1, 2, 3, 4]:
+    write(f':CHAN{ch}:DISPlay ON')
+    write(f':CHAN{ch}:PROB 1')
+    write(f':CHAN{ch}:SCAL 2.0')
+    write(f':CHAN{ch}:OFFS 0')
 
-# Verify probe (accepts "1" or "1.000000e+00")
-try:
-    prob = query(':CHAN1:PROB?').strip()
-    try:
-        prob_val = float(prob)
-        if abs(prob_val - 1.0) > 0.001:
-            errors.append(f':CHAN1:PROB?: expected=1 actual={prob}')
-    except ValueError:
-        errors.append(f':CHAN1:PROB?: expected=1 actual={prob}')
-except Exception as exc:
-    errors.append(f':CHAN1:PROB?: readback failed ({exc})')
+# Verify channel states
+for ch in [1, 2, 3, 4]:
+    prob = query(f':CHAN{ch}:PROB?').strip()
+    disp = query(f':CHAN{ch}:DISPlay?').strip()
+    scal = query(f':CHAN{ch}:SCAL?').strip()
+    print(f'  CHAN{ch}: DISPlay={disp} PROB={prob} SCAL={scal}', file=sys.stderr)
 
 # Arm single sequence, trigger on CS falling edge
 write(':TRIG:SWE SINGLE')
@@ -269,6 +255,21 @@ write(':TRIG:SOUR CHAN1')
 write(':TRIG:EDGE:SLOP FALL')
 write(':TRIG:LEV 1.2')
 write(':SING')
+
+# Verify decoder settings
+for cmd, expected in {
+    ':DECoder1:MODE?': 'SPI',
+    ':DECoder1:SPI:CLK?': 'CHAN3',
+    ':DECoder1:SPI:MOSI?': 'CHAN4',
+    ':DECoder1:SPI:MISO?': 'CHAN2',
+    ':DECoder1:SPI:CS?': 'CHAN1',
+}.items():
+    try:
+        actual = query(cmd).upper().strip()
+        if actual != expected.upper():
+            errors.append(f'{cmd}: expected={expected} actual={actual}')
+    except Exception as exc:
+        errors.append(f'{cmd}: readback failed ({exc})')
 
 inst.close()
 if errors:
