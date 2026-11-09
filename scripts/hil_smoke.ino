@@ -49,9 +49,10 @@ void setup() {
   Serial.println(ok ? "OK" : "FAILED");
 
   if (!ok) {
-    Serial.println("Chip ID mismatch — check part marking.");
-    Serial.println("Expected chip-ID nibble: 0xF (MCP3564, 24-bit 8ch)");
-    while (1);
+    Serial.println("WARN: Chip ID mismatch — continuing to generate SPI traffic for scope decode");
+    Serial.println("      Check part marking and TEST_ADC_TYPE.");
+    Serial.println("      Expected chip-ID nibble: 0x9 (MCP3462, 16-bit 4ch) or 0xF (MCP3564, 24-bit 8ch)");
+    // Do NOT halt — continue generating SPI traffic so the scope can capture the chip-ID read
   }
 
   Serial.print("Device address: 0x");
@@ -119,6 +120,36 @@ void setup() {
 }
 
 void loop() {
-  printStatus("status");
-  delay(1000);
+  // Continuously poll analogRead on all channels to generate SPI traffic
+  // for the oscilloscope decoder to capture and decode.
+  Serial.println("Polling analogRead(CH0..CH3):");
+  int32_t raw0 = mcp.analogRead(MCP3x6x_CH0);
+  int32_t uV0  = mcp.toVoltage(raw0);
+  Serial.print("CH0: raw=");
+  Serial.print(raw0);
+  Serial.print(" uV=");
+  Serial.println(uV0);
+
+  int32_t raw1 = mcp.analogRead(MCP3x6x_CH1);
+  int32_t uV1  = mcp.toVoltage(raw1);
+  Serial.print("CH1: raw=");
+  Serial.print(raw1);
+  Serial.print(" uV=");
+  Serial.println(uV1);
+
+  int32_t raw2 = mcp.analogRead(MCP3x6x_CH2);
+  int32_t uV2  = mcp.toVoltage(raw2);
+  Serial.print("CH2: raw=");
+  Serial.print(raw2);
+  Serial.print(" uV=");
+  Serial.println(uV2);
+
+  int32_t raw3 = mcp.analogRead(MCP3x6x_CH3);
+  int32_t uV3  = mcp.toVoltage(raw3);
+  Serial.print("CH3: raw=");
+  Serial.print(raw3);
+  Serial.print(" uV=");
+  Serial.println(uV3);
+  printStatus("loop");
+  delay(200);
 }
