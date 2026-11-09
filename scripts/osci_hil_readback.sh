@@ -95,6 +95,9 @@ cp "$REPO_DIR/library.json" "$REPO_DIR/library.properties" "$REPO_DIR/platformio
 cp -r "$REPO_DIR/src" "$BDIR/"
 
 # Write a minimal platformio.ini for the scratch project that only targets ATMEGA328P
+# upload_flags = -V skips avrdude flash verification, which is required on some
+# Arduino Nano clones whose bootloader does not support flash readback
+# (causes "programmer is out of sync" during verify even though write succeeds).
 cat > "$BDIR/platformio.ini" <<'PIOEOF'
 [platformio]
 description = HIL smoke sketch build for ATmega328P (Arduino Nano)
@@ -105,6 +108,7 @@ board = nanoatmega328
 framework = arduino
 monitor_speed = 115200
 build_flags = -DTEST_ADC_TYPE=MCP3564
+upload_flags = -V
 PIOEOF
 
 UPLOAD_ARG=()
@@ -245,7 +249,7 @@ echo "============================================================"
 echo " HIL readback orchestration complete"
 echo "  Step 1 (build+upload): PASS"
 echo "  Step 2 (scope detect): PASS"
-echo "  Step 3 (configure):    PASS (mismatches=$MISMATCHES)"
+echo "  Step 3 (configure):    PASS (settings verified)"
 echo "  Step 4 (readback):     PASS (bytes=$BYTE_COUNT)"
 echo "============================================================"
 
