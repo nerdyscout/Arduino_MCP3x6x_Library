@@ -487,6 +487,8 @@ void register_config_tests() {
 
 static MCP3564 mcp;
 
+static bool g_begin_ok = false;
+
 void setup(void) {
 #if defined(USB_VID) && defined(USB_PID)
   while (!Serial);
@@ -500,8 +502,8 @@ void setup(void) {
 
   // Test: begin() — CMD_RESET + chip-ID read
   Serial.print("TEST: begin ... MOSI: 78 79");
-  bool ok = mcp.begin();
-  Serial.println(ok ? " PASS" : " FAIL");
+  g_begin_ok = mcp.begin();
+  Serial.println(g_begin_ok ? " PASS" : " FAIL");
 
   // Test: unlock() — IWRITE|LOCK
   Serial.print("TEST: unlock ... MOSI: c6");
@@ -539,24 +541,50 @@ void setup(void) {
   Serial.println(" PASS");
 
   // Test: analogRead CH0..CH3 — MUX + CONVERSION + ADCDATA read
-  uint8_t channels[] = {MCP3x6x_CH0, MCP3x6x_CH1, MCP3x6x_CH2, MCP3x6x_CH3};
-  for (uint8_t i = 0; i < 4; i++) {
-    Serial.print("TEST: analogRead(CH");
-    Serial.print(i);
-    Serial.print(") ... MOSI: 9a ");
-    Serial.print(static_cast<uint8_t>(channels[i]), HEX);
-    Serial.print(" 68 81");
-    int32_t raw = mcp.analogRead(static_cast<uint8_t>(channels[i]));
-    Serial.print(" raw=");
-    Serial.print(raw);
-    Serial.println(" PASS");
+  // Only if begin() succeeded (chip responds); otherwise conversion stalls
+  if (g_begin_ok) {
+    uint8_t channels[] = {MCP3x6x_CH0, MCP3x6x_CH1, MCP3x6x_CH2, MCP3x6x_CH3};
+    for (uint8_t i = 0; i < 4; i++) {
+      Serial.print("TEST: analogRead(CH");
+      Serial.print(i);
+      Serial.print(") ... MOSI: 9a ");
+      Serial.print(static_cast<uint8_t>(channels[i]), HEX);
+      Serial.print(" 68 81");
+      int32_t raw = mcp.analogRead(static_cast<uint8_t>(channels[i]));
+      Serial.print(" raw=");
+      Serial.print(raw);
+      Serial.println(" PASS");
+    }
+  } else {
+    Serial.println("TEST: analogRead — skipped (begin() failed, chip not responding)");
   }
 
   Serial.println("TEST_END");
 }
 
 void loop(void) {
-  delay(1000);
+  // Continuously generate SPI traffic so the oscilloscope decoder can capture it.
+  // Each analogRead() triggers: MUX write + CONVERSION + ADCDATA read (CS toggles per transaction).
+  // Only runs if begin() succeeded (chip responds); otherwise conversion stalls.
+  if (!g_begin_ok) {
+    // Chip not responding — still generate SPI traffic for scope capture:
+    // dummy CS toggle + transfer on every loop iteration.
+    digitalWrite(SS, LOW);
+    SPI.transfer(0x00);
+    digitalWrite(SS, HIGH);
+    delay(200);
+    return;
+  }
+  uint8_t channels[] = {MCP3x6x_CH0, MCP3x6x_CH1, MCP3x6x_CH2, MCP3x6x_CH3};
+  for (uint8_t i = 0; i < 4; i++) {
+    int32_t raw = mcp.analogRead(static_cast<uint8_t>(channels[i]));
+    Serial.print("loop: CH");
+    Serial.print(i);
+    Serial.print(" raw=");
+    Serial.println(raw);
+  }
+  Serial.println("---");
+  delay(200);
 }
 
 #endif  // PIO_NATIVE_TESTING

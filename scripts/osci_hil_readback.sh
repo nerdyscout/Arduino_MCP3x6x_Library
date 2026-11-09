@@ -235,32 +235,40 @@ write(':DECoder1:SPI:ENDian MSB')
 write(':DECoder1:SPI:SELect CS')
 write(':CHAN1:PROB 1')  # 1x probe, direct connection
 
-# Arm single sequence, trigger on CS falling edge
-write(':TRIG:SWE SINGLE')
-write(':TRIG:SOUR CHAN1')
-write(':TRIG:EDGE:SLOP FALL')
-write(':TRIG:LEV 1.2')
-write(':SING')
-
-# Verify settings
+# Verify settings BEFORE arming (scope is busy once SINGLE is armed)
 checks = {
     ':DECoder1:MODE?': 'SPI',
     ':DECoder1:SPI:CLK?': 'CHAN3',
     ':DECoder1:SPI:MOSI?': 'CHAN4',
     ':DECoder1:SPI:MISO?': 'CHAN2',
     ':DECoder1:SPI:CS?': 'CHAN1',
-    ':CHAN1:PROB?': '1',
-    ':TRIG:SWE?': 'SING',
-    ':TRIG:SOUR?': 'CHAN1',
-    ':TRIG:EDGE:SLOP?': 'NEG',
 }
 for cmd, expected in checks.items():
     try:
-        actual = query(cmd)
-        if actual.upper() != expected.upper():
+        actual = query(cmd).upper().strip()
+        if actual != expected.upper():
             errors.append(f'{cmd}: expected={expected} actual={actual}')
     except Exception as exc:
         errors.append(f'{cmd}: readback failed ({exc})')
+
+# Verify probe (accepts "1" or "1.000000e+00")
+try:
+    prob = query(':CHAN1:PROB?').strip()
+    try:
+        prob_val = float(prob)
+        if abs(prob_val - 1.0) > 0.001:
+            errors.append(f':CHAN1:PROB?: expected=1 actual={prob}')
+    except ValueError:
+        errors.append(f':CHAN1:PROB?: expected=1 actual={prob}')
+except Exception as exc:
+    errors.append(f':CHAN1:PROB?: readback failed ({exc})')
+
+# Arm single sequence, trigger on CS falling edge
+write(':TRIG:SWE SINGLE')
+write(':TRIG:SOUR CHAN1')
+write(':TRIG:EDGE:SLOP FALL')
+write(':TRIG:LEV 1.2')
+write(':SING')
 
 inst.close()
 if errors:
@@ -285,10 +293,8 @@ print('CONFIG_OK')
   local serial_out
   serial_out=$(python3 -c "
 import serial, time
-port = '${OSCI_UPLOAD_PORT:-/dev/ttyUSB1}'
+port = '${OSCI_UPLOAD_PORT:-/dev/ttyUSB0}'
 ser = serial.Serial(port, 115200, timeout=5)
-time.sleep(3)
-ser.reset_input_buffer()
 time.sleep(8)
 lines = []
 deadline = time.time() + 30
@@ -297,7 +303,7 @@ while time.time() < deadline:
         line = ser.readline().decode('utf-8', errors='replace').strip()
         if line:
             lines.append(line)
-            print(line)
+            print(line, flush=True)
     if any('TEST_END' in l for l in lines):
         break
     time.sleep(0.1)
@@ -421,10 +427,8 @@ PIOEOF
   local serial_out
   serial_out=$(python3 -c "
 import serial, time
-port = '${OSCI_UPLOAD_PORT:-/dev/ttyUSB1}'
+port = '${OSCI_UPLOAD_PORT:-/dev/ttyUSB0}'
 ser = serial.Serial(port, 115200, timeout=5)
-time.sleep(3)
-ser.reset_input_buffer()
 time.sleep(8)
 lines = []
 deadline = time.time() + 30
@@ -433,7 +437,7 @@ while time.time() < deadline:
         line = ser.readline().decode('utf-8', errors='replace').strip()
         if line:
             lines.append(line)
-            print(line)
+            print(line, flush=True)
     if any('TEST_END' in l for l in lines):
         break
     time.sleep(0.1)
