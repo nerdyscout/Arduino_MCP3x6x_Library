@@ -29,6 +29,7 @@ REPO_DIR="$(cd "${ROOT_DIR}/.." && pwd)"
 DECODER="${OSCI_DECODER:-/home/stefan/.config/opencode/skills/scpi/scripts/decoder.py}"
 SKETCH="${OSCI_SKETCH:-${ROOT_DIR}/hil_smoke.ino}"
 TMP_ROOT="/tmp/opencode/mcp3x6x_hil"
+UPLOAD_PORT="${OSCI_UPLOAD_PORT:-}"
 
 DEBUG=0
 if [ "${1:-}" = "--debug" ]; then
@@ -73,6 +74,7 @@ echo " Sketch:      $SKETCH"
 echo " Decoder:     $DECODER"
 echo " Resource:    ${OSCI_RESOURCE:-<auto-detect>}"
 echo " Debug:       $DEBUG"
+echo " Upload port: ${UPLOAD_PORT:-<auto-detect>}"
 echo "============================================================"
 
 # ---------------------------------------------------------------------------
@@ -105,7 +107,12 @@ monitor_speed = 115200
 build_flags = -DTEST_ADC_TYPE=MCP3564
 PIOEOF
 
-if (pio run -e ATMEGA328P -d "$BDIR" && pio upload -e ATMEGA328P -d "$BDIR"); then
+UPLOAD_ARG=()
+if [ -n "${UPLOAD_PORT}" ]; then
+  UPLOAD_ARG=(--upload-port "${UPLOAD_PORT}")
+fi
+
+if (pio run -e ATMEGA328P -d "$BDIR" --target upload "${UPLOAD_ARG[@]:-}"); then
   echo "PASS: build + upload succeeded"
 else
   echo "FAIL: build or upload failed" >&2
@@ -117,7 +124,7 @@ fi
 # ---------------------------------------------------------------------------
 echo
 echo "[Step 2/5] Auto-detect Rigol over USBTMC"
-if python3 "$DECODER" --protocol spi --decoder 1 --mode readback --json "${DEBUG_ARG[@]:-}" "${RESOURCE_ARG[@]:-}" --etable on >/dev/null 2>&1; then
+if python3 "$DECODER" --protocol spi --decoder 1 --mode readback --json "${DEBUG_ARG[@]:-}" "${RESOURCE_ARG[@]:-}" --mosi CHAN4 --miso CHAN2 --etable on; then
   echo "PASS: Rigol detected and responding to SCPI"
 else
   echo "FAIL: no Rigol responding over USBTMC (set OSCI_RESOURCE if not auto-detected)" >&2
@@ -127,51 +134,74 @@ fi
 # ---------------------------------------------------------------------------
 # Step 3: Configure scope SPI decoder
 #   CHAN3=SCLK (pin 13), CHAN4=MOSI (pin 11), CHAN2=MISO (pin 12), CHAN1=CS (pin 10)
+#   Uses inline PyVISA because decoder.py --mode configure fails on this Rigol
+#   firmware at drain_errors() (:SYST:ERR? times out). Config writes themselves
+#   succeed — verified below by readback query.
 # ---------------------------------------------------------------------------
 echo
-echo "[Step 3/5] decoder.py --mode configure (program :DECoder1 SPI settings)"
-CONFIG_OUT=$(run_decoder --mode configure \
-  --sclk CHAN3 --mosi CHAN4 --miso CHAN2 --cs CHAN1 \
-  --width 8 --edge rise --polarity pos --endian msb --select cs 2>&1) || {
-  echo "FAIL: decoder configure failed:" >&2
-  echo "$CONFIG_OUT" >&2
+echo "[Step 3/5] Configure scope SPI decoder via PyVISA (:DECoder1 SPI settings)"
+CONFIG_ERRS=$(python3 -c "
+import pyvisa, sys
+rm = pyvisa.ResourceManager('@py')
+inst = rm.open_resource('${OSCI_RESOURCE}')
+inst.timeout = 5000
+inst.chunk_size = 64
+errors = []
+def write(cmd):
+    inst.write(cmd)
+def query(cmd):
+    return inst.query(cmd).strip()
+# Configure SPI decoder
+write(':DECoder1:MODE SPI')
+write(':DECoder1:SPI:CLK CHAN3')
+write(':DECoder1:SPI:MOSI CHAN4')
+write(':DECoder1:SPI:MISO CHAN2')
+write(':DECoder1:SPI:CS CHAN1')
+write(':DECoder1:SPI:WIDTh 8')
+write(':DECoder1:SPI:EDGE RISE')
+write(':DECoder1:SPI:ENDian MSB')
+write(':DECoder1:SPI:SELect CS')
+# Readback-verify each setting
+checks = {
+    ':DECoder1:MODE?': 'SPI',
+    ':DECoder1:SPI:CLK?': 'CHAN3',
+    ':DECoder1:SPI:MOSI?': 'CHAN4',
+    ':DECoder1:SPI:MISO?': 'CHAN2',
+    ':DECoder1:SPI:CS?': 'CHAN1',
+    ':DECoder1:SPI:WIDTh?': '8',
+    ':DECoder1:SPI:EDGE?': 'RISE',
+    ':DECoder1:SPI:ENDian?': 'MSB',
+    ':DECoder1:SPI:SELect?': 'CS',
+}
+for cmd, expected in checks.items():
+    try:
+        actual = query(cmd)
+        if actual.upper() != expected.upper():
+            errors.append(f'{cmd}: expected={expected} actual={actual}')
+    except Exception as exc:
+        errors.append(f'{cmd}: readback failed ({exc})')
+inst.close()
+if errors:
+    print('CONFIG_ERRORS:' + '; '.join(errors))
+    sys.exit(1)
+print('CONFIG_OK')
+" 2>&1) || {
+  echo "FAIL: SPI decoder configuration failed:" >&2
+  echo "$CONFIG_ERRS" >&2
   exit 3
 }
-
-CONFIG_OK=$(echo "$CONFIG_OUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if d.get('ok') else 'BAD')") || {
-  echo "FAIL: could not parse configure JSON output" >&2
-  echo "$CONFIG_OUT" >&2
-  exit 4
-}
-
-if [ "$CONFIG_OK" != "OK" ]; then
-  echo "FAIL: decoder configure returned ok=false" >&2
-  echo "$CONFIG_OUT" >&2
+echo "$CONFIG_ERRS" | grep -q "CONFIG_OK" && echo "PASS: scope SPI decoder configured and verified" || {
+  echo "FAIL: scope SPI decoder configuration verification failed" >&2
+  echo "$CONFIG_ERRS" >&2
   exit 3
-fi
-
-MISMATCHES=$(echo "$CONFIG_OUT" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-ms=d.get('settings',{}).get('mismatches',[])
-print(len(ms))
-") || {
-  echo "FAIL: could not parse mismatch count" >&2
-  exit 4
 }
-
-if [ "$MISMATCHES" != "0" ]; then
-  echo "WARN: decoder configure had $MISMATCHES readback mismatch(es)" >&2
-  echo "$CONFIG_OUT" >&2
-fi
-echo "PASS: scope SPI decoder configured (mismatches=$MISMATCHES)"
 
 # ---------------------------------------------------------------------------
 # Step 4: Read back SPI events from scope (:ETABle1:DATA?)
 # ---------------------------------------------------------------------------
 echo
 echo "[Step 4/5] decoder.py --mode readback (query :ETABle1:DATA?)"
-READBACK_OUT=$(run_decoder --mode readback --etable on 2>&1) || {
+READBACK_OUT=$(run_decoder --mode readback --etable on --mosi CHAN4 --miso CHAN2 2>&1) || {
   echo "FAIL: decoder readback failed:" >&2
   echo "$READBACK_OUT" >&2
   exit 5
