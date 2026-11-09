@@ -575,15 +575,19 @@ void loop(void) {
   // Only runs if begin() succeeded (chip responds); otherwise conversion stalls.
   if (!g_begin_ok) {
     // Chip not responding — still generate SPI traffic for scope capture:
-    // dummy CS toggle + transfer on every loop iteration.
-    digitalWrite(4, LOW);
+    // bit-bang SPI pins (CS=10, MOSI=11, MISO=12, SCK=13) so the scope sees
+    // activity on all 4 channels connected to the oscilloscope.
+    pinMode(10, OUTPUT);
+    pinMode(11, OUTPUT);
+    pinMode(12, OUTPUT);
+    pinMode(13, OUTPUT);
+    digitalWrite(10, LOW);   // CS low
+    digitalWrite(11, HIGH);  // MOSI high
+    digitalWrite(13, HIGH);  // SCK high
     delayMicroseconds(100);
-    digitalWrite(5, HIGH);
-    digitalWrite(6, HIGH);
-    delayMicroseconds(100);
-    digitalWrite(5, LOW);
-    digitalWrite(6, LOW);
-    digitalWrite(4, HIGH);
+    digitalWrite(11, LOW);   // MOSI low
+    digitalWrite(13, LOW);   // SCK low
+    digitalWrite(10, HIGH);  // CS high
     delay(200);
     return;
   }
