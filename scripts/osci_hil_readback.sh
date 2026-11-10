@@ -67,10 +67,12 @@ if [[ "$RELATIVE" != test/* ]]; then
   exit 4
 fi
 
-RESOURCE_ARG=()
-if [ -n "${OSCI_RESOURCE:-}" ]; then
-  RESOURCE_ARG=(--resource "$OSCI_RESOURCE")
+if [ -z "${OSCI_RESOURCE:-}" ]; then
+  echo "error: OSCI_RESOURCE environment variable must be set (e.g. USB0::...)" >&2
+  exit 4
 fi
+
+RESOURCE_ARG=(--resource "$OSCI_RESOURCE")
 
 UPLOAD_ARG=()
 if [ -n "${OSCI_UPLOAD_PORT:-}" ]; then
@@ -157,7 +159,7 @@ build_flags = -DTEST_ADC_TYPE=MCP3564
 upload_flags = -V
 PIOEOF
 
-  if ! (pio run -e ATMEGA328P -d "$bdir" --target upload "${UPLOAD_ARG[@]:-}"); then
+  if ! (pio run -e ATMEGA328P -d "$bdir" --target upload "${UPLOAD_ARG[@]}"); then
     echo "FAIL: build or upload failed" >&2
     return 1
   fi
@@ -256,12 +258,11 @@ for ch in [1, 2, 3, 4]:
 write(':TIM:SCAL 100e-9')
 write(':TIM:OFFS 0')
 
-# Arm single sequence, trigger on CS falling edge
-write(':TRIG:SWE SINGLE')
+# Arm trigger in AUTO mode for continuous capture
+write(':TRIG:SWE AUTO')
 write(':TRIG:SOUR CHAN1')
 write(':TRIG:EDGE:SLOP FALL')
 write(':TRIG:LEV 1.2')
-write(':SING')
 
 inst.close()
 if errors:

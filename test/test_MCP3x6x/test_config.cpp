@@ -577,27 +577,7 @@ void setup(void) {
 void loop(void) {
   // Continuously generate SPI traffic so the oscilloscope decoder can capture it.
   // Each analogRead() triggers: MUX write + CONVERSION + ADCDATA read (CS toggles per transaction).
-  // Only runs if begin() succeeded (chip responds); otherwise conversion stalls.
-  if (!g_begin_ok) {
-    // Chip not responding — still generate SPI traffic for scope capture:
-    // bit-bang SPI pins (CS=10, MOSI=11, MISO=12, SCK=13) so the scope sees
-    // activity on all 4 channels connected to the oscilloscope.
-    pinMode(10, OUTPUT);
-    pinMode(11, OUTPUT);
-    pinMode(12, OUTPUT);
-    pinMode(13, OUTPUT);
-    while (true) {
-      digitalWrite(10, LOW);   // CS low
-      digitalWrite(11, HIGH);  // MOSI high
-      digitalWrite(13, HIGH);  // SCK high
-      delayMicroseconds(50);
-      digitalWrite(11, LOW);   // MOSI low
-      digitalWrite(13, LOW);   // SCK low
-      delayMicroseconds(50);
-      digitalWrite(10, HIGH);  // CS high
-      delayMicroseconds(50);
-    }
-  }
+  // Runs regardless of begin() result so SPI traffic is always present for the scope.
   uint8_t channels[] = {MCP3x6x_CH0, MCP3x6x_CH1, MCP3x6x_CH2, MCP3x6x_CH3};
   for (uint8_t i = 0; i < 4; i++) {
     int32_t raw = mcp.analogRead(static_cast<uint8_t>(channels[i]));
