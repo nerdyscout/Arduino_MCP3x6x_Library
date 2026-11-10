@@ -254,8 +254,8 @@ for ch in [1, 2, 3, 4]:
     write(f':CHAN{ch}:SCAL 1.0')
     write(f':CHAN{ch}:OFFS 0')
 
-# Set timebase for 4MHz SPI capture
-write(':TIM:SCAL 100e-9')
+# Set timebase for slow SPI capture (2ms/div works reliably with decoder)
+write(':TIM:SCAL 2e-3')
 write(':TIM:OFFS 0')
 
 # Arm trigger in AUTO mode for continuous capture
