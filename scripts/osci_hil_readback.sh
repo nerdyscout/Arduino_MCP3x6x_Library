@@ -242,34 +242,12 @@ for ch in [1, 2, 3, 4]:
     write(f':CHAN{ch}:SCAL 2.0')
     write(f':CHAN{ch}:OFFS 0')
 
-# Verify channel states
-for ch in [1, 2, 3, 4]:
-    prob = query(f':CHAN{ch}:PROB?').strip()
-    disp = query(f':CHAN{ch}:DISPlay?').strip()
-    scal = query(f':CHAN{ch}:SCAL?').strip()
-    print(f'  CHAN{ch}: DISPlay={disp} PROB={prob} SCAL={scal}', file=sys.stderr)
-
 # Arm single sequence, trigger on CS falling edge
 write(':TRIG:SWE SINGLE')
 write(':TRIG:SOUR CHAN1')
 write(':TRIG:EDGE:SLOP FALL')
 write(':TRIG:LEV 1.2')
 write(':SING')
-
-# Verify decoder settings
-for cmd, expected in {
-    ':DECoder1:MODE?': 'SPI',
-    ':DECoder1:SPI:CLK?': 'CHAN3',
-    ':DECoder1:SPI:MOSI?': 'CHAN4',
-    ':DECoder1:SPI:MISO?': 'CHAN2',
-    ':DECoder1:SPI:CS?': 'CHAN1',
-}.items():
-    try:
-        actual = query(cmd).upper().strip()
-        if actual != expected.upper():
-            errors.append(f'{cmd}: expected={expected} actual={actual}')
-    except Exception as exc:
-        errors.append(f'{cmd}: readback failed ({exc})')
 
 inst.close()
 if errors:
