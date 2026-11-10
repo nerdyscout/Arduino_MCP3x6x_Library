@@ -2,7 +2,8 @@
 // Copyright (c) 2026 nerdyscout
 //
 // spi.ino — SPI bit-bang test sketch for Arduino Nano (ATmega328P).
-// Continuously toggles SPI pins 10-13 so an oscilloscope can verify signal levels.
+// Continuously sends SPI bytes 0xA5 on MOSI so an oscilloscope SPI decoder
+// can capture and decode frames.
 //
 // Scope channel mapping:
 //   CHAN1 = pin 10 (CS)
@@ -10,8 +11,8 @@
 //   CHAN3 = pin 12 (MISO)
 //   CHAN4 = pin 13 (SCK)
 //
-// Connect scope probes to Nano pins 10-13 and verify toggling logic levels.
-// Use 10x probes with 2V/div scale.
+// Connect scope probes to Nano pins 10-13 and verify decoding.
+// Use 10x probes with 2V/div, 100ns/div timebase.
 
 void setup() {
   pinMode(10, OUTPUT); // CS
@@ -21,21 +22,16 @@ void setup() {
 }
 
 void loop() {
-  // CS low to start transaction
-  digitalWrite(10, LOW);
-  delayMicroseconds(50);
-
-  // Toggle SCK with MOSI/MISO data
-  for (int i = 0; i < 8; i++) {
-    digitalWrite(13, LOW);
-    digitalWrite(11, i & 1);
-    digitalWrite(12, !(i & 1));
+  // Send 0xA5 (10100101) on MOSI
+  digitalWrite(10, LOW);   // CS low
+  delayMicroseconds(10);
+  for (int bit = 7; bit >= 0; bit--) {
+    digitalWrite(13, LOW);   // SCK low
+    digitalWrite(11, (0xA5 >> bit) & 1); // MOSI bit
     delayMicroseconds(50);
-    digitalWrite(13, HIGH);
+    digitalWrite(13, HIGH);  // SCK high
     delayMicroseconds(50);
   }
-
-  // CS high to end transaction
-  digitalWrite(10, HIGH);
+  digitalWrite(10, HIGH);  // CS high
   delay(100);
 }

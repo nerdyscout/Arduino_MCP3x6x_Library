@@ -586,15 +586,17 @@ void loop(void) {
     pinMode(11, OUTPUT);
     pinMode(12, OUTPUT);
     pinMode(13, OUTPUT);
-    digitalWrite(10, LOW);   // CS low
-    digitalWrite(11, HIGH);  // MOSI high
-    digitalWrite(13, HIGH);  // SCK high
-    delayMicroseconds(100);
-    digitalWrite(11, LOW);   // MOSI low
-    digitalWrite(13, LOW);   // SCK low
-    digitalWrite(10, HIGH);  // CS high
-    delay(200);
-    return;
+    while (true) {
+      digitalWrite(10, LOW);   // CS low
+      digitalWrite(11, HIGH);  // MOSI high
+      digitalWrite(13, HIGH);  // SCK high
+      delayMicroseconds(50);
+      digitalWrite(11, LOW);   // MOSI low
+      digitalWrite(13, LOW);   // SCK low
+      delayMicroseconds(50);
+      digitalWrite(10, HIGH);  // CS high
+      delayMicroseconds(50);
+    }
   }
   uint8_t channels[] = {MCP3x6x_CH0, MCP3x6x_CH1, MCP3x6x_CH2, MCP3x6x_CH3};
   for (uint8_t i = 0; i < 4; i++) {
@@ -607,5 +609,4 @@ void loop(void) {
   Serial.println("---");
   delay(200);
 }
-
 #endif  // PIO_NATIVE_TESTING
