@@ -1563,7 +1563,7 @@ class MCP3x6x {
    *
    * @ingroup status
    */
-  inline constexpr bool status_dr() { return !_status.dr; }
+  inline constexpr bool status_dr() { return _status.dr; }
 
   /**
    * @brief crccfg status of latest communication
@@ -2556,7 +2556,7 @@ class MCP3x6x {
         if (_readTimeout && (millis() - start) >= _readTimeout) {
           return MCP3x6x_TIMEOUT;
         }
-      } while (_status.dr);
+      } while (!_status.dr);
 
       _dataAvailable                                  = false;
       return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
@@ -2646,7 +2646,7 @@ class MCP3x6x {
       if (_readTimeout && (millis() - start) >= _readTimeout) {
         return MCP3x6x_TIMEOUT;
       }
-    } while (_status.dr);
+    } while (!_status.dr);
     return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
   }
 };
