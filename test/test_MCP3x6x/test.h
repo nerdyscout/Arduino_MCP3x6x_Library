@@ -8,15 +8,30 @@
   #include <ArduinoFake.h>
 // cppcheck-suppress syntaxError
 using namespace fakeit;
+  #include <unity.h>
+  #include <cstring>
+  #include <vector>
+
+  // ---------------------------------------------------------------------------
+  // SPI tracking (native only)
+  // ---------------------------------------------------------------------------
+  extern std::vector<uint8_t> spiAddrs;
+  extern std::vector<std::vector<uint8_t>> spiData;
+  extern uint8_t mockStatusByte;
+  extern uint8_t lastSpiAddress;
+  extern std::vector<uint8_t> mockReadSequence;
+
+  extern bool digitalWriteCalled;
+  extern uint8_t digitalWritePin;
+  extern uint8_t digitalWriteValue;
+
+  extern bool pinModeCalled;
+  extern uint8_t pinModePin;
+  extern uint8_t pinModeMode;
 #else
   #include <Arduino.h>
   #include <SPI.h>
 #endif
-
-#include <unity.h>
-
-#include <cstring>
-#include <vector>
 
 #include "Arduino_MCP3x6x_Library.hpp"
 
@@ -33,23 +48,6 @@ using TestADC = MCP3461;
   #define FOR_EACH_ADC(M) M(TEST_ADC_TYPE)
 using TestADC = TEST_ADC_TYPE;
 #endif
-
-// ---------------------------------------------------------------------------
-// SPI tracking (native only)
-// ---------------------------------------------------------------------------
-extern std::vector<uint8_t> spiAddrs;
-extern std::vector<std::vector<uint8_t>> spiData;
-extern uint8_t mockStatusByte;
-extern uint8_t lastSpiAddress;
-extern std::vector<uint8_t> mockReadSequence;
-
-extern bool digitalWriteCalled;
-extern uint8_t digitalWritePin;
-extern uint8_t digitalWriteValue;
-
-extern bool pinModeCalled;
-extern uint8_t pinModePin;
-extern uint8_t pinModeMode;
 
 // ---------------------------------------------------------------------------
 // Singleton ADC instance helpers (reused across tests)
@@ -116,6 +114,7 @@ struct MCP3x6xTest {
 // ---------------------------------------------------------------------------
 // Template test helpers
 // ---------------------------------------------------------------------------
+#ifdef PIO_NATIVE_TESTING
 template <typename T>
 void test_instance() {
   T* p = new T();
@@ -129,6 +128,7 @@ void test_begin() {
   bool ok = adc.begin();
   TEST_ASSERT_TRUE(ok);
 }
+#endif
 
 // ---------------------------------------------------------------------------
 // Registration function declarations

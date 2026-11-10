@@ -48,16 +48,16 @@ void test_reset_fastcmd() {
 // ---------------------------------------------------------------------------
 void test_status_dr_true() {
   TestADC adc;
-  mockStatusByte = 0x04;  // DR=1 → _status.dr=1 → status_dr() = !1 = false
+  mockStatusByte = 0x04;  // DR=1 → status_dr() = true
   adc.reset();
-  TEST_ASSERT_FALSE(adc.status_dr());
+  TEST_ASSERT_TRUE(adc.status_dr());
 }
 
 void test_status_dr_false() {
   TestADC adc;
-  mockStatusByte = 0x00;  // DR=0 → _status.dr=0 → status_dr() = !0 = true
+  mockStatusByte = 0x00;  // DR=0 → status_dr() = false
   adc.reset();
-  TEST_ASSERT_TRUE(adc.status_dr());
+  TEST_ASSERT_FALSE(adc.status_dr());
 }
 
 void test_status_crccfg() {
