@@ -234,13 +234,17 @@ write(':DECoder1:SPI:EDGE RISE')
 write(':DECoder1:SPI:ENDian MSB')
 write(':DECoder1:SPI:SELect CS')
 
-# Enable all 4 channels with 1x probe (direct connection, no scope probe)
-# and appropriate vertical scale for 3.3V/5V logic signals (2V/div)
+# Enable all 4 channels with 10x probe (standard scope probe)
+# and appropriate vertical scale for 3.3V/5V logic signals (1V/div with 10x probe = 10V effective)
 for ch in [1, 2, 3, 4]:
     write(f':CHAN{ch}:DISPlay ON')
-    write(f':CHAN{ch}:PROB 1')
-    write(f':CHAN{ch}:SCAL 2.0')
+    write(f':CHAN{ch}:PROB 10')
+    write(f':CHAN{ch}:SCAL 1.0')
     write(f':CHAN{ch}:OFFS 0')
+
+# Set timebase for 4MHz SPI capture (100ns/div = captures 4 clock cycles across screen)
+write(':TIM:SCAL 100e-9')
+write(':TIM:OFFS 0')
 
 # Arm single sequence, trigger on CS falling edge
 write(':TRIG:SWE SINGLE')
