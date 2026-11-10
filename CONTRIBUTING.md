@@ -38,22 +38,22 @@ pre-commit install
 Build every example for every environment:
 
 ```sh
-./examples/build.sh
+./scripts/build_examples_sh
 ```
 
 Build only specific environments:
 
 ```sh
-./examples/build.sh ESP32 SAMD21G18A
+./scripts/build_examples_sh ESP32 SAMD21G18A
 ```
 
 Build only a specific example (all environments):
 
 ```sh
-./examples/build.sh MCP3461_Mux_SingleEnded
+./scripts/build_examples_sh MCP3461_Mux_SingleEnded
 ```
 
-See `examples/build.sh` for full usage details.
+See `scripts/build_examples_sh` for full usage details.
 
 ## Running Tests
 
@@ -87,7 +87,7 @@ See `.pre-commit-config.yaml` for the full hook configuration.
 Generate top/bottom board renders and fabrication zips:
 
 ```sh
-./pcb/render_boards.sh
+./scripts/run_kibot.sh
 ```
 
 KiBot config files:

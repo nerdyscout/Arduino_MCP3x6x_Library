@@ -8,15 +8,15 @@
 # .kicad_pro (text_variables) and .kicad_pcb (title block date/rev),
 # so they appear on the rendered board image itself.
 #
-# Usage: ./pcb/render_boards.sh   (run from repo root)
+# Usage: ./scripts/run_kibot.sh   (run from repo root)
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-RENDER_CONFIG="$SCRIPT_DIR/render.kibot.yaml"
-FAB_CONFIG="$SCRIPT_DIR/fab.kibot.yaml"
+RENDER_CONFIG="$REPO_ROOT/pcb/render.kibot.yaml"
+FAB_CONFIG="$REPO_ROOT/pcb/fab.kibot.yaml"
 
 # board name -> kicad_pcb path (relative to repo root)
 declare -A BOARDS=(
