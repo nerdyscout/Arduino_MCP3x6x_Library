@@ -4,13 +4,15 @@
 #include "test.h"
 
 // ---------------------------------------------------------------------------
-// SPI tracking definitions
+// SPI tracking definitions (native mock mode only)
 // ---------------------------------------------------------------------------
+#ifdef PIO_NATIVE_TESTING
 std::vector<uint8_t> spiAddrs;
 std::vector<std::vector<uint8_t>> spiData;
+std::vector<uint8_t> mockReadSequence;
+#endif
 uint8_t mockStatusByte = 0x00;
 uint8_t lastSpiAddress = 0x00;
-std::vector<uint8_t> mockReadSequence;
 
 bool digitalWriteCalled   = false;
 uint8_t digitalWritePin   = 0xFF;
@@ -79,9 +81,11 @@ void suiteSetUp(void) {
 int suiteTearDown(int num_failures) { return num_failures; }
 
 void setUp(void) {
+#ifdef PIO_NATIVE_TESTING
   spiAddrs.clear();
   spiData.clear();
   mockReadSequence.clear();
+#endif
   digitalWriteCalled = false;
   digitalWritePin    = 0xFF;
   digitalWriteValue  = 0xFF;
@@ -211,6 +215,30 @@ void register_scope_tests() {
 #endif
 }
 
+// ---------------------------------------------------------------------------
+// Run all tests
+// ---------------------------------------------------------------------------
+int runUnityTests(void) {
+  UNITY_BEGIN();
+  register_basic_tests();
+
+#ifdef PIO_NATIVE_TESTING
+  register_config_tests();
+  register_analog_tests();
+  register_scan_mode_tests();
+  register_fastcmd_status_tests();
+  register_misc_tests();
+  register_dma_tests();
+
+  RUN_TEST(test_hil_smoke_begin);
+  RUN_TEST(test_hil_smoke_register_write);
+  RUN_TEST(test_hil_smoke_status_bits);
+  RUN_TEST(test_chipid_all_variants);
+#endif
+
+  return UNITY_END();
+}
+
 #endif  // PIO_NATIVE_TESTING
 
 // ---------------------------------------------------------------------------
@@ -233,89 +261,6 @@ static void printStatus(const char* where) {
   Serial.println(mcp.getDeviceAddress());
 }
 
-void setup() {
-#if defined(USB_VID) && defined(USB_PID)
-  while (!Serial);
-#else
-  delay(2000);
-#endif
-
-  Serial.println(__FILE__);
-
-  if (!mcp.begin()) {
-    Serial.println("FAIL: begin() returned false");
-    printStatus("begin");
-    while (1);
-  }
-  Serial.println("PASS: begin() succeeded");
-  printStatus("after begin");
-
-  mcp.unlock();
-  Serial.println("PASS: unlock() succeeded");
-  mcp.lock(0x00);
-  Serial.println("PASS: lock(0x00) succeeded");
-  mcp.unlock();
-
-  mcp.setReference(2.4f);
-  Serial.println("PASS: setReference(2.4f) succeeded");
-
-  mcp.config2(false, MCP3564::GAIN_1, MCP3564::BOOST_2);
-  Serial.println("PASS: config2(GAIN_1, BOOST_2) succeeded");
-
-  Serial.print("VREF=");
-  Serial.print(mcp.getReference());
-  Serial.println(" V");
-
-  int32_t raw = mcp.analogRead(MCP3x6x_CH0);
-  int32_t uV  = mcp.toVoltage(raw);
-  Serial.print("PASS: analogRead(CH0)=");
-  Serial.print(raw);
-  Serial.print(" voltage=");
-  Serial.println(uV / 1000000.0, 6);
-}
-
-void loop() {
-  printStatus("status");
-  delay(1000);
-}
-
-#endif  // PIO_NATIVE_TESTING
-
-// ---------------------------------------------------------------------------
-// Run all tests
-// ---------------------------------------------------------------------------
-int runUnityTests(void) {
-  UNITY_BEGIN();
-  register_basic_tests();
-  register_config_tests();
-  register_analog_tests();
-  register_scan_mode_tests();
-  register_fastcmd_status_tests();
-  register_misc_tests();
-  register_dma_tests();
-
-#ifdef PIO_NATIVE_TESTING
-  RUN_TEST(test_hil_smoke_begin);
-  RUN_TEST(test_hil_smoke_register_write);
-  RUN_TEST(test_hil_smoke_status_bits);
-  RUN_TEST(test_chipid_all_variants);
-#endif
-
-  return UNITY_END();
-}
-
-// ---------------------------------------------------------------------------
-// Entry points
-// ---------------------------------------------------------------------------
-
-#ifdef PIO_NATIVE_TESTING
-int main(int argc, char** argv) {
-  suiteSetUp();
-  int result = runUnityTests();
-  return suiteTearDown(result);
-}
-#else
-void loop(void) {}
 void setup(void) {
 #if defined(USB_VID) && defined(USB_PID)
   while (!Serial);
@@ -326,54 +271,37 @@ void setup(void) {
   while (!Serial);
   Serial.println(__FILE__);
 
-  Serial.print("begin() ... ");
-  bool ok = mcp.begin();
-  Serial.println(ok ? "OK" : "FAILED");
+  UNITY_BEGIN();
+  register_basic_tests();
 
-  if (!ok) {
-    Serial.println("Chip ID mismatch — check part marking and class instantiation.");
-    Serial.println("Expected chip-ID nibble: 0xF (MCP3564)");
-    while (1);
-  }
+#ifdef PIO_NATIVE_TESTING
+  register_config_tests();
+  register_analog_tests();
+  register_scan_mode_tests();
+  register_fastcmd_status_tests();
+  register_misc_tests();
+  register_dma_tests();
 
-  Serial.print("Device address: 0x");
-  Serial.println(mcp.getDeviceAddress(), HEX);
-  Serial.println("Hardware SPI test sequence starting...");
-  Serial.println();
+  RUN_TEST(test_hil_smoke_begin);
+  RUN_TEST(test_hil_smoke_register_write);
+  RUN_TEST(test_hil_smoke_status_bits);
+  RUN_TEST(test_chipid_all_variants);
+#endif
 
-  // T-002: CONFIG0 write
-  mcp.config0(TestADC::CONVERSION, TestADC::BIAS_0UA, TestADC::EXTERN, false);
-  Serial.println("CONFIG0 write: 0x42");
-
-  // T-003: CONFIG1 write
-  mcp.config1(TestADC::OSR_256, TestADC::MCLK_0);
-  Serial.println("CONFIG1 write: 0x44");
-
-  // T-004: CONFIG2 write
-  mcp.config2(false, TestADC::GAIN_1, TestADC::BOOST_2);
-  Serial.println("CONFIG2 write: 0x46");
-
-  // T-005: CONFIG3 write
-  mcp.config3(false, false, false, TestADC::SGN_DATA, TestADC::CONTINUOUS);
-  Serial.println("CONFIG3 write: 0x48");
-
-  // T-006: IRQ write
-  mcp.irq(false, false, TestADC::IRQ_OFF);
-  Serial.println("IRQ write: 0x4A");
-
-  // T-007: MUX write (CH0 single-ended)
-  mcp.mux(TestADC::MUX_CH0, TestADC::MUX_AGND);
-  Serial.println("MUX write: 0x4C");
-
-  // T-008: analogRead(CH0) — MUX write + CONVERSION + ADCDATA read
-  int32_t raw = mcp.analogRead(MCP3x6x_CH0);
-  Serial.print("analogRead(CH0) = ");
-  Serial.println(raw);
-
-  Serial.println("Hardware smoke test complete — scope capture complete.");
+  UNITY_END();
 }
 
-void loop() {
-  // Nothing — all SPI traffic happens in setup().
+void loop(void) {
+  printStatus("status");
+  delay(1000);
+}
+
+#endif  // PIO_NATIVE_TESTING
+
+#ifdef PIO_NATIVE_TESTING
+int main(int argc, char** argv) {
+  suiteSetUp();
+  int result = runUnityTests();
+  return suiteTearDown(result);
 }
 #endif

@@ -31,6 +31,11 @@ using namespace fakeit;
 #else
   #include <Arduino.h>
   #include <SPI.h>
+  #include <unity.h>
+#endif
+
+#ifdef PIO_NATIVE_TESTING
+  #include <cstring>
 #endif
 
 #include "Arduino_MCP3x6x_Library.hpp"
@@ -114,7 +119,6 @@ struct MCP3x6xTest {
 // ---------------------------------------------------------------------------
 // Template test helpers
 // ---------------------------------------------------------------------------
-#ifdef PIO_NATIVE_TESTING
 template <typename T>
 void test_instance() {
   T* p = new T();
@@ -128,7 +132,6 @@ void test_begin() {
   bool ok = adc.begin();
   TEST_ASSERT_TRUE(ok);
 }
-#endif
 
 // ---------------------------------------------------------------------------
 // Registration function declarations

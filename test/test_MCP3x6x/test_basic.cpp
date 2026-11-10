@@ -60,8 +60,10 @@ void test_begin_MCP3564() {
 // ---------------------------------------------------------------------------
 void register_basic_tests() {
 #define REG_INSTANCE(V) RUN_TEST(test_instance_##V);
-  FOR_EACH_ADC(REG_INSTANCE)
+#define REG_INSTANCE_CALL(V) REG_INSTANCE(V)
+  FOR_EACH_ADC(REG_INSTANCE_CALL)
 #undef REG_INSTANCE
+#undef REG_INSTANCE_CALL
 
 #ifdef PIO_NATIVE_TESTING
   #define REG_BEGIN(V) RUN_TEST(test_begin_##V);
