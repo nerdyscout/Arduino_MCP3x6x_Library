@@ -202,6 +202,20 @@ void register_chipid_diag_tests() {
 #endif
 }
 
+void register_scope_tests() {
+#ifdef PIO_NATIVE_TESTING
+  RUN_TEST(test_scope_begin);
+  RUN_TEST(test_scope_config0);
+  RUN_TEST(test_scope_config1);
+  RUN_TEST(test_scope_config2);
+  RUN_TEST(test_scope_config3);
+  RUN_TEST(test_scope_mux);
+  RUN_TEST(test_scope_conversion);
+  RUN_TEST(test_scope_analogRead);
+  RUN_TEST(test_scope_analogReadContinuous);
+#endif
+}
+
 #endif  // PIO_NATIVE_TESTING
 
 // ---------------------------------------------------------------------------
@@ -290,6 +304,15 @@ int runUnityTests(void) {
   RUN_TEST(test_hil_smoke_register_write);
   RUN_TEST(test_hil_smoke_status_bits);
   RUN_TEST(test_chipid_all_variants);
+  RUN_TEST(test_scope_begin);
+  RUN_TEST(test_scope_config0);
+  RUN_TEST(test_scope_config1);
+  RUN_TEST(test_scope_config2);
+  RUN_TEST(test_scope_config3);
+  RUN_TEST(test_scope_mux);
+  RUN_TEST(test_scope_conversion);
+  RUN_TEST(test_scope_analogRead);
+  RUN_TEST(test_scope_analogReadContinuous);
 #endif
 
   return UNITY_END();
@@ -313,6 +336,58 @@ void setup(void) {
 #else
   delay(2000);
 #endif
-  runUnityTests();
+  Serial.begin(115200);
+  while (!Serial);
+  Serial.println(__FILE__);
+
+  Serial.print("begin() ... ");
+  bool ok = mcp.begin();
+  Serial.println(ok ? "OK" : "FAILED");
+
+  if (!ok) {
+    Serial.println("Chip ID mismatch — check part marking and class instantiation.");
+    Serial.println("Expected chip-ID nibble: 0xF (MCP3564)");
+    while (1);
+  }
+
+  Serial.print("Device address: 0x");
+  Serial.println(mcp.getDeviceAddress(), HEX);
+  Serial.println("Hardware SPI test sequence starting...");
+  Serial.println();
+
+  // T-002: CONFIG0 write
+  mcp.config0(TestADC::CONVERSION, TestADC::BIAS_0UA, TestADC::EXTERN, false);
+  Serial.println("CONFIG0 write: 0x42");
+
+  // T-003: CONFIG1 write
+  mcp.config1(TestADC::OSR_256, TestADC::MCLK_0);
+  Serial.println("CONFIG1 write: 0x44");
+
+  // T-004: CONFIG2 write
+  mcp.config2(false, TestADC::GAIN_1, TestADC::BOOST_2);
+  Serial.println("CONFIG2 write: 0x46");
+
+  // T-005: CONFIG3 write
+  mcp.config3(false, false, false, TestADC::SGN_DATA, TestADC::CONTINUOUS);
+  Serial.println("CONFIG3 write: 0x48");
+
+  // T-006: IRQ write
+  mcp.irq(false, false, TestADC::IRQ_OFF);
+  Serial.println("IRQ write: 0x4A");
+
+  // T-007: MUX write (CH0 single-ended)
+  mcp.mux(TestADC::MUX_CH0, TestADC::MUX_AGND);
+  Serial.println("MUX write: 0x4C");
+
+  // T-008: analogRead(CH0) — MUX write + CONVERSION + ADCDATA read
+  int32_t raw = mcp.analogRead(MCP3x6x_CH0);
+  Serial.print("analogRead(CH0) = ");
+  Serial.println(raw);
+
+  Serial.println("Hardware smoke test complete — scope capture complete.");
+}
+
+void loop() {
+  // Nothing — all SPI traffic happens in setup().
 }
 #endif

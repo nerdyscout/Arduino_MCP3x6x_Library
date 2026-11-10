@@ -4,20 +4,22 @@
 #
 # Modes:
 #   mocked   Run native unit tests with ArduinoFake mocks (GitHub pipeline)
-#   hil      Upload test_config.cpp to Nano, configure Rigol scope SPI decoder,
+#   hil      Upload <test> to Nano, configure Rigol scope SPI decoder,
 #            read back :ETABle1:DATA? events, compare MOSI bytes against expected
 #            values printed by the test to Serial (single point of truth)
-#   hardware Upload test_config.cpp to Nano, read Serial output, assert all tests pass
+#   hardware Upload <test> to Nano, read Serial output, assert all tests pass
 #   all      Run mocked -> hil -> hardware sequentially
 #
 # Usage:
-#   ./osci_hil_readback.sh --mode mocked|hil|hardware|all [--debug]
+#   ./osci_hil_readback.sh --mode mocked|hil|hardware|all --test <test.cpp> [--debug]
+#
+# Arguments:
+#   --test <file.cpp>   Path to test .cpp file under tests/ (default: test/test_MCP3x6x/test_config.cpp)
 #
 # Environment:
 #   OSCI_RESOURCE    VISA resource string for the Rigol (auto-detected if unset)
 #   OSCI_UPLOAD_PORT Upload port for the Nano (e.g. /dev/ttyUSB1)
 #   OSCI_DECODER     Path to decoder.py (default: bundled scpi skill script)
-#   OSCI_TEST_FILE   Path to test_config.cpp (default: test/test_MCP3x6x/test_config.cpp)
 #
 # Exit codes: 0 = all modes pass, non-zero = first failing mode/test
 #
@@ -39,6 +41,10 @@ while [ $# -gt 0 ]; do
       shift
       MODE="${1:-}"
       ;;
+    --test)
+      shift
+      TEST_FILE="${1:-}"
+      ;;
     --debug)
       DEBUG=1
       ;;
@@ -51,7 +57,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -z "$MODE" ]; then
-  echo "usage: $0 --mode mocked|hil|hardware|all [--debug]" >&2
+  echo "usage: $0 --mode mocked|hil|hardware|all --test <test.cpp> [--debug]" >&2
   exit 2
 fi
 
@@ -62,6 +68,13 @@ fi
 
 if [ ! -f "$TEST_FILE" ]; then
   echo "error: test file not found at $TEST_FILE" >&2
+  exit 4
+fi
+
+# Validate test file is under tests/
+RELATIVE="${TEST_FILE#$REPO_DIR/}"
+if [[ "$RELATIVE" != test/* ]]; then
+  echo "error: test file must be under tests/ directory, got: $TEST_FILE" >&2
   exit 4
 fi
 
