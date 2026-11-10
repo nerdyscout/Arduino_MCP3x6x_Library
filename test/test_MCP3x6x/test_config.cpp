@@ -504,6 +504,11 @@ void setup(void) {
   pinMode(5, OUTPUT);
   pinMode(6, OUTPUT);
   pinMode(7, OUTPUT);
+  // SPI pins 10-13 for scope capture when begin() fails
+  pinMode(10, OUTPUT);
+  pinMode(11, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(13, OUTPUT);
 
   Serial.println("TEST_START");
 
