@@ -7,7 +7,7 @@ See `proposal.md` - Why and What Changes (do not restate). Current state:
 - Target board: Arduino Nano = ATmega328P, PlatformIO env `ATMEGA328P` (`board = nanoatmega328`), default SPI pins CS=10, MOSI=11, MISO=12, SCK=13, 4 MHz, MODE0.
 - `test/test_MCP3x6x/test_config.cpp` is currently native-test-only (`#ifdef PIO_NATIVE_TESTING`).
 - `test/test_MCP3x6x/test_runner.cpp` shows the hardware-mode pattern (`#ifndef PIO_NATIVE_TESTING` `setup()`/`loop()`, Serial at 115200 baud).
-- Oscilloscope: Rigol DS1000Z-family over USBTMC; `decoder.py` at `/home/stefan/.config/opencode/skills/scpi/scripts/decoder.py`, verified over USBTMC via PyVISA, re-execs into its own `.venv`.
+- Oscilloscope: Rigol DS1000Z-family over USBTMC; `decoder.py` at `skills/scpi/scripts/decoder.py`, verified over USBTMC via PyVISA, re-execs into its own `.venv`.
 - Git remote: github.com/nerdyscout/Arduino_MCP3x6x_Library → `gh` CLI.
 
 ## Goals / Non-Goals

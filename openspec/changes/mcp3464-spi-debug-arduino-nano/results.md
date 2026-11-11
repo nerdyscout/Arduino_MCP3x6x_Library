@@ -97,5 +97,5 @@ Verified SPI communication between Arduino Nano (ATmega328P) and MCP3564 (24-bit
 - #19 Env & test vehicle — Closed ✅
 - #20 Hardware wiring & scope — Closed ✅
 - #21 Baseline library verification on scope — Closed ✅
-- #22 SCPI scope capture — Moved to separate project `/home/stefan/.config/opencode`
+- #22 SCPI scope capture — Moved to separate project `.config/opencode`
 - #23 Results documentation — This change

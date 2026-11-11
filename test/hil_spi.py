@@ -38,7 +38,7 @@ def target_test_hil_spi(target, source, env):
     print(f"Scope resource: {resource}")
 
     decoder = os.environ.get("DECODER_PATH",
-                             "/home/stefan/.config/opencode/skills/scpi/scripts/decoder.py")
+                             "${workspaceFolder}/.config/opencode/skills/scpi/scripts/decoder.py")
     if not os.path.isfile(decoder):
         print(f"ERROR: decoder.py not found at {decoder} (set DECODER_PATH)", file=sys.stderr)
         sys.exit(1)
