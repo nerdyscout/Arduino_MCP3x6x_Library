@@ -13,7 +13,7 @@ using namespace fakeit;
   #include <vector>
 
   // ---------------------------------------------------------------------------
-  // SPI tracking (native only)
+  // SPI tracking (native mock mode only)
   // ---------------------------------------------------------------------------
   extern std::vector<uint8_t> spiAddrs;
   extern std::vector<std::vector<uint8_t>> spiData;
@@ -63,7 +63,7 @@ T* createADC() {
 }
 
 // ---------------------------------------------------------------------------
-// Friend struct for testing private members
+// Friend struct for testing private members (native only)
 // ---------------------------------------------------------------------------
 #ifdef PIO_NATIVE_TESTING
 struct MCP3x6xTest {
@@ -134,17 +134,15 @@ void test_begin() {
 }
 
 // ---------------------------------------------------------------------------
-// Registration function declarations
+// Registration function declarations (defined in tests.hpp)
 // ---------------------------------------------------------------------------
-void register_basic_tests();
+void register_init_tests();
 void register_config_tests();
-void register_analog_tests();
-void register_scan_mode_tests();
-void register_fastcmd_status_tests();
-void register_misc_tests();
+void register_conversion_tests();
+void register_status_tests();
 void register_dma_tests();
-void register_hil_smoke_tests();
-void register_chipid_diag_tests();
+void register_calibration_tests();
+void register_spi_tests();
 
 // ---------------------------------------------------------------------------
 // Uniform entry point

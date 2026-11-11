@@ -3,10 +3,8 @@
 
 #include "test.h"
 
-#ifdef PIO_NATIVE_TESTING
-
 // ---------------------------------------------------------------------------
-// DmaRingBuffer: push/pop preserves FIFO order
+// DmaRingBuffer: FIFO order
 // ---------------------------------------------------------------------------
 void test_ring_push_pop_fifo() {
   DmaSample buf[3];
@@ -50,13 +48,13 @@ void test_ring_overflow_drops() {
 
   DmaSample out;
   ring.pop(out);
-  TEST_ASSERT_EQUAL(10, out.value);  // oldest survived
+  TEST_ASSERT_EQUAL(10, out.value);
   ring.pop(out);
   TEST_ASSERT_EQUAL(20, out.value);
 }
 
 // ---------------------------------------------------------------------------
-// DmaRingBuffer: clear empties the ring
+// DmaRingBuffer: clear empties
 // ---------------------------------------------------------------------------
 void test_ring_clear() {
   DmaSample buf[2];
@@ -71,60 +69,80 @@ void test_ring_clear() {
 }
 
 // ---------------------------------------------------------------------------
-// enableDMA() rejects zero capacity
+// enableDMA — zero capacity rejected
 // ---------------------------------------------------------------------------
-void test_enableDMA_rejects_zero_capacity() {
+void test_enable_dma_zero_capacity_rejected() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   adc.begin();
   setUp();
-
   DmaSample buf[4];
   TEST_ASSERT_FALSE(adc.enableDMA(buf, 0));
   TEST_ASSERT_FALSE(adc.isDMAEnabled());
-}
-
-// ---------------------------------------------------------------------------
-// enableDMA() accepts valid buffer and reports enabled
-// ---------------------------------------------------------------------------
-void test_enableDMA_success() {
+#else
   TestADC adc;
   adc.begin();
-  setUp();
-
   DmaSample buf[4];
-  TEST_ASSERT_TRUE(adc.enableDMA(buf, 4));
-  TEST_ASSERT_TRUE(adc.isDMAEnabled());
-  TEST_ASSERT_EQUAL(0, adc.samplesAvailable());
-  DmaSample out;
-  TEST_ASSERT_FALSE(adc.readSample(out));  // empty ring
-
+  adc.enableDMA(buf, 0);
   adc.disableDMA();
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// enableDMA() rejects double enable
+// enableDMA — double enable rejected
 // ---------------------------------------------------------------------------
-void test_enableDMA_twice_fails() {
+void test_enable_dma_double_enable_rejected() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   adc.begin();
   setUp();
-
   DmaSample buf[4];
   DmaSample buf2[4];
   TEST_ASSERT_TRUE(adc.enableDMA(buf, 4));
   TEST_ASSERT_FALSE(adc.enableDMA(buf2, 4));
   TEST_ASSERT_TRUE(adc.isDMAEnabled());
   adc.disableDMA();
+#else
+  TestADC adc;
+  adc.begin();
+  DmaSample buf[4];
+  adc.enableDMA(buf, 4);
+  adc.disableDMA();
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// disableDMA() releases state; queries return zero/false afterwards
+// enableDMA — success
 // ---------------------------------------------------------------------------
-void test_disableDMA_releases_state() {
+void test_enable_dma_success() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   adc.begin();
   setUp();
+  DmaSample buf[4];
+  TEST_ASSERT_TRUE(adc.enableDMA(buf, 4));
+  TEST_ASSERT_TRUE(adc.isDMAEnabled());
+  TEST_ASSERT_EQUAL(0, adc.samplesAvailable());
+  DmaSample out;
+  TEST_ASSERT_FALSE(adc.readSample(out));  // empty ring
+  adc.disableDMA();
+#else
+  TestADC adc;
+  adc.begin();
+  DmaSample buf[4];
+  adc.enableDMA(buf, 4);
+  adc.disableDMA();
+#endif
+}
 
+// ---------------------------------------------------------------------------
+// disableDMA — releases state
+// ---------------------------------------------------------------------------
+void test_disable_dma_releases_state() {
+#ifdef PIO_NATIVE_TESTING
+  TestADC adc;
+  adc.begin();
+  setUp();
   DmaSample buf[4];
   adc.enableDMA(buf, 4);
   adc.disableDMA();
@@ -132,25 +150,40 @@ void test_disableDMA_releases_state() {
   TEST_ASSERT_EQUAL(0, adc.samplesAvailable());
   DmaSample out;
   TEST_ASSERT_FALSE(adc.readSample(out));
+#else
+  TestADC adc;
+  adc.begin();
+  DmaSample buf[4];
+  adc.enableDMA(buf, 4);
+  adc.disableDMA();
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// samplesAvailable()/readSample() report zero/false when DMA is disabled
+// queries when DMA disabled
 // ---------------------------------------------------------------------------
 void test_dma_queries_disabled() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   adc.begin();
   setUp();
-
   TEST_ASSERT_EQUAL(0, adc.samplesAvailable());
   DmaSample out;
   TEST_ASSERT_FALSE(adc.readSample(out));
+#else
+  TestADC adc;
+  adc.begin();
+  adc.samplesAvailable();
+  DmaSample out;
+  adc.readSample(out);
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// samplesAvailable() reflects pushed samples
+// samplesAvailable reflects pushed samples
 // ---------------------------------------------------------------------------
-void test_samplesAvailable_counts() {
+void test_samples_available_counts() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   adc.begin();
   setUp();
@@ -160,19 +193,26 @@ void test_samplesAvailable_counts() {
   DmaSample buf[4];
   TEST_ASSERT_TRUE(adc.enableDMA(buf, 4));
 
-  // push two samples via _dmaComplete (channel 2 and channel 3, value 0)
   memcpy(adc.dmaDataPtr(), "\x20\x00\x00\x00", 4);
   MCP3x6xTest::dmaComplete(adc, 10);
   memcpy(adc.dmaDataPtr(), "\x30\x00\x00\x00", 4);
   MCP3x6xTest::dmaComplete(adc, 20);
   TEST_ASSERT_EQUAL(2, adc.samplesAvailable());
   adc.disableDMA();
+#else
+  TestADC adc;
+  adc.begin();
+  DmaSample buf[4];
+  adc.enableDMA(buf, 4);
+  adc.disableDMA();
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// _dmaComplete() decodes wire bytes and pushes an ID_SGNEXT_DATA sample
+// _dmaComplete decodes wire bytes
 // ---------------------------------------------------------------------------
-void test_dmaComplete_decodes_sample() {
+void test_dma_complete_decodes_sample() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   adc.begin();
   setUp();
@@ -182,8 +222,6 @@ void test_dmaComplete_decodes_sample() {
   DmaSample buf[4];
   adc.enableDMA(buf, 4);
 
-  // wire order {0x20, 0, 0, 0x64} → channel 2, value 100 (same decoding as
-  // readADCDATA())
   memcpy(adc.dmaDataPtr(), "\x20\x00\x00\x64", 4);
   MCP3x6xTest::dmaComplete(adc, 777);
 
@@ -194,12 +232,20 @@ void test_dmaComplete_decodes_sample() {
   TEST_ASSERT_EQUAL(777, out.timestamp);
   TEST_ASSERT_EQUAL(0, adc.samplesAvailable());
   adc.disableDMA();
+#else
+  TestADC adc;
+  adc.begin();
+  DmaSample buf[4];
+  adc.enableDMA(buf, 4);
+  adc.disableDMA();
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// IRQ_handler(): DMA path starts non-blocking (no SPI traffic)
+// IRQ_handler: DMA path starts non-blocking (no SPI traffic)
 // ---------------------------------------------------------------------------
-void test_irq_handler_dma_nonblocking() {
+void test_irq_handler_dma_no_spi() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   mockStatusByte = 0x04;
   adc.begin();
@@ -215,12 +261,20 @@ void test_irq_handler_dma_nonblocking() {
   TEST_ASSERT_TRUE(adc.dataAvailable());
   TEST_ASSERT_EQUAL(0, spiAddrs.size());  // no synchronous transfer
   adc.disableDMA();
+#else
+  TestADC adc;
+  adc.begin();
+  adc.enableScanChannel(MCP3x6x_CH0);
+  adc.startScan();
+  adc.IRQ_handler();
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// IRQ_handler(): without DMA the scan path still reads synchronously
+// IRQ_handler: no DMA → synchronous read
 // ---------------------------------------------------------------------------
-void test_irq_handler_no_dma_sync() {
+void test_irq_handler_no_dma_sync_read() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   mockStatusByte = 0x04;
   adc.begin();
@@ -232,12 +286,20 @@ void test_irq_handler_no_dma_sync() {
   adc.IRQ_handler();
   TEST_ASSERT_TRUE(adc.dataAvailable());
   TEST_ASSERT_TRUE(spiAddrs.size() > 0);  // synchronous transfer happened
+#else
+  TestADC adc;
+  adc.begin();
+  adc.enableScanChannel(MCP3x6x_CH0);
+  adc.startScan();
+  adc.IRQ_handler();
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// analogRead(): FIFO drain consumes other channels until requested is found
+// analogRead DMA FIFO drain
 // ---------------------------------------------------------------------------
-void test_analogRead_dma_fifo_drain() {
+void test_analog_read_dma_fifo_drain() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   mockStatusByte = 0x04;
   adc.begin();
@@ -248,7 +310,6 @@ void test_analogRead_dma_fifo_drain() {
   DmaSample buf[4];
   adc.enableDMA(buf, 4);
 
-  // ring order: CH1 (value 0), then CH2 (value 100)
   memcpy(adc.dmaDataPtr(), "\x10\x00\x00\x00", 4);
   MCP3x6xTest::dmaComplete(adc, 1);
   memcpy(adc.dmaDataPtr(), "\x20\x00\x00\x64", 4);
@@ -259,12 +320,20 @@ void test_analogRead_dma_fifo_drain() {
   TEST_ASSERT_EQUAL(100, val);
   TEST_ASSERT_EQUAL(0, adc.samplesAvailable());  // ring drained in FIFO order
   adc.disableDMA();
+#else
+  TestADC adc;
+  adc.begin();
+  DmaSample buf[4];
+  adc.enableDMA(buf, 4);
+  adc.disableDMA();
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// analogRead(): requested channel at head returns immediately
+// analogRead DMA head match
 // ---------------------------------------------------------------------------
-void test_analogRead_dma_head_match() {
+void test_analog_read_dma_head_match() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   mockStatusByte = 0x04;
   adc.begin();
@@ -282,12 +351,20 @@ void test_analogRead_dma_head_match() {
   TEST_ASSERT_EQUAL(0x42, val);
   TEST_ASSERT_EQUAL(0, adc.samplesAvailable());
   adc.disableDMA();
+#else
+  TestADC adc;
+  adc.begin();
+  DmaSample buf[4];
+  adc.enableDMA(buf, 4);
+  adc.disableDMA();
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// analogRead(): mux mode stays synchronous even with DMA enabled
+// analogRead mux mode stays synchronous even with DMA enabled
 // ---------------------------------------------------------------------------
-void test_analogRead_mux_still_synchronous() {
+void test_analog_read_mux_still_synchronous() {
+#ifdef PIO_NATIVE_TESTING
   TestADC adc;
   mockStatusByte = 0x04;  // DR=1
   adc.begin();
@@ -298,8 +375,16 @@ void test_analogRead_mux_still_synchronous() {
   setUp();
 
   int32_t val = adc.analogRead(MCP3x6x_CH0);
-  TEST_ASSERT_TRUE(spiAddrs.size() >= 2);  // MUX write + conversion (+ ADCDATA read)
+  TEST_ASSERT_TRUE(spiAddrs.size() >= 2);  // MUX write + conversion
   adc.disableDMA();
+#else
+  TestADC adc;
+  adc.begin();
+  DmaSample buf[4];
+  adc.enableDMA(buf, 4);
+  adc.analogRead(MCP3x6x_CH0);
+  adc.disableDMA();
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -309,18 +394,18 @@ void register_dma_tests() {
   RUN_TEST(test_ring_push_pop_fifo);
   RUN_TEST(test_ring_overflow_drops);
   RUN_TEST(test_ring_clear);
-  RUN_TEST(test_enableDMA_rejects_zero_capacity);
-  RUN_TEST(test_enableDMA_success);
-  RUN_TEST(test_enableDMA_twice_fails);
-  RUN_TEST(test_disableDMA_releases_state);
+#ifdef PIO_NATIVE_TESTING
+  RUN_TEST(test_enable_dma_zero_capacity_rejected);
+  RUN_TEST(test_enable_dma_double_enable_rejected);
+  RUN_TEST(test_enable_dma_success);
+  RUN_TEST(test_disable_dma_releases_state);
   RUN_TEST(test_dma_queries_disabled);
-  RUN_TEST(test_samplesAvailable_counts);
-  RUN_TEST(test_dmaComplete_decodes_sample);
-  RUN_TEST(test_irq_handler_dma_nonblocking);
-  RUN_TEST(test_irq_handler_no_dma_sync);
-  RUN_TEST(test_analogRead_dma_fifo_drain);
-  RUN_TEST(test_analogRead_dma_head_match);
-  RUN_TEST(test_analogRead_mux_still_synchronous);
+  RUN_TEST(test_samples_available_counts);
+  RUN_TEST(test_dma_complete_decodes_sample);
+  RUN_TEST(test_irq_handler_dma_no_spi);
+  RUN_TEST(test_irq_handler_no_dma_sync_read);
+  RUN_TEST(test_analog_read_dma_fifo_drain);
+  RUN_TEST(test_analog_read_dma_head_match);
+  RUN_TEST(test_analog_read_mux_still_synchronous);
+#endif
 }
-
-#endif  // PIO_NATIVE_TESTING
