@@ -8,7 +8,7 @@
 # .kicad_pro (text_variables) and .kicad_pcb (title block date/rev),
 # so they appear on the rendered board image itself.
 #
-# Usage: ./scripts/run_kibot.sh   (run from repo root)
+# Usage: ./pcb/kibot.sh   (run from repo root)
 
 set -euo pipefail
 

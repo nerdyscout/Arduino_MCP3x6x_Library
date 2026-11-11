@@ -7,55 +7,72 @@ Arduino library for Microchip MCP346xR / MCP356xR 16/24-bit SAR analog-to-digita
 - MCP3461R / MCP3462R / MCP3464R (16-bit)
 - MCP3561R / MCP3562R / MCP3564R (24-bit)
 
-## Installation
+## Getting Started
 
-Use the Arduino Library Manager and search for **MCP3x6xR**, or clone this repository into your `libraries` folder:
+### Install PlatformIO
+
+Install [PlatformIO](https://platformio.org/), then clone the library:
 
 ```sh
-git clone https://github.com/nerdyscout/Arduino_MCP3x6x_Library.git \
-  ~/Arduino/libraries/MCP3x6xR
+git clone https://github.com/nerdyscout/Arduino_MCP3x6x_Library.git
+cd Arduino_MCP3x6x_Library
 ```
 
-## Quick example
+### Build examples
 
-```cpp
-#include "Arduino_MCP3x6x_Library.hpp"
+Build all examples for all environments:
 
-MCP3461 mcp;
-
-void setup() {
-  Serial.begin(115200);
-  mcp.begin();
-}
-
-void loop() {
-  int32_t raw  = mcp.analogRead(MCP3x6x_CH0);
-  double volt  = raw * mcp.getReference() / mcp.getMaxValue();
-  Serial.println(volt, 6);
-  delay(1000);
-}
+```sh
+./examples/build.sh
 ```
 
-More examples are in the `examples/` folder covering single-ended, differential, scan, and streaming modes.
+Build specific environments:
 
-## Breakout PCBs
+```sh
+./examples/build.sh ESP32 ATMEGA328P SAMD21G18A
+```
 
-Breakout PCBs for this project live in the `pcb/` folder, with KiCad sources for Adafruit, Arduino, and Sparkfun-style boards.
+Build only one example:
 
-| Board | Top | Bottom |
-| --- | --- | --- |
-| Adafruit Feather | ![Feather top](pcb/Adafruit/Feather_top.svg) | ![Feather bottom](pcb/Adafruit/Feather_bottom.svg) |
-| Arduino Uno | ![Uno top](pcb/Arduino/Uno_top.svg) | ![Uno bottom](pcb/Arduino/Uno_bottom.svg) |
-| Sparkfun ProMicro | ![ProMicro top](pcb/Sparkfun/ProMicro_top.svg) | ![ProMicro bottom](pcb/Sparkfun/ProMicro_bottom.svg) |
+```sh
+./examples/build.sh MCP3564_DMA
+```
+
+Upload a single example to your board:
+
+```sh
+./examples/upload.sh MCP3564_DMA ATMEGA328P
+```
+
+### Run tests
+
+Run the native unit tests (ArduinoFake + Unity, no hardware required):
+
+```sh
+pio test -e native
+```
+
+### Hardware testing
+
+Build and upload the hardware smoke test to a physical board:
+
+```sh
+pio test -e ATMEGA328P
+```
+
+Run hardware-in-the-loop SPI communication verification:
+
+```sh
+pio run -t test_hil_spi -e ATMEGA328P
+```
 
 ## Documentation
 
-Full API reference is generated with Doxygen and hosted at:
+- `pcb/README.md` — PCB fabrication (KiBot)
+- `examples/README.md` — Examples build and upload
+- `test/README.md` — Native, hardware, and HIL testing
+- `docs/` — Doxygen API reference (`doxygen Doxyfile`)
 
-https://nerdyscout.github.io/Arduino_MCP3x6x_Library/
+## Contributing
 
-Build locally with `doxygen Doxyfile`.
-
-## License
-
-MIT — see `LICENSES/`.
+See `pcb/README.md`, `examples/README.md`, and `test/README.md` for domain-specific guides. Submit changes via pull request against `develop`.

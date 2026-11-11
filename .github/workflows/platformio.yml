@@ -93,4 +93,4 @@ jobs:
         run: pip3 install kibot || pip3 install --break-system-packages kibot
 
       - name: Render and fabricate ${{ matrix.board }}
-        run: ./scripts/run_kibot.sh
+        run: ./pcb/kibot.sh
