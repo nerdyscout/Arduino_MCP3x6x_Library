@@ -38,46 +38,45 @@ pre-commit install
 Build every example for every environment:
 
 ```sh
-./scripts/build_examples_sh
+./examples/build.sh
 ```
 
 Build only specific environments:
 
 ```sh
-./scripts/build_examples_sh ESP32 SAMD21G18A
+./examples/build.sh ESP32 SAMD21G18A
 ```
 
 Build only a specific example (all environments):
 
 ```sh
-./scripts/build_examples_sh MCP3461_Mux_SingleEnded
+./examples/build.sh MCP3461_Mux_SingleEnded
 ```
 
-See `scripts/build_examples_sh` for full usage details.
+Build and upload a single example to a board:
+
+```sh
+./examples/upload.sh MCP3564_DMA ATMEGA328P
+
+# Or via PlatformIO custom target:
+pio run -t upload_MCP3564_DMA -e ATMEGA328P
+```
+
+See `examples/build.sh` and `examples/upload.sh` for full usage details.
 
 ## Running Tests
 
-### Native mock tests (CI matrix — no hardware)
+### Native mock tests (CI — no hardware)
 
-Run the full native unit test matrix across all 6 MCP variants via ArduinoFake + Unity:
+Run the native unit test suite via ArduinoFake + Unity:
 
 ```sh
-# Run all 6 variant environments
-pio test -c platformio_ci.ini \
-  -e native_MCP3461_ci \
-  -e native_MCP3462_ci \
-  -e native_MCP3464_ci \
-  -e native_MCP3561_ci \
-  -e native_MCP3562_ci \
-  -e native_MCP3564_ci
-
-# Run a single variant
-pio test -c platformio_ci.ini -e native_MCP3564_ci
+pio test -e native
 ```
 
-Each variant environment compiles and executes the same mock test suite with
-`-DTEST_ADC_TYPE=<variant>`, verifying chip-ID validation and per-variant
-register behavior.
+The native environment compiles and executes the same mock test suite for all
+6 MCP variants via `FOR_EACH_ADC` macro expansion, verifying chip-ID validation
+and per-variant register behavior.
 
 ### Hardware test (real board)
 
@@ -86,12 +85,11 @@ environment is `ATMEGA328P` (Arduino Nano); select the MCP variant with
 `-DTEST_ADC_TYPE=<variant>`:
 
 ```sh
-pio test -c platformio_ci.ini -e ATMEGA328P_ci
+pio test -e ATMEGA328P
 ```
 
-The hardware `setup()` runs `begin()`, register writes, and polling
-`analogRead(CH0..CH3)`, printing expected MOSI bytes to Serial at 115200 baud
-for oscilloscope correlation.
+The hardware `setup()` runs `runUnityTests()` which prints PASS/FAIL for every
+test to Serial at 115200 baud for oscilloscope correlation.
 
 ### Hardware-in-the-loop test (real board + Unity Serial readback)
 
@@ -105,9 +103,8 @@ pio run -t test_hil -e ATMEGA328P
 pio run -t test_hil -e ATMEGA328P --build-flags "-DTEST_ADC_TYPE=MCP3564"
 ```
 
-This builds, uploads, and monitors the hardware test via Serial. The hardware
-`setup()` executes `runUnityTests()` which prints PASS/FAIL for every test to
-Serial at 115200 baud. `pio test` parses the Unity output and reports results.
+This builds, uploads, and monitors the hardware test via Serial. `pio test`
+parses the Unity output and reports results.
 
 ### SPI communication test (real board + decoder.py readback)
 

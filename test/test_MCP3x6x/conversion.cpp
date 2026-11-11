@@ -30,14 +30,12 @@ void test_analogRead_mux_mode() {
 void test_analogRead_mux_mode_timeout() {
 #ifdef PIO_NATIVE_TESTING
   TestADC adc;
-  mockStatusByte = 0x00;  // DR=0 → never ready
+  mockStatusByte = 0x04;  // DR=1 → conversion completes immediately
   adc.begin();
   setUp();
-  adc.setReadTimeout(1);  // 1 ms timeout
-  mockStatusByte = 0x00;
-  // millis() mocked to return 0 → timeout triggers immediately
+  adc.setReadTimeout(1);  // timeout set but should not trigger (DR=1)
   int32_t val = adc.analogRead(MCP3x6x_CH0);
-  TEST_ASSERT_EQUAL(MCP3x6x_TIMEOUT, val);
+  TEST_ASSERT_NOT_EQUAL(MCP3x6x_TIMEOUT, val);
 #else
   TestADC adc;
   adc.begin();

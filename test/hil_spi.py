@@ -1,121 +1,17 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 nerdyscout
 #
-# platformio_extra_script.py — Custom PlatformIO targets for HIL testing.
-#
-# Adds two custom targets runnable on any environment:
-#   pio run -t test_hil -e <env>          # Build+upload+run Unity test on real hardware (Serial readback)
-#   pio run -t test_hil_spi -e <env>      # Same + SPI bus readback via decoder.py byte comparison
-#
-# Wire into platformio.ini [env] section:
-#   extra_scripts = platformio_extra_script.py
+# hil_spi.py — PlatformIO custom target: test_hil_spi
+# Build+upload+reset+SPI decoder readback+byte comparison on real hardware.
 
 Import("env")
+import json
 import os
 import subprocess
 import sys
-import time
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _run(cmd, debug=False):
-    """Run a command, streaming output. Return returncode."""
-    if debug:
-        print(f"[debug] $ {' '.join(cmd)}", file=sys.stderr)
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    except FileNotFoundError as exc:
-        print(f"ERROR: command not found: {cmd[0]} ({exc})", file=sys.stderr)
-        return 127
-    if debug:
-        if result.stdout:
-            print(result.stdout, end="")
-        if result.stderr:
-            print(result.stderr, end="", file=sys.stderr)
-    return result.returncode
-
-
-def _env_name(env):
-    return env.get("PIOENV", "ATMEGA328P")
-
-
-def _adc_type(env):
-    """Extract TEST_ADC_TYPE from build flags, default MCP3564."""
-    bflags = env.get("BUILD_FLAGS", [])
-    if isinstance(bflags, str):
-        bflags = bflags.split()
-    for f in bflags:
-        if f.startswith("-DTEST_ADC_TYPE="):
-            return f.split("=", 1)[1]
-    return "MCP3564"
-
-
-# ---------------------------------------------------------------------------
-# Target: test_hil
-#   Build + upload + run Unity test on real hardware via Serial monitor.
-#   Uses pio test which handles build+upload+monitor for hardware envs.
-# ---------------------------------------------------------------------------
-
-def target_test_hil(target, source, env):
-    env_name = _env_name(env)
-    ci_env = env_name + "_ci"
-    print(f"=== Test HIL: {ci_env} ===")
-
-    # pio test handles build+upload+monitor for hardware, parses Unity output
-    rc = _run(["pio", "test", "-c", "platformio_ci.ini", "-e", ci_env])
-    sys.exit(rc)
-
-
-# ---------------------------------------------------------------------------
-# Target: test_hil_spi
-#   Build + upload + reset + decoder.py configure/readback + byte comparison.
-# ---------------------------------------------------------------------------
-
-def _reset_board_via_dtr(debug=False):
-    """Toggle DTR on the single detected serial port to reset the board."""
-    import serial.tools.list_ports
-    ports = [p.device for p in serial.tools.list_ports.comports()]
-    if len(ports) == 0:
-        print("ERROR: no serial ports found for board reset", file=sys.stderr)
-        return False
-    if len(ports) > 1:
-        print(f"WARNING: multiple serial ports ({ports}), using first: {ports[0]}", file=sys.stderr)
-    port = ports[0]
-    try:
-        ser = serial.Serial(port, 115200, timeout=1)
-        ser.setDTR(False)
-        ser.close()
-        time.sleep(0.2)
-        ser = serial.Serial(port, 115200, timeout=1)
-        ser.setDTR(True)
-        ser.close()
-        time.sleep(0.5)
-        if debug:
-            print(f"[debug] DTR reset on {port}", file=sys.stderr)
-    except Exception as exc:
-        print(f"ERROR: failed to reset board on {port}: {exc}", file=sys.stderr)
-        return False
-    return True
-
-
-def _detect_scope_resource(debug=False):
-    """Auto-detect exactly one VISA resource for the oscilloscope."""
-    import pyvisa
-    try:
-        rm = pyvisa.ResourceManager()
-        resources = rm.list_resources()
-    except Exception as exc:
-        print(f"ERROR: cannot enumerate VISA resources: {exc}", file=sys.stderr)
-        return None
-    if len(resources) == 0:
-        print("ERROR: no VISA resources found; connect oscilloscope", file=sys.stderr)
-        return None
-    if len(resources) > 1:
-        print(f"ERROR: multiple VISA resources ({resources}); specify one", file=sys.stderr)
-        return None
-    return resources[0]
+sys.path.insert(0, 'test')
+from _shared import _run, _env_name, _adc_type, _reset_board_via_dtr, _detect_scope_resource  # noqa: E402
+from _shared import CHAN_CS, CHAN_SCLK, CHAN_MISO, CHAN_MOSI  # noqa: E402
 
 
 def target_test_hil_spi(target, source, env):
@@ -126,7 +22,7 @@ def target_test_hil_spi(target, source, env):
     print(f"=== Test HIL+SPI: {ci_env} / {adc_type} ===")
 
     # 1. Build+upload the test firmware (skip monitor, we use decoder.py instead)
-    rc = _run(["pio", "test", "-c", "platformio_ci.ini", "-e", ci_env, "--without-testing"])
+    rc = _run(["pio", "test", "-c", "platformio.ini", "-e", ci_env, "--without-testing"])
     if rc != 0:
         print("ERROR: build/upload failed", file=sys.stderr)
         sys.exit(rc)
@@ -146,12 +42,6 @@ def target_test_hil_spi(target, source, env):
     if not os.path.isfile(decoder):
         print(f"ERROR: decoder.py not found at {decoder} (set DECODER_PATH)", file=sys.stderr)
         sys.exit(1)
-
-    # Scope channel mapping (Nano: CS=10→CHAN1, SCK=13→CHAN3, MISO=12→CHAN2, MOSI=11→CHAN4)
-    CHAN_CS = "CHAN1"
-    CHAN_SCLK = "CHAN3"
-    CHAN_MISO = "CHAN2"
-    CHAN_MOSI = "CHAN4"
 
     # 4. decoder.py configure
     print("Configuring SPI decoder on scope ...")
@@ -182,7 +72,6 @@ def target_test_hil_spi(target, source, env):
         sys.exit(rc)
 
     # 6. Parse and compare decoded MOSI bytes
-    import json
     try:
         events = json.loads(stdout)
     except json.JSONDecodeError as exc:
@@ -255,18 +144,6 @@ def target_test_hil_spi(target, source, env):
     print("=== All steps passed. Exit 0. ===")
     sys.exit(0)
 
-
-# ---------------------------------------------------------------------------
-# Register custom targets
-# ---------------------------------------------------------------------------
-
-env.AddCustomTarget(
-    name="test_hil",
-    dependencies=None,
-    actions=target_test_hil,
-    title="Test HIL",
-    description="Build+upload+run Unity test on real hardware via Serial readback"
-)
 
 env.AddCustomTarget(
     name="test_hil_spi",

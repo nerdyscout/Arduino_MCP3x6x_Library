@@ -17,27 +17,30 @@ void test_instance_all_variants() {
 }
 
 // ---------------------------------------------------------------------------
-// begin() — success path for the current TestADC variant (POR=1 + correct HW_ID)
+// begin() — success path for all variants (POR=1 + correct HW_ID)
 // ---------------------------------------------------------------------------
 void test_begin_success_current_variant() {
 #ifdef PIO_NATIVE_TESTING
   // Expected chip-ID nibble per variant (from Linux driver mcp3564.c)
+  #define NIBBLE_MCP3461 0x8
+  #define NIBBLE_MCP3462 0x9
+  #define NIBBLE_MCP3464 0xB
+  #define NIBBLE_MCP3561 0xC
+  #define NIBBLE_MCP3562 0xD
+  #define NIBBLE_MCP3564 0xF
+
   uint8_t nibble = 0xFF;
-#if defined(TEST_ADC_TYPE)
-#  if TEST_ADC_TYPE == MCP3461
-    nibble = 0x8;
-#  elif TEST_ADC_TYPE == MCP3462
-    nibble = 0x9;
-#  elif TEST_ADC_TYPE == MCP3464
-    nibble = 0xB;
-#  elif TEST_ADC_TYPE == MCP3561
-    nibble = 0xC;
-#  elif TEST_ADC_TYPE == MCP3562
-    nibble = 0xD;
-#  elif TEST_ADC_TYPE == MCP3564
-    nibble = 0xF;
-#  endif
-#endif
+#define MAP_NIBBLE(V) \
+  if (std::is_same<TestADC, V>::value) nibble = NIBBLE_##V;
+  FOR_EACH_ADC(MAP_NIBBLE)
+#undef MAP_NIBBLE
+#undef NIBBLE_MCP3461
+#undef NIBBLE_MCP3462
+#undef NIBBLE_MCP3464
+#undef NIBBLE_MCP3561
+#undef NIBBLE_MCP3562
+#undef NIBBLE_MCP3564
+
   TEST_ASSERT_NOT_EQUAL(0xFF, nibble);  // variant must be recognized
 
   mockStatusByte   = 0x01;   // POR=1 → reset() succeeds

@@ -22,7 +22,7 @@ jobs:
         run: pip3 install platformio
 
       - name: Run unit tests
-        run: pio test -c platformio_ci.ini -e native_MCP3461_ci -e native_MCP3462_ci -e native_MCP3464_ci -e native_MCP3561_ci -e native_MCP3562_ci -e native_MCP3564_ci
+        run: pio test -e native
 
   examples:
     name: Build examples
@@ -39,7 +39,7 @@ jobs:
         run: pip3 install platformio
 
       - name: Build all examples
-        run: ./scripts/build_examples_sh ${{ matrix.env }}
+        run: ./examples/build.sh ${{ matrix.env }}
 
   detect-pcb-boards:
     name: Detect changed PCB boards
