@@ -3,10 +3,11 @@
 # build.sh — Build every example for every PlatformIO environment.
 #
 # Usage:
-#   ./build.sh                     # build all examples × all envs
-#   ./build.sh ESP32 SAMD21G18A     # build only these environments
-#   ./build.sh MCP3564_Mux_SingleEnded  # build only this example (all envs)
+#   ./build.sh                              # build all examples × all envs
+#   ./build.sh ESP32 SAMD21G18A             # build only these environments
+#   ./build.sh MCP3564_Mux_SingleEnded      # build only this example (all envs)
 #   ./build.sh ESP32 MCP3564_Mux_SingleEnded  # mixed: envs then examples
+#   ./build.sh --upload <example> [env]     # build+upload one example
 #
 # The script auto-discovers:
 #   * environments from [env:NAME] sections in platformio.ini
@@ -17,17 +18,16 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC_DIR="${ROOT_DIR}/../src"
-EXAMPLES_DIR="${ROOT_DIR}"
-PLATFORMIO_INI="${ROOT_DIR}/../platformio.ini"
+EXAMPLES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "${EXAMPLES_DIR}/.." && pwd)"
+PLATFORMIO_INI="${REPO_DIR}/platformio.ini"
 TMP_ROOT="/tmp/opencode/mcp3x6x_builds"
 
 # ---------------------------------------------------------------------------
 # Discover environments from platformio.ini [env:NAME] sections
 # ---------------------------------------------------------------------------
 discover_envs() {
-    grep -E '^\[env:' "$PLATFORMIO_INI" | sed -E 's/^\[env:(.*)\]/\1/' | tr '\n' ' '
+    grep -E '^\[env:' "${PLATFORMIO_INI}" | sed -E 's/^\[env:(.*)\]/\1/' | tr '\n' ' '
 }
 
 # ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ discover_envs() {
 # ---------------------------------------------------------------------------
 discover_examples() {
     local dirs=()
-    for d in "$EXAMPLES_DIR"/*/; do
+    for d in "${EXAMPLES_DIR}"/*/; do
         dirs+=("$(basename "$d")")
     done
     printf '%s\n' "${dirs[@]}" | sort | tr '\n' ' '
@@ -53,11 +53,11 @@ build_one() {
     mkdir -p "$bdir/src"
 
     # Copy library sources + manifest files into scratch build dir
-    cp -r "$SRC_DIR" "$SRC_DIR/.."/library.json "$SRC_DIR/.."/library.properties "$SRC_DIR/.."/platformio.ini "$bdir/"
+    cp -r "${REPO_DIR}/src" "${REPO_DIR}/library.json" "${REPO_DIR}/library.properties" "${REPO_DIR}/platformio.ini" "$bdir/"
 
     # Copy example .ino files into scratch src/
     local ino_count=0
-    for f in "$EXAMPLES_DIR/$example"/*.ino; do
+    for f in "${EXAMPLES_DIR}/${example}"/*.ino; do
         [ -f "$f" ] || continue
         cp "$f" "$bdir/src/"
         ino_count=$((ino_count + 1))
@@ -78,26 +78,50 @@ build_one() {
         local status_line
         status_line=$(echo "$out" | grep -E '^\s+[0-9]+ failed' || echo "FAILED")
         echo "FAIL  [${env}] ${example}  ${status_line}"
-        # Save the full log for debugging
         echo "$out" > "${TMP_ROOT}/${env}_${example}.log"
         return 1
     fi
 }
 
 # ---------------------------------------------------------------------------
-# Main
+# Parse arguments
 # ---------------------------------------------------------------------------
+UPLOAD_EXAMPLE=""
+UPLOAD_ENV=""
 ENVS_REQUESTED=()
 EXAMPLES_REQUESTED=()
 
-for arg in "$@"; do
-    # Heuristic: if it matches an example dir name, treat as example; else env
-    if [ -d "${EXAMPLES_DIR}/${arg}" ]; then
+i=0
+while [ $i -lt $# ]; do
+    arg="${!i}"
+    if [ "$arg" = "--upload" ]; then
+        i=$((i + 1))
+        if [ $i -lt $# ]; then
+            UPLOAD_EXAMPLE="${!i}"
+        fi
+        i=$((i + 1))
+        if [ $i -lt $# ]; then
+            next="${!i}"
+            if [ "${next#-}" = "$next" ]; then
+                UPLOAD_ENV="$next"
+                i=$((i + 1))
+            fi
+        fi
+    elif [ -d "${EXAMPLES_DIR}/${arg}" ]; then
         EXAMPLES_REQUESTED+=("$arg")
+        i=$((i + 1))
     else
         ENVS_REQUESTED+=("$arg")
+        i=$((i + 1))
     fi
 done
+
+# Handle --upload mode
+if [ -n "${UPLOAD_EXAMPLE}" ]; then
+    echo "=== Upload example: ${UPLOAD_EXAMPLE} ==="
+    "${EXAMPLES_DIR}/upload.sh" "${UPLOAD_EXAMPLE}" "${UPLOAD_ENV}"
+    exit $?
+fi
 
 ALL_ENVS=$(discover_envs)
 ALL_EXAMPLES=$(discover_examples)
@@ -131,14 +155,12 @@ SKIP=0
 TOTAL=0
 
 for env in "${ENVS[@]}"; do
-    # Validate env exists
     if ! echo " $ALL_ENVS " | grep -q " $env "; then
         echo "WARNING: environment '${env}' not found in platformio.ini — skipping"
         continue
     fi
 
     for example in "${EXAMPLES[@]}"; do
-        # Validate example exists
         if [ ! -d "${EXAMPLES_DIR}/${example}" ]; then
             echo "WARNING: example '${example}' not found — skipping"
             continue

@@ -1,10 +1,10 @@
-name: PlatformIO CI
+name: PlatformIO
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -12,29 +12,85 @@ permissions:
 
 jobs:
   tests:
-    name: Run PlatformIO unit tests (native)
+    name: Run PlatformIO unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install PlatformIO
-        run: |
-          pip3 install platformio
+        run: pip3 install platformio
 
-      - name: Run unit tests (native env)
-        run: pio test -c platformio_ci.ini -e native_ci
+      - name: Run unit tests
+        run: pio test -e native
 
   examples:
-    name: Build all examples
+    name: Build examples
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [ESP32, ATMEGA328P, SAMD21G18A]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install PlatformIO
-        run: |
-          pip3 install platformio
+        run: pip3 install platformio
 
       - name: Build all examples
+        run: ./examples/build.sh ${{ matrix.env }}
+
+  detect-pcb-boards:
+    name: Detect changed PCB boards
+    runs-on: ubuntu-latest
+    outputs:
+      boards: ${{ steps.detect.outputs.boards }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - id: detect
+        name: Detect changed boards
         run: |
-          chmod +x examples/build.sh
-          ./examples/build.sh
+          if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+            CHANGED="$(git diff-tree --no-commit-id --name-only -r HEAD~1 HEAD -- pcb/ 2>/dev/null || true)"
+          else
+            CHANGED="$(git diff-tree --no-commit-id --name-only -r --root HEAD -- pcb/ 2>/dev/null || true)"
+          fi
+
+          BOARDS=()
+          for path in $CHANGED; do
+            case "$path" in
+              pcb/Adafruit/*) BOARDS+=("Feather") ;;
+              pcb/Arduino/*) BOARDS+=("Uno") ;;
+              pcb/Sparkfun/*) BOARDS+=("ProMicro") ;;
+            esac
+          done
+
+          JSON="$(printf '%s\n' "${BOARDS[@]}" | sort -u | jq -R . | jq -s .)"
+          if [ -z "$JSON" ] || [ "$JSON" = "[]" ]; then
+            JSON="[]"
+          fi
+
+          echo "boards=$JSON" >> $GITHUB_OUTPUT
+          echo "Changed boards: $JSON"
+
+  fabrication:
+    name: Fabrication renders & gerbers
+    needs: detect-pcb-boards
+    if: needs.detect-pcb-boards.outputs.boards != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJson(needs.detect-pcb-boards.outputs.boards) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install kibot
+        run: pip3 install kibot || pip3 install --break-system-packages kibot
+
+      - name: Render and fabricate ${{ matrix.board }}
+        run: ./pcb/kibot.sh

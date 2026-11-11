@@ -6,17 +6,37 @@
 
 #ifdef PIO_NATIVE_TESTING
   #include <ArduinoFake.h>
+// cppcheck-suppress syntaxError
 using namespace fakeit;
+  #include <unity.h>
+  #include <cstring>
+  #include <vector>
+
+  // ---------------------------------------------------------------------------
+  // SPI tracking (native mock mode only)
+  // ---------------------------------------------------------------------------
+  extern std::vector<uint8_t> spiAddrs;
+  extern std::vector<std::vector<uint8_t>> spiData;
+  extern uint8_t mockStatusByte;
+  extern uint8_t lastSpiAddress;
+  extern std::vector<uint8_t> mockReadSequence;
+
+  extern bool digitalWriteCalled;
+  extern uint8_t digitalWritePin;
+  extern uint8_t digitalWriteValue;
+
+  extern bool pinModeCalled;
+  extern uint8_t pinModePin;
+  extern uint8_t pinModeMode;
 #else
   #include <Arduino.h>
   #include <SPI.h>
+  #include <unity.h>
 #endif
 
-#include <unity.h>
-
-#include <algorithm>
-#include <cstring>
-#include <vector>
+#ifdef PIO_NATIVE_TESTING
+  #include <cstring>
+#endif
 
 #include "Arduino_MCP3x6x_Library.hpp"
 
@@ -35,23 +55,6 @@ using TestADC = TEST_ADC_TYPE;
 #endif
 
 // ---------------------------------------------------------------------------
-// SPI tracking (native only)
-// ---------------------------------------------------------------------------
-extern std::vector<uint8_t> spiAddrs;
-extern std::vector<std::vector<uint8_t>> spiData;
-extern uint8_t mockStatusByte;
-extern uint8_t lastSpiAddress;
-extern std::vector<uint8_t> mockReadSequence;
-
-extern bool digitalWriteCalled;
-extern uint8_t digitalWritePin;
-extern uint8_t digitalWriteValue;
-
-extern bool pinModeCalled;
-extern uint8_t pinModePin;
-extern uint8_t pinModeMode;
-
-// ---------------------------------------------------------------------------
 // Singleton ADC instance helpers (reused across tests)
 // ---------------------------------------------------------------------------
 template <typename T>
@@ -60,7 +63,7 @@ T* createADC() {
 }
 
 // ---------------------------------------------------------------------------
-// Friend struct for testing private members
+// Friend struct for testing private members (native only)
 // ---------------------------------------------------------------------------
 #ifdef PIO_NATIVE_TESTING
 struct MCP3x6xTest {
@@ -131,15 +134,15 @@ void test_begin() {
 }
 
 // ---------------------------------------------------------------------------
-// Registration function declarations
+// Registration function declarations (defined in tests.hpp)
 // ---------------------------------------------------------------------------
-void register_basic_tests();
+void register_init_tests();
 void register_config_tests();
-void register_analog_tests();
-void register_scan_mode_tests();
-void register_fastcmd_status_tests();
-void register_misc_tests();
+void register_conversion_tests();
+void register_status_tests();
 void register_dma_tests();
+void register_calibration_tests();
+void register_spi_tests();
 
 // ---------------------------------------------------------------------------
 // Uniform entry point

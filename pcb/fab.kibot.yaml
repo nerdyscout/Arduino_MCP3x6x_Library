@@ -1,0 +1,37 @@
+# KiBot config — fabrication outputs (gerbers, drill, bom, cpl/placement) for each breakout PCB.
+#
+# Output filenames use kibot native %f.%x (pcb basename + extension).
+# Gerbers/drill go into fab/ next to the board's .kicad_pcb file.
+#
+# Usage: kibot -b <board.kicad_pcb> -c pcb/fab.kibot.yaml -d <board_dir> <output_name>
+
+kibot:
+  version: 1
+globals:
+  use_os_env_for_expand: true
+outputs:
+  - name: gerber
+    type: gerber
+    dir: ./fab/
+    output: '%f.%x'
+  - name: drill
+    type: excellon
+    dir: ./fab/
+    output: '%f.%x'
+  - name: bom
+    type: bom
+    dir: ./fab/
+    output: '%f_bom.%x'
+  - name: position
+    type: position
+    dir: ./fab/
+    output: '%f_cpl.%x'
+  - name: compress
+    type: compress
+    dir: ./fab/
+    output: '%f_fab.zip'
+    include:
+      - gerber
+      - drill
+      - bom
+      - position

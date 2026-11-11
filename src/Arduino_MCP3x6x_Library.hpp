@@ -1103,7 +1103,12 @@ class MCP3x6x {
         _offset(MCP3x6x_CFG_OFFSET),
         _gain(MCP3x6x_CFG_GAIN),
         _lock(MCP3x6x_CFG_LOCK),
-        _crccfg(MCP3x6x_CFG_CRCCFG) {}
+        _crccfg(MCP3x6x_CFG_CRCCFG),
+        _status{}
+#ifdef ARDUINO_ARCH_SAMD
+        , _dmaSamdDescriptor{}
+#endif
+        {}
 
   /**
    * @brief Destroy the MCP3x6x object
@@ -1121,6 +1126,13 @@ class MCP3x6x {
   ////////////////////////////////////////////////////////////////////////////////
 
   // setup SPI
+  /**
+   * @brief initialize SPI and reset the ADC
+   *
+   * @return true on success, false if reset or chip ID validation failed
+   *
+   * @ingroup init
+   */
   bool begin() {
 #if defined(ARDUINO_ARCH_ESP32)  // init SPI of ESP32
     _spi->begin(_pinCS, _pinMISO, _pinMOSI, _pinCLK);
@@ -1157,6 +1169,9 @@ class MCP3x6x {
       return false;
     }
 
+    // Wait for reset to complete (matches Linux driver mcp3564_config: mdelay(1))
+    delay(20);
+
     // chip ID validation
     if (!_validateChipID()) {
       return false;
@@ -1169,9 +1184,11 @@ class MCP3x6x {
   }
 
   bool _validateChipID() {
-    uint8_t reserved_e = 0;
-    _transfer(&reserved_e, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_RESERVED3, sizeof(reserved_e));
-    uint8_t hw_id = reserved_e & 0x0F;
+    uint8_t reserved_e[2] = {0, 0};
+    _transfer(reserved_e, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_RESERVED3, sizeof(reserved_e));
+    // Read 16-bit value from RESERVED_E (matches Linux driver mcp3564_read_16bits),
+    // extract chip-ID nibble from low 4 bits of first byte (big-endian: byte[0] is high byte)
+    uint8_t hw_id = reserved_e[0] & 0x0F;
 
     uint8_t expected_id;
     if (_MAX_RESOLUTION == 16) {
@@ -1218,6 +1235,25 @@ class MCP3x6x {
    */
   void end() { _spi->end(); }
 
+  /**
+   * @brief write all configuration registers to device
+   *
+   * @param config0  ADC operating mode, bias, VREF selection
+   * @param config1  conversion mode, oversampling ratio, data format
+   * @param config2  gain, offset calibration settings
+   * @param config3  data format, channel ID, scan settings
+   * @param irq      IRQ configuration
+   * @param mux      channel multiplexer selection
+   * @param scan     channel scan settings
+   * @param timer    conversion timer settings
+   * @param offset   offset calibration value
+   * @param gain     gain calibration value
+   * @param lock     lock register
+   * @param crccfg   CRC configuration
+   * @return status_t
+   *
+   * @ingroup config
+   */
   void configure(Config0 config0, Config1 config1, Config2 config2, Config3 config3, Irq irq,
                  Mux mux, Scan scan, Timer timer, Offset offset, Gain gain, Lock lock,
                  Crccfg crccfg) {
@@ -1527,7 +1563,7 @@ class MCP3x6x {
    *
    * @ingroup status
    */
-  inline constexpr bool status_dr() { return !_status.dr; }
+  inline constexpr bool status_dr() { return _status.dr; }
 
   /**
    * @brief crccfg status of latest communication
@@ -1734,6 +1770,13 @@ class MCP3x6x {
   // read registers
   ////////////////////////////////////////////////////////////////////////////////
 
+  /**
+   * @brief read device status register
+   *
+   * @return byte raw status register contents
+   *
+   * @ingroup status
+   */
   inline byte status() { return _status.raw; }
 
   /**
@@ -2143,10 +2186,30 @@ class MCP3x6x {
     return write(_config1);
   }
 
+  /**
+   * @brief set oversampling ratio
+   *
+   * @param rate  Oversampling ratio (see osr enum)
+   * @return status_t
+   *
+   * @ingroup calibration
+   */
   status_t setOversamplingRatio(osr rate) { return setAveraging(rate); }
 
+  /**
+   * @brief set ADC resolution in bits
+   *
+   * @param bits  resolution in bits
+   * @note not applicable for fixed-resolution external ADC
+   */
   void setResolution(size_t bits) {}  // not applicable for fixed-resolution external ADC
 
+  /**
+   * @brief set analog read resolution in bits
+   *
+   * @param bits  resolution in bits
+   * @note not applicable for fixed-resolution external ADC
+   */
   void analogReadResolution(size_t bits) {}  // not applicable for fixed-resolution external ADC
 
   /**
@@ -2260,6 +2323,24 @@ class MCP3x6x {
     }
 
     return (int16_t)((int64_t)(V_uV - V_25_uV) * 100 / (int64_t)_tempSlope + 2500 + _tempOffset);
+  }
+
+  /**
+   * @brief read temperature sensor and return temperature in Celsius
+   *
+   * Saves the current MUX channel, switches to the temperature sensor,
+   * reads the temperature, then restores the previous MUX channel.
+   *
+   * @return double temperature in degrees Celsius
+   *
+   * @ingroup calibration
+   * @see readTemperature(), setTempOffset(), setTempSlope()
+   */
+  double getTemperature() {
+    Mux savedMux = _mux;
+    int16_t temp_cC = readTemperature();
+    _mux = savedMux;
+    return temp_cC / 100.0;
   }
 
   /**
@@ -2475,7 +2556,7 @@ class MCP3x6x {
         if (_readTimeout && (millis() - start) >= _readTimeout) {
           return MCP3x6x_TIMEOUT;
         }
-      } while (_status.dr);
+      } while (!_status.dr);
 
       _dataAvailable                                  = false;
       return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
@@ -2565,7 +2646,7 @@ class MCP3x6x {
       if (_readTimeout && (millis() - start) >= _readTimeout) {
         return MCP3x6x_TIMEOUT;
       }
-    } while (_status.dr);
+    } while (!_status.dr);
     return _result.raw[(uint8_t)_adcdata.channelid] = _adcdata.value;
   }
 };

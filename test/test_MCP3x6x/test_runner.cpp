@@ -2,15 +2,18 @@
 // Copyright (c) 2026 nerdyscout
 
 #include "test.h"
+#include "tests.hpp"
 
 // ---------------------------------------------------------------------------
-// SPI tracking definitions
+// SPI tracking definitions (native mock mode only)
 // ---------------------------------------------------------------------------
+#ifdef PIO_NATIVE_TESTING
 std::vector<uint8_t> spiAddrs;
 std::vector<std::vector<uint8_t>> spiData;
+std::vector<uint8_t> mockReadSequence;
+#endif
 uint8_t mockStatusByte = 0x00;
 uint8_t lastSpiAddress = 0x00;
-std::vector<uint8_t> mockReadSequence;
 
 bool digitalWriteCalled   = false;
 uint8_t digitalWritePin   = 0xFF;
@@ -79,9 +82,11 @@ void suiteSetUp(void) {
 int suiteTearDown(int num_failures) { return num_failures; }
 
 void setUp(void) {
+#ifdef PIO_NATIVE_TESTING
   spiAddrs.clear();
   spiData.clear();
   mockReadSequence.clear();
+#endif
   digitalWriteCalled = false;
   digitalWritePin    = 0xFF;
   digitalWriteValue  = 0xFF;
@@ -93,23 +98,24 @@ void setUp(void) {
 void tearDown(void) {}
 
 // ---------------------------------------------------------------------------
-// Run all tests
+// Run all tests — single point of truth for registration
 // ---------------------------------------------------------------------------
 int runUnityTests(void) {
   UNITY_BEGIN();
-  register_basic_tests();
+  register_init_tests();
   register_config_tests();
-  register_analog_tests();
-  register_scan_mode_tests();
-  register_fastcmd_status_tests();
-  register_misc_tests();
+  register_conversion_tests();
+  register_status_tests();
   register_dma_tests();
+  register_calibration_tests();
+  register_spi_tests();
   return UNITY_END();
 }
 
 // ---------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------
+
 #ifdef PIO_NATIVE_TESTING
 int main(int argc, char** argv) {
   suiteSetUp();
@@ -117,14 +123,40 @@ int main(int argc, char** argv) {
   return suiteTearDown(result);
 }
 #else
-void loop(void) {}
+// ---------------------------------------------------------------------------
+// Hardware-only mode — runs on selected board via PlatformIO test build.
+// Select the MCP variant with -DTEST_ADC_TYPE=<variant>.
+// Prints PASS/FAIL to Serial at 115200 baud for oscilloscope correlation.
+// ---------------------------------------------------------------------------
+
+static TestADC mcp;
+
+static void printStatus(const char* where) {
+  Serial.print(where);
+  Serial.print(": DR=");
+  Serial.print(mcp.status_dr());
+  Serial.print(" CRCCFG=");
+  Serial.print(mcp.status_crccfg());
+  Serial.print(" POR=");
+  Serial.print(mcp.status_por());
+  Serial.print(" ADDR=");
+  Serial.println(mcp.getDeviceAddress());
+}
+
 void setup(void) {
-  #if defined(USB_VID) && defined(USB_PID)
-  while (!Serial) {
-  }
-  #else
+#if defined(USB_VID) && defined(USB_PID)
+  while (!Serial);
+#else
   delay(2000);
-  #endif
+#endif
+  Serial.begin(115200);
+  while (!Serial);
+  Serial.println(__FILE__);
   runUnityTests();
+}
+
+void loop(void) {
+  printStatus("status");
+  delay(1000);
 }
 #endif
