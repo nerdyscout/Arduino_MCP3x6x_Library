@@ -1,0 +1,55 @@
+name: KiCad Fabrication
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'pcb/**/*.kicad_*'
+
+jobs:
+  detect-pcb-boards:
+    name: Detect changed PCB boards
+    runs-on: ubuntu-latest
+    outputs:
+      boards: ${{ steps.detect.outputs.boards }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - id: detect
+        name: Detect changed boards
+        run: |
+          BOARDS=()
+          for path in ${{ github.event.paths }}; do
+            case "$path" in
+              pcb/Adafruit/*) BOARDS+=("Feather") ;;
+              pcb/Arduino/*) BOARDS+=("Uno") ;;
+              pcb/Sparkfun/*) BOARDS+=("ProMicro") ;;
+            esac
+          done
+
+          JSON="$(printf '%s\n' "${BOARDS[@]}" | sort -u | jq -R . | jq -c -s .)"
+          if [ -z "$JSON" ] || [ "$JSON" = "[]" ]; then
+            JSON="[]"
+          fi
+
+          echo "boards=$JSON" >> $GITHUB_OUTPUT
+          echo "Changed boards: $JSON"
+
+  fabrication:
+    name: Fabrication renders & gerbers
+    needs: detect-pcb-boards
+    if: needs.detect-pcb-boards.outputs.boards != '[]'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/inti-cmnb/kicad10_auto_full
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJson(needs.detect-pcb-boards.outputs.boards) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Render and fabricate ${{ matrix.board }}
+        run: ./pcb/kibot.sh
