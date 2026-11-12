@@ -12,12 +12,22 @@
 # Examples:
 #   ./upload.sh MCP3564_DMA             # build+upload to default env (ATMEGA328P)
 #   ./upload.sh MCP3564_DMA SAMD21G18A  # build+upload to SAMD21
+#
+# Upload logs are written to logs/upload_<example>_<env>.log for analysis.
+#
 
 set -euo pipefail
 
 EXAMPLES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${EXAMPLES_DIR}/.." && pwd)"
 PLATFORMIO_INI="${REPO_DIR}/platformio.ini"
+LOGS_DIR="${REPO_DIR}/logs"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+now() { date '+%Y-%m-%d %H:%M:%S'; }
+log() { echo "[$(now)] $*"; }
 
 # ---------------------------------------------------------------------------
 # Discover environments from platformio.ini
@@ -31,8 +41,10 @@ discover_envs() {
 # ---------------------------------------------------------------------------
 if [ $# -lt 1 ]; then
     echo "Usage: $0 <example> [env]" >&2
-    echo "Available examples: $(ls -1d "${EXAMPLES_DIR}"/*/ | xargs -n1 basename | tr '\n' ' ')" >&2
-    echo "Available environments: $(discover_envs)" >&2
+    echo "Available examples:" >&2
+    ls -1d "${EXAMPLES_DIR}"/*/ | xargs -n1 basename | sed 's/^/\t/' >&2
+    echo "Available environments:" >&2
+    printf '\t%s\n' $(discover_envs) >&2
     exit 1
 fi
 
@@ -52,7 +64,8 @@ fi
 # Validate example
 if [ ! -d "${EXAMPLES_DIR}/${EXAMPLE}" ]; then
     echo "ERROR: example not found: ${EXAMPLE}" >&2
-    echo "Available examples: $(ls -1d "${EXAMPLES_DIR}"/*/ | xargs -n1 basename | tr '\n' ' ')" >&2
+    echo "Available examples:" >&2
+    ls -1d "${EXAMPLES_DIR}"/*/ | xargs -n1 basename | sed 's/^/\t/' >&2
     exit 1
 fi
 
@@ -67,7 +80,8 @@ fi
 AVAILABLE_ENVS="$(discover_envs)"
 if ! echo " ${AVAILABLE_ENVS} " | grep -q " ${ENV} "; then
     echo "ERROR: environment not found: ${ENV}" >&2
-    echo "Available environments: ${AVAILABLE_ENVS}" >&2
+    echo "Available environments:" >&2
+    printf '\t%s\n' ${AVAILABLE_ENVS} >&2
     exit 1
 fi
 
@@ -89,11 +103,24 @@ ln -sf "${INO_FILE}" "${SYMLINK}"
 # Ensure symlink is removed on exit
 trap 'rm -f "${SYMLINK}"' EXIT
 
-echo "Uploading example: ${EXAMPLE} to env: ${ENV}"
-echo "Symlink: src/${INO_BASENAME} -> ${INO_FILE}"
+mkdir -p "$LOGS_DIR"
+LOGFILE="${LOGS_DIR}/upload_${EXAMPLE}_${ENV}.log"
+
+log "Uploading example: ${EXAMPLE} to env: ${ENV}"
+log "Symlink: src/${INO_BASENAME} -> ${INO_FILE}"
+log "Log file: ${LOGFILE}"
+log ">>> PLATFORMIO_EXTRA_SCRIPTS= pio run -c ${PLATFORMIO_INI} -e ${ENV} --target upload"
 
 # Run pio run from repo root
 # Override extra_scripts to empty (examples don't need HIL scripts)
-PLATFORMIO_EXTRA_SCRIPTS= pio run -c "${PLATFORMIO_INI}" -e "${ENV}" --target upload
+set +e
+PLATFORMIO_EXTRA_SCRIPTS= pio run -c "${PLATFORMIO_INI}" -e "${ENV}" --target upload 2>&1 | tee "$LOGFILE"
+upload_status=$?
+set -e
 
-echo "=== Upload complete: ${EXAMPLE} ==="
+if [ "$upload_status" -eq 0 ]; then
+    log "=== Upload complete: ${EXAMPLE} ==="
+else
+    log "=== Upload FAILED: ${EXAMPLE} (exit ${upload_status}) ==="
+    exit "$upload_status"
+fi

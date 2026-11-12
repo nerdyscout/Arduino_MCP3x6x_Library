@@ -1,48 +1,74 @@
-name: PlatformIO
+name: PlatformIO Build Matrix
 
 on:
   push:
-    branches: [main, develop]
-    paths:
-      - 'src/**'
-      - 'test/**'
-      - 'examples/**'
-      - 'platformio.ini'
+    branches: [ main, develop ]
   pull_request:
-    branches: [main, develop]
-  workflow_dispatch:
+    branches: [ main, develop ]
 
-permissions:
-  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  tests:
-    name: Run PlatformIO unit tests
+  discover:
     runs-on: ubuntu-latest
+    outputs:
+      envs: ${{ steps.discover.outputs.envs }}
+      examples: ${{ steps.discover.outputs.examples }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install PlatformIO
-        run: pip3 install platformio
-
-      - name: Run unit tests
-        run: pio test -e native
-
-  examples:
-    name: Build examples
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install PlatformIO
-        run: pip3 install platformio
-
-      - name: Build all examples for all environments
+      - id: discover
+        name: Discover environments and examples
         run: |
-          ENVS=$(grep -E '^\[env:' platformio.ini | sed -E 's/^\[env:(.*)\]/\1/' | tr '\n' ' ')
-          for env in $ENVS; do
-            echo "Building examples for environment: $env"
-            ./examples/build.sh "$env"
-          done
+          ENVS_JSON=$(grep -E '^\[env:' platformio.ini | sed -E 's/^\[env:(.*)\]/\1/' \
+            | awk 'BEGIN{ORS=""} {printf "%s\"%s\"", (NR>1?",":""), $0} END{printf ""}')
+          echo "envs=[${ENVS_JSON}]" >> "$GITHUB_OUTPUT"
+
+          EXAMPLES_JSON=$(ls -1d examples/*/ | xargs -n1 basename \
+            | awk 'BEGIN{ORS=""} {printf "%s\"%s\"", (NR>1?",":""), $0} END{printf ""}')
+          echo "examples=[${EXAMPLES_JSON}]" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        env: ${{ fromJSON(needs.discover.outputs.envs) }}
+        example: ${{ fromJSON(needs.discover.outputs.examples) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        id: cache-pio
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+
+      - name: Install PlatformIO Core
+        run: |
+          python3 -m pip install --upgrade platformio
+          echo "$HOME/.platformio/penv/bin" >> $GITHUB_PATH
+
+      - name: Build example ${{ matrix.example }} for ${{ matrix.env }}
+        run: ./examples/build.sh ${{ matrix.env }} ${{ matrix.example }}
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ matrix.env }}-${{ matrix.example }}
+          path: /tmp/opencode/mcp3x6x_builds/${{ matrix.env }}_${{ matrix.example }}.log

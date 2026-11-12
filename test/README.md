@@ -1,14 +1,14 @@
 # Testing
 
-## Native mock tests (CI — no hardware)
+## Mocked unit tests (CI — no hardware)
 
-Run the native unit test suite via ArduinoFake + Unity:
+Run the mocked unit test suite via ArduinoFake + Unity:
 
 ```sh
-pio test -e native
+pio test -e mocked
 ```
 
-The native environment compiles and executes the same mock test suite for all
+The mocked environment compiles and executes the same mock test suite for all
 6 MCP variants via `FOR_EACH_ADC` macro expansion, verifying chip-ID validation
 and per-variant register behavior.
 

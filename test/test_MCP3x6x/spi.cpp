@@ -7,7 +7,7 @@
 // CMD_* macro values
 // ---------------------------------------------------------------------------
 void test_cmd_macro_values() {
-#ifdef PIO_NATIVE_TESTING
+#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(0x68, MCP3x6x_CMD_CONVERSION);
   TEST_ASSERT_EQUAL_HEX8(0x6C, MCP3x6x_CMD_STANDBY);
   TEST_ASSERT_EQUAL_HEX8(0x70, MCP3x6x_CMD_SHUTDOWN);
@@ -17,7 +17,7 @@ void test_cmd_macro_values() {
   TEST_ASSERT_EQUAL_HEX8(0x43, MCP3x6x_CMD_IREAD);
   TEST_ASSERT_EQUAL_HEX8(0x42, MCP3x6x_CMD_IWRITE);
 #else
-  // Macro values verified by native.
+  // Macro values verified by mocked.
 #endif
 }
 
@@ -25,7 +25,7 @@ void test_cmd_macro_values() {
 // ADR_* macro values
 // ---------------------------------------------------------------------------
 void test_adr_macro_values() {
-#ifdef PIO_NATIVE_TESTING
+#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_SPI_ADR | (0x0 << 2), MCP3x6x_ADR_ADCDATA);
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_SPI_ADR | (0x1 << 2), MCP3x6x_ADR_CONFIG0);
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_SPI_ADR | (0x2 << 2), MCP3x6x_ADR_CONFIG1);
@@ -40,7 +40,7 @@ void test_adr_macro_values() {
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_SPI_ADR | (0xD << 2), MCP3x6x_ADR_LOCK);
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_SPI_ADR | (0xF << 2), MCP3x6x_ADR_CRCCFG);
 #else
-  // Macro values verified by native.
+  // Macro values verified by mocked.
 #endif
 }
 
@@ -48,7 +48,7 @@ void test_adr_macro_values() {
 // CFG_* default values
 // ---------------------------------------------------------------------------
 void test_cfg_default_values() {
-#ifdef PIO_NATIVE_TESTING
+#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL(0xC0, MCP3x6x_CFG_CONFIG0);
   TEST_ASSERT_EQUAL(0x0C, MCP3x6x_CFG_CONFIG1);
   TEST_ASSERT_EQUAL(0x8B, MCP3x6x_CFG_CONFIG2);
@@ -57,7 +57,7 @@ void test_cfg_default_values() {
   TEST_ASSERT_EQUAL(0x08, MCP3x6x_CFG_MUX);
   TEST_ASSERT_EQUAL(0xA5, MCP3x6x_CFG_LOCK);
 #else
-  // Config defaults verified by native.
+  // Config defaults verified by mocked.
 #endif
 }
 
@@ -65,7 +65,7 @@ void test_cfg_default_values() {
 // Channel macro values
 // ---------------------------------------------------------------------------
 void test_channel_macro_values() {
-#ifdef PIO_NATIVE_TESTING
+#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(0x08, MCP3x6x_CH0);
   TEST_ASSERT_EQUAL_HEX8(0x18, MCP3x6x_CH1);
   TEST_ASSERT_EQUAL_HEX8(0x28, MCP3x6x_CH2);
@@ -83,7 +83,7 @@ void test_channel_macro_values() {
   TEST_ASSERT_EQUAL_HEX8(0xF8, MCP3x6x_VCM);
   TEST_ASSERT_EQUAL_HEX8(0x88, MCP3x6x_OFFSET);
 #else
-  // Channel macros verified by native.
+  // Channel macros verified by mocked.
 #endif
 }
 
@@ -91,7 +91,7 @@ void test_channel_macro_values() {
 // Enum values match datasheet bit patterns
 // ---------------------------------------------------------------------------
 void test_enum_values_all() {
-#ifdef PIO_NATIVE_TESTING
+#ifdef PIO_MOCKED_TESTING
   // adc_mode
   TEST_ASSERT_EQUAL(3, (uint8_t)TestADC::CONVERSION);
   TEST_ASSERT_EQUAL(2, (uint8_t)TestADC::STANDBY);
@@ -118,7 +118,7 @@ void test_enum_values_all() {
   TEST_ASSERT_EQUAL(0, (uint8_t)TestADC::MUX_CH0);
   TEST_ASSERT_EQUAL(15, (uint8_t)TestADC::MUX_VCM);
 #else
-  // Enum values verified by native.
+  // Enum values verified by mocked.
 #endif
 }
 
@@ -126,11 +126,9 @@ void test_enum_values_all() {
 // Registration
 // ---------------------------------------------------------------------------
 void register_spi_tests() {
-#ifdef PIO_NATIVE_TESTING
   RUN_TEST(test_cmd_macro_values);
   RUN_TEST(test_adr_macro_values);
   RUN_TEST(test_cfg_default_values);
   RUN_TEST(test_channel_macro_values);
   RUN_TEST(test_enum_values_all);
-#endif
 }

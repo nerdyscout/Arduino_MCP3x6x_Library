@@ -1,0 +1,38 @@
+{
+  "name": "PlatformIO MCP3x6x",
+  "build": {
+    "dockerfile": "Containerfile",
+    "context": "platformio"
+  },
+  "runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "platformio.platformio-ide",
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake",
+        "xaver.clang-format"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "xaver.clang-format",
+        "clang-format.executable": "/usr/bin/clang-format",
+        "cpp.check.configurations": [
+          {
+            "name": "default",
+            "checkerPath": "/usr/bin/cppcheck",
+            "includePath": [],
+            "defines": [],
+            "standard": "cpp17"
+          }
+        ]
+      }
+    }
+  },
+  "remoteUser": "vscode"
+}

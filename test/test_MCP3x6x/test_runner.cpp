@@ -5,9 +5,9 @@
 #include "tests.hpp"
 
 // ---------------------------------------------------------------------------
-// SPI tracking definitions (native mock mode only)
+// SPI tracking definitions (mocked mode only)
 // ---------------------------------------------------------------------------
-#ifdef PIO_NATIVE_TESTING
+#ifdef PIO_MOCKED_TESTING
 std::vector<uint8_t> spiAddrs;
 std::vector<std::vector<uint8_t>> spiData;
 std::vector<uint8_t> mockReadSequence;
@@ -15,19 +15,19 @@ std::vector<uint8_t> mockReadSequence;
 uint8_t mockStatusByte = 0x00;
 uint8_t lastSpiAddress = 0x00;
 
-bool digitalWriteCalled   = false;
-uint8_t digitalWritePin   = 0xFF;
+bool digitalWriteCalled = false;
+uint8_t digitalWritePin = 0xFF;
 uint8_t digitalWriteValue = 0xFF;
 
-bool pinModeCalled        = false;
-uint8_t pinModePin        = 0xFF;
-uint8_t pinModeMode       = 0xFF;
+bool pinModeCalled = false;
+uint8_t pinModePin = 0xFF;
+uint8_t pinModeMode = 0xFF;
 
 // ---------------------------------------------------------------------------
 // suiteSetUp / setUp / tearDown
 // ---------------------------------------------------------------------------
 void suiteSetUp(void) {
-#ifdef PIO_NATIVE_TESTING
+#ifdef PIO_MOCKED_TESTING
   ArduinoFakeReset();
 
   // Mock global Arduino functions
@@ -48,54 +48,57 @@ void suiteSetUp(void) {
   When(OverloadedMethod(ArduinoFake(SPI), endTransaction, void(void))).AlwaysReturn();
 
   When(OverloadedMethod(ArduinoFake(SPI), transfer, byte(uint8_t)))
-      .AlwaysDo([](uint8_t addr) -> byte {
-        lastSpiAddress = addr;
-        spiAddrs.push_back(addr);
-        return mockStatusByte;
-      });
+    .AlwaysDo([](uint8_t addr) -> byte {
+      lastSpiAddress = addr;
+      spiAddrs.push_back(addr);
+      return mockStatusByte;
+    });
 
   When(OverloadedMethod(ArduinoFake(SPI), transfer, void(void*, size_t)))
-      .AlwaysDo([](void* data, size_t size) {
-        std::vector<uint8_t> bytes(size);
-        std::memcpy(bytes.data(), data, size);
-        spiData.push_back(bytes);
+    .AlwaysDo([](void* data, size_t size) {
+      std::vector<uint8_t> bytes(size);
+      std::memcpy(bytes.data(), data, size);
+      spiData.push_back(bytes);
 
-        if ((lastSpiAddress & 0x01) && size > 0) {
-          if (!mockReadSequence.empty()) {
-            size_t n = size < mockReadSequence.size() ? size : mockReadSequence.size();
-            std::memcpy(data, mockReadSequence.data(), n);
-            mockReadSequence.erase(mockReadSequence.begin(), mockReadSequence.begin() + n);
-          } else {
-            uint8_t reg = (lastSpiAddress >> 2) & 0x0F;
-            std::memset(data, 0x00, size);
-            if (reg == 0x0E) {
-              ((uint8_t*)data)[0] = 0x08;  // MCP3461 HW_ID (TestADC default)
-            } else if (reg == 0x0C) {
-              ((uint8_t*)data)[0] = 0x30;  // R-variant
-            }
+      if ((lastSpiAddress & 0x01) && size > 0) {
+        if (!mockReadSequence.empty()) {
+          size_t n = size < mockReadSequence.size() ? size : mockReadSequence.size();
+          std::memcpy(data, mockReadSequence.data(), n);
+          mockReadSequence.erase(mockReadSequence.begin(), mockReadSequence.begin() + n);
+        } else {
+          uint8_t reg = (lastSpiAddress >> 2) & 0x0F;
+          std::memset(data, 0x00, size);
+          if (reg == 0x0E) {
+            ((uint8_t*)data)[0] = 0x08;  // MCP3461 HW_ID (TestADC default)
+          } else if (reg == 0x0C) {
+            ((uint8_t*)data)[0] = 0x30;  // R-variant
           }
         }
-      });
+      }
+    });
 #endif
 }
 
-int suiteTearDown(int num_failures) { return num_failures; }
+int suiteTearDown(int num_failures) {
+  return num_failures;
+}
 
 void setUp(void) {
-#ifdef PIO_NATIVE_TESTING
+#ifdef PIO_MOCKED_TESTING
   spiAddrs.clear();
   spiData.clear();
   mockReadSequence.clear();
 #endif
   digitalWriteCalled = false;
-  digitalWritePin    = 0xFF;
-  digitalWriteValue  = 0xFF;
-  pinModeCalled      = false;
-  pinModePin         = 0xFF;
-  pinModeMode        = 0xFF;
+  digitalWritePin = 0xFF;
+  digitalWriteValue = 0xFF;
+  pinModeCalled = false;
+  pinModePin = 0xFF;
+  pinModeMode = 0xFF;
 }
 
-void tearDown(void) {}
+void tearDown(void) {
+}
 
 // ---------------------------------------------------------------------------
 // Run all tests — single point of truth for registration
@@ -116,7 +119,7 @@ int runUnityTests(void) {
 // Entry points
 // ---------------------------------------------------------------------------
 
-#ifdef PIO_NATIVE_TESTING
+#ifdef PIO_MOCKED_TESTING
 int main(int argc, char** argv) {
   suiteSetUp();
   int result = runUnityTests();
@@ -145,18 +148,19 @@ static void printStatus(const char* where) {
 
 void setup(void) {
 #if defined(USB_VID) && defined(USB_PID)
-  while (!Serial);
+  while (!Serial)
+    ;
 #else
   delay(2000);
 #endif
   Serial.begin(115200);
-  while (!Serial);
+  while (!Serial)
+    ;
   Serial.println(__FILE__);
   runUnityTests();
 }
 
 void loop(void) {
-  printStatus("status");
-  delay(1000);
+  // Tests already executed in setup(); keep alive for serial monitor
 }
 #endif
