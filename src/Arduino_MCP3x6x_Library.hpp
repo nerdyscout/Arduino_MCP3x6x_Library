@@ -3,7 +3,7 @@
 
 /**
  * @file Arduino_MCP3x6x_Library.hpp
- * @author nerdyscout (stefan.herold@posteo.de)
+ * @author nerdyscout (nerdyscout@posteo.de)
  * @brief Library to support Microchip MCP3x6x/R 16/24bit ADCs
  * @version 0.2.0
  * @date 2026-03-23
