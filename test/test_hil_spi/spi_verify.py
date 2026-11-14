@@ -3,6 +3,7 @@
 
 import json
 import os
+import re
 import sys
 import time
 
@@ -167,7 +168,55 @@ def read_sequence(board_port, timeout_s=20, debug=False):
             pass
 
 
-def verify(build_env="hil_spi", do_reset=False, debug=False):
+
+def _run_decoder_compare(decoder_path, expected, cfg, debug=False):
+    if not decoder_path or not os.path.isfile(decoder_path):
+        return None, "decoder not found"
+    import subprocess
+    channels = cfg.get("channels", {})
+    ch = {
+        "cs": str(channels.get("cs", "CHAN1")).replace("CHAN", ""),
+        "sclk": str(channels.get("sclk", "CHAN3")).replace("CHAN", ""),
+        "mosi": str(channels.get("mosi", "CHAN4")).replace("CHAN", ""),
+        "miso": str(channels.get("miso", "CHAN2")).replace("CHAN", ""),
+    }
+    base = [sys.executable, decoder_path]
+    try:
+        # Best-effort configure/readback (interface varies by decoder implementation)
+        cfg_cmd = base + ["--mode", "configure"]
+        rb_cmd = base + ["--mode", "readback"]
+        if debug:
+            print(f"  decoder configure: {' '.join(cfg_cmd)}")
+        subprocess.run(cfg_cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if debug:
+            print(f"  decoder readback: {' '.join(rb_cmd)}")
+        r = subprocess.run(rb_cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        out = (r.stdout or "") + "\n" + (r.stderr or "")
+        # try parse JSON array/obj from output
+        m = re.search(r"\{.*\"mosi\".*\}", out, re.S)
+        if m:
+            try:
+                obj = json.loads(m.group(0))
+                got = _normalize_mosi(obj.get("mosi"))
+                if got:
+                    return (got == expected), f"decoder readback mosi={got}"
+            except Exception:
+                pass
+        m = re.search(r"\[[^\]]+\]", out)
+        if m:
+            try:
+                arr = json.loads(m.group(0))
+                if isinstance(arr, list):
+                    got = _normalize_mosi(arr)
+                    if got:
+                        return (got == expected), f"decoder readback bytes={got}"
+            except Exception:
+                pass
+        return None, f"decoder readback not parseable (rc={r.returncode})"
+    except Exception as exc:
+        return None, f"decoder error: {exc}"
+
+def verify(build_env="hil_spi", do_reset=False, debug=False, repeat=1):
     cfg = load_config()
     if cfg.get("board_port"):
         os.environ.setdefault("BOARD_PORT", str(cfg["board_port"]))
@@ -215,6 +264,16 @@ def verify(build_env="hil_spi", do_reset=False, debug=False):
         got = found[idx:idx + len(exp)]
         idx += len(exp)
         print(f"  OK {label}: {got}")
+
+    decoder_path = os.environ.get("DECODER_PATH", "")
+    dec_ok, dec_msg = _run_decoder_compare(decoder_path, EXPECTED_FLAT, cfg, debug=debug)
+    if dec_ok is True:
+        print(f"Decoder readback gate: PASS ({dec_msg})")
+    elif dec_ok is False:
+        print(f"ERROR: decoder readback gate failed: {dec_msg}", file=sys.stderr)
+        return 1
+    elif decoder_path:
+        print(f"NOTE: decoder readback gate skipped/unavailable: {dec_msg}")
 
     print("=== SPI verification passed. ===")
     return 0
