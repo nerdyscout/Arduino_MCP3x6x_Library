@@ -119,12 +119,11 @@ Builds/uploads/runs the Unity HIL suite in `test/test_hil/` on the selected hard
 # Full build+upload+verify (includes pin-probe for channel mapping)
 pio run -t test_hil_spi -e ATMEGA328P
 
-# Fast verify on an already-flashed/running board (skips pin-probe)
-pio test -e hil_spi
-# or: python3 test/test_hil_spi/verify_cmd.py
+# Fast verify on an already-flashed/running board (authoritative gate)
+python3 test/test_hil_spi/verify_cmd.py
 ```
 
-Verifies SPI fast commands issued via the library instance against the testcase-emitted serial JSON sequence, using reusable scope settings from `test/hil_spi_config.json`. See `test/README.md` for the full testing guide (tiers, config, env vars).
+Host-paced verification proves fast-command MOSI+MISO by reading true on-bus bytes from the Rigol DS1000Z internal decoder (`:ETABle1:DATA?`) under one fixed scope/decoder setting (config in `test/hil_spi_config.json`); firmware serial JSON is diagnostic. `pio test -e hil_spi` may report `ERRORED`/`SIGHUP` with the custom command—treat `verify_cmd.py` / the custom target exit as authoritative. See `test/README.md` for tiers, config, and env vars.
 
 ## PCB fabrication
 
