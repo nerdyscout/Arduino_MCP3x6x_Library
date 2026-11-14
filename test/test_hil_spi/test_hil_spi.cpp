@@ -118,5 +118,5 @@ void loop(void) {
   Serial.println(F("],\"miso\":[]}"));
   Serial.println(F("SCOPE_END"));
   gCmdIndex = (uint8_t)((gCmdIndex + 1) % 5);
-  delay(400);
+  delay(600);
 }

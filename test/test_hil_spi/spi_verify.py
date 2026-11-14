@@ -197,98 +197,252 @@ def _find_decoder_script():
     return ""
 
 
-def _decoder_run(decoder_path, mode, cfg, timeout_s=12, debug=False):
-    import subprocess
+def _read_etable_pair(scope):
+    """Read one decoded (mosi,miso) pair from Rigol internal decoder ETABle."""
+    # Import lazily so verify can still run basic checks without scripts on path issues
+    try:
+        sys.path.insert(0, os.path.join(os.getcwd(), "scripts"))
+        from decoder import _parse_tmc_block, _etable_hex_payload, _extract_from_etable_text  # type: ignore
+    except Exception:
+        return [], []
+    try:
+        scope.inst.timeout = 8000
+        scope.write(":ETABle1:DATA?")
+        raw = scope.read_raw() or b""
+        payload = _parse_tmc_block(raw)
+        text = _etable_hex_payload(payload).decode("ascii", "ignore")
+        mo, mi = _extract_from_etable_text(text)
+        return mo, mi
+    except Exception:
+        return [], []
+
+
+def _configure_scope_for_decode(scope, cfg):
     ch = cfg.get("channels", {})
     trig = cfg.get("trigger", {})
     tb = cfg.get("timebase", {})
+    acq = cfg.get("acquire", {})
     dec = cfg.get("decoder", {})
-    cmd = [
-        sys.executable, decoder_path, "--mode", mode,
-        "--resource", os.environ.get("OSCI_RESOURCE", cfg.get("resource", "")),
-        "--cs", str(ch.get("cs", "CHAN1")),
-        "--sclk", str(ch.get("sclk", "CHAN3")),
-        "--mosi", str(ch.get("mosi", "CHAN4")),
-        "--miso", str(ch.get("miso", "CHAN2")),
-        "--trigger", str(trig.get("level_volts", 2.0)),
-        "--vdiv", str(cfg.get("volts_per_div", 2.0)),
-        "--offset", str(cfg.get("offset_volts", 0.0)),
-        "--tscale", str(tb.get("scale_s", 0.000002)),
-        "--toffset", str(tb.get("offset_s", 0.000008)),
-        "--spi-mode", str(dec.get("mode", "CS")),
-        "--spi-select", str(dec.get("spi_select", "NCS")),
-        "--spi-timeout", str(dec.get("spi_timeout_s", 0.00005)),
-        "--edge", str(dec.get("edge", "FALL")),
-        "--polarity", str(dec.get("ss_polarity", dec.get("polarity", "NEG"))),
-        "--endian", str(dec.get("endian", "LSB")),
-        "--width", str(dec.get("width", 8)),
-        "--dec-threshold", str(dec.get("threshold_volts", trig.get("level_volts", 1.6))),
-        "--timeout", str(timeout_s),
-    ]
-    if debug:
-        cmd.append("--debug")
-    r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    if debug and r.stderr:
-        print(r.stderr, file=sys.stderr)
-    out = (r.stdout or "").strip()
-    return r.returncode, out
+    ch_cs = str(ch.get("cs", "CHAN1"))
+    ch_sclk = str(ch.get("sclk", "CHAN3"))
+    ch_miso = str(ch.get("miso", "CHAN2"))
+    ch_mosi = str(ch.get("mosi", "CHAN4"))
+    probe = _probe_value(cfg.get("probe", "1x"))
+    vdiv = float(cfg.get("volts_per_div", 2.0))
+    offset = float(cfg.get("offset_volts", 0.0))
+    trig_src = str(trig.get("source", "CHAN1"))
+    trig_slope = str(trig.get("slope", "NEGative"))
+    trig_level = float(trig.get("level_volts", 2.0))
+    tscale = float(tb.get("scale_s", 0.000002))
+    toffset = float(tb.get("offset_s", 0.000008))
+    mdepth = str(acq.get("mdepth", "12000000"))
+    dec_mode = str(dec.get("mode", "CS")).upper()
+    dec_select = str(dec.get("spi_select", "NCS")).upper()
+    dec_edge = str(dec.get("edge", "FALL")).upper()
+    dec_endian = str(dec.get("endian", "LSB")).upper()
+    dec_pol = str(dec.get("ss_polarity", dec.get("polarity", "NEG"))).upper()
+    dec_width = int(dec.get("width", 8))
+    dec_thr = float(dec.get("threshold_volts", trig_level))
 
-
-def _parse_decoder(out):
-    # expect JSON {"mosi":[...],"miso":[...]}
-    obj = None
+    scope.write(":STOP")
+    for c in [ch_cs, ch_sclk, ch_miso, ch_mosi]:
+        scope.write(f":{c}:DISPlay ON")
+        scope.write(f":{c}:PROBe {probe}")
+        scope.write(f":{c}:SCALe {vdiv}")
+        scope.write(f":{c}:OFFSet {offset}")
+        scope.write(f":{c}:COUPling DC")
+    scope.write(f":TIMebase:MAIN:SCALe {tscale}")
+    scope.write(f":TIMebase:MAIN:OFFSet {toffset}")
+    scope.write(":ACQuire:TYPE NORM")
+    scope.write(f":ACQuire:MDEPth {mdepth}")
+    scope.write(":TRIGger:MODE EDGE")
+    scope.write(f":TRIGger:EDGE:SOURce {trig_src}")
+    scope.write(f":TRIGger:EDGE:SLOPe {trig_slope}")
+    scope.write(f":TRIGger:EDGE:LEVel {trig_level}")
+    # decoder
+    scope.write(":DECoder1:MODE SPI")
+    scope.write(":DECoder1:DISPlay ON")
+    scope.write(":DECoder1:FORMat HEX")
+    scope.write(":DECoder1:THReshold:AUTO OFF")
+    for c in [ch_cs, ch_sclk, ch_miso, ch_mosi]:
+        scope.write(f":DECoder1:THReshold:{c} {dec_thr}")
+    scope.write(f":DECoder1:SPI:CLK {ch_sclk}")
+    scope.write(f":DECoder1:SPI:MOSI {ch_mosi}")
+    scope.write(f":DECoder1:SPI:MISO {ch_miso}")
+    scope.write(f":DECoder1:SPI:CS {ch_cs}")
+    scope.write(f":DECoder1:SPI:SELect {dec_select}")
+    scope.write(f":DECoder1:SPI:MODE {dec_mode}")
+    scope.write(f":DECoder1:SPI:POLarity {dec_pol}")
+    scope.write(f":DECoder1:SPI:EDGE {dec_edge}")
+    scope.write(f":DECoder1:SPI:ENDian {dec_endian}")
+    scope.write(f":DECoder1:SPI:WIDTh {dec_width}")
+    if dec_mode == "TIM":
+        scope.write(f":DECoder1:SPI:TIMeout {float(dec.get('spi_timeout_s', 0.00005))}")
+    scope.write(":ETABle1:DISPlay ON")
+    scope.write(":ETABle1:FORMat HEX")
+    scope.write(":ETABle1:VIEW PACKage")
     try:
-        obj = json.loads(out)
+        scope.opc()
     except Exception:
-        m = re.search(r"\{.*\}", out, re.S)
-        if m:
-            try:
-                obj = json.loads(m.group(0))
-            except Exception:
-                obj = None
-    if not isinstance(obj, dict):
-        return [], []
-    return _normalize_mosi(obj.get("mosi")), _normalize_mosi(obj.get("miso"))
+        pass
 
 
-def _pair_matches(label, got_mosi, got_miso):
-    for l, v in EXPECTED:
-        if l != label:
+def _capture_decode_pair(scope, debug=False):
+    """Read latest decoded MOSI/MISO pair from running ETABle (AUTO/RUN)."""
+    mo, mi = _read_etable_pair(scope)
+    if debug:
+        print(f"    [cap] mosi={mo} miso={mi}")
+    return mo, mi
+
+
+def _name_to_label(name):
+    return f"{name}()" if name and not name.endswith("()") else (name or "")
+
+
+def _wait_serial_for(ser, target, timeout_s=5.0):
+    t = time.time() + timeout_s
+    while time.time() < t:
+        try:
+            line = ser.readline().decode("utf-8", "ignore").strip()
+        except Exception:
+            line = ""
+        if not line:
             continue
-        return got_mosi == v.get("mosi", []) and got_miso == v.get("miso", [])
-    return False
+        if line == target:
+            return True, line
+        if target == "JSON" and line.startswith("{"):
+            return True, line
+    return False, ""
 
 
 def verify_internal_decoder(decoder_path, cfg, debug=False):
     """Gate: prove each MCP3x6x fast command (MOSI+MISO) is read back by the
     scope internal decoder (:ETABle1:DATA?) using a single fixed setting.
-    Firmware emits one command per cycle at max SPI speed; we accumulate decoded
-    (mosi,miso) pairs until all expected pairs are observed."""
-    pending = {label: (v.get("mosi", []), v.get("miso", [])) for label, v in EXPECTED}
-    max_attempts = int(cfg.get("capture", {}).get("attempts", 40))
-    inter_delay = 0.7
-    for attempt in range(1, max_attempts + 1):
-        rc, out = _decoder_run(decoder_path, "configure", cfg, debug=debug)
-        if debug:
-            print(f"  [decode {attempt}/{max_attempts}] configure rc={rc} {out}")
-        time.sleep(0.5)
-        rc, out = _decoder_run(decoder_path, "readback", cfg, timeout_s=12, debug=debug)
-        got_mosi, got_miso = _parse_decoder(out)
-        if debug:
-            print(f"  [decode {attempt}/{max_attempts}] readback rc={rc} mosi={got_mosi} miso={got_miso} out={out[:220]}")
-        if not got_mosi and not got_miso:
-            continue
-        matched = []
-        for label, (exp_m, exp_i) in list(pending.items()):
-            if got_mosi == exp_m and got_miso == exp_i:
-                del pending[label]
-                matched.append((label, exp_m, exp_i))
-        if matched:
-            for label, em, ei in matched:
-                print(f"  OK {label}: mosi={em} miso={ei} (internal decoder)")
+    Synchronizes on serial SCOPE_BEGIN/name, single-captures each frame, and
+    accumulates decoded (mosi,miso) pairs until all expected pairs are seen."""
+    import pyvisa
+    import serial
+
+    resource = os.environ.get("OSCI_RESOURCE") or cfg.get("resource") or ""
+    if not resource:
+        return False, "no scope resource (OSCI_RESOURCE/config)"
+    board_port = os.environ.get("BOARD_PORT") or cfg.get("board_port") or "/dev/ttyUSB0"
+    expected_by_label = {label: (v.get("mosi", []), v.get("miso", [])) for label, v in EXPECTED}
+    pending = dict(expected_by_label)
+    max_rounds = int(cfg.get("capture", {}).get("attempts", 60))
+
+    rm = pyvisa.ResourceManager()
+    inst = None
+    ser = None
+    try:
+        inst = rm.open_resource(resource)
+        inst.timeout = 15000
+        ser = serial.Serial(board_port, 115200, timeout=0.25)
+        time.sleep(0.2)
+        try:
+            ser.reset_input_buffer()
+        except Exception:
+            pass
+
+        class _S:
+            pass
+        scope = _S()
+        scope.inst = inst
+        scope.timeout_ms = 15000
+        scope.write = inst.write
+        scope.query = lambda cmd: inst.query(cmd)
+        scope.read_raw = lambda: inst.read_raw()
+
+        def _ws(timeout_s=2.5, poll_s=0.04):
+            t = time.time() + timeout_s
+            while time.time() < t:
+                try:
+                    s = (inst.query(":TRIGger:STATus?") or "").strip().upper()
+                    if s in ("STOP", "TD", "T'D", "TDONE"):
+                        return True
+                except Exception:
+                    pass
+                time.sleep(poll_s)
+            return False
+        scope.wait_stop = _ws
+
+        _configure_scope_for_decode(scope, cfg)
+
+        attempts = 0
+        while attempts < max_rounds and pending:
+            attempts += 1
+            # align to next command announcement
+            ok, _ = _wait_serial_for(ser, "SCOPE_BEGIN", timeout_s=4.0)
+            if not ok:
+                continue
+            # arm single capture for this command
+            try:
+                inst.write(":TRIGger:SWEep SINGle")
+                inst.write(":SINGle")
+            except Exception:
+                pass
+            # read JSON/name/end
+            cmd_name = ""
+            t_end = time.time() + 2.0
+            while time.time() < t_end:
+                try:
+                    l2 = ser.readline().decode("utf-8", "ignore").strip()
+                except Exception:
+                    l2 = ""
+                if not l2:
+                    continue
+                if debug:
+                    print(f"  [ser] {l2}")
+                if l2.startswith("{"):
+                    try:
+                        obj = json.loads(l2)
+                        cmd_name = str(obj.get("name", ""))
+                    except Exception:
+                        pass
+                if l2 == "SCOPE_END":
+                    break
+            label = _name_to_label(cmd_name)
+
+            _ws(timeout_s=1.8, poll_s=0.03)
+            try:
+                inst.write(":STOP")
+            except Exception:
+                pass
+            time.sleep(0.15)
+            got_mosi, got_miso = _read_etable_pair(scope)
+            if debug:
+                print(f"  [decode {attempts}/{max_rounds}] label={label} mosi={got_mosi} miso={got_miso}")
+
+            if label in pending:
+                exp_m, exp_i = expected_by_label[label]
+                if got_mosi == exp_m and got_miso == exp_i:
+                    del pending[label]
+                    print(f"  OK {label}: mosi={exp_m} miso={exp_i} (internal decoder)")
+                elif debug:
+                    print(f"    mismatch {label}: got mosi={got_mosi} miso={got_miso} exp mosi={exp_m} miso={exp_i}")
+
+        try:
+            inst.write(":TRIGger:SWEep AUTO")
+            inst.write(":RUN")
+        except Exception:
+            pass
         if not pending:
             return True, "internal decoder (:ETABle1:DATA?) read back all expected MOSI+MISO pairs"
-        time.sleep(inter_delay)
+    finally:
+        try:
+            if ser is not None:
+                ser.close()
+        except Exception:
+            pass
+        try:
+            if inst is not None:
+                inst.close()
+        except Exception:
+            pass
+        try:
+            rm.close()
+        except Exception:
+            pass
     missing = ", ".join(f"{k}:mosi={v[0]} miso={v[1]}" for k, v in pending.items())
     return False, f"missing decoded pairs for: {missing}"
 
@@ -330,10 +484,10 @@ def verify(build_env="hil_spi", do_reset=False, debug=False, repeat=1):
 
     # Primary gate: prove fast commands via scope internal decoder readback
     decoder_path = _find_decoder_script()
-    if not decoder_path:
-        print("ERROR: internal decoder script not found (expected scripts/decoder.py)", file=sys.stderr)
-        return 1
-    print(f"Using internal decoder: {decoder_path}")
+    if decoder_path:
+        print(f"Using internal decoder: {decoder_path}")
+    else:
+        print("Using in-process internal decoder readback (:ETABle1:DATA?)")
     ok, msg = verify_internal_decoder(decoder_path, cfg, debug=debug)
     if not ok:
         print(f"ERROR: internal decoder gate failed: {msg}", file=sys.stderr)
