@@ -79,6 +79,7 @@ def configure(scope: RigolSCPI, args):
     scope.setup_timebase(args.tscale, args.toffset)
     scope.setup_acquire("NORM", "AUTO")
     scope.setup_edge_trigger(ch_cs, slope="NEGative", level_v=args.trigger, sweep="SING")
+    # Internal decoder config per Rigol DS1000Z manual (:DECoder<n>:SPI, :ETABle<n>)
     scope.setup_spi_decoder(
         decoder=1,
         cs=ch_cs,
@@ -90,50 +91,157 @@ def configure(scope: RigolSCPI, args):
         endian="MSB",
         edge="RISE",
         ss_polarity="NEG",
+        mode="CS",
     )
+    scope.setup_event_table(decoder=1, fmt="HEX", view="PACKage")
     scope.single()
     return {"configured": True, "channels": {"cs": ch_cs, "sclk": ch_sclk, "mosi": ch_mosi, "miso": ch_miso}}
 
 
-def read_internal_decoder(scope: RigolSCPI, timeout_s: float, debug: bool = False):
-    scope.wait_stop(timeout_s=min(timeout_s, 8.0))
-    scope.stop()
-    time.sleep(0.2)
-    # shorten timeout for potentially unsupported queries
-    try:
-        scope.inst.timeout = 3000
-    except Exception:
-        pass
-    queries = [
-        ":DECoder1:DATA?",
-        ":DECoder1:EVENt?",
-        ":DECoder1:SPI:DATA?",
-    ]
-    texts = {}
-    for cmd in queries:
+def _parse_tmc_block(raw: bytes) -> bytes:
+    if not raw:
+        return b""
+    if raw[:1] == b"#" and len(raw) > 2 and raw[1:2].isdigit():
         try:
-            r = scope.query(cmd)
+            nd = int(raw[1:2])
+            hdr = 2 + nd
+            ln = int(raw[2:hdr] or b"0")
+            return raw[hdr:hdr + ln]
         except Exception:
-            r = None
-        if r and str(r).strip():
-            texts[cmd] = r
-            if debug:
-                print(f"[debug] {cmd} => {str(r)[:160]!r}", file=sys.stderr)
+            return raw
+    return raw
+
+
+def _etable_hex_payload(payload: bytes):
+    if not payload:
+        return b""
+    # Rigol often returns binary bytes representing hex chars/printable table in HEX mode
+    # or raw text. Try to interpret as ASCII text first.
     try:
-        scope.inst.timeout = scope.timeout_ms
+        txt = payload.decode("ascii", errors="ignore")
     except Exception:
-        pass
-    for cmd in queries:
-        if cmd in texts:
-            mo, mi = _extract_bytes(texts[cmd])
-            if mo or mi:
-                return {"mosi": mo, "miso": mi, "source": f"internal-decoder:{cmd}"}
-    if texts:
-        blob = "\n".join(f"{k}: {v}" for k, v in texts.items())
-        mo, mi = _extract_bytes(blob)
-        if mo or mi:
-            return {"mosi": mo, "miso": mi, "source": "internal-decoder:combined"}
-    return {"mosi": [], "miso": [], "source": "internal-decoder:none"}
+        txt = ""
+    # if looks like hex text, prefer it
+    if re.search(r"[0-9A-Fa-f]{2}", txt):
+        return txt.encode("ascii", errors="ignore")
+    # if payload itself contains many 0x30-0x39/41-46/61-66 treat as text
+    printable = sum(1 for b in payload if 32 <= b <= 126 or b in (9,10,13))
+    if printable >= max(1, len(payload) * 0.7):
+        return payload
+    # else return as-is (binary)
+    return payload
+
+
+def _extract_from_etable_text(text: str):
+    mosi, miso = [], []
+    if not text:
+        return mosi, miso
+    # explicit labels
+    for line in text.replace("\r", "\n").split("\n"):
+        if not line.strip():
+            continue
+        hx = [int(x, 16) & 0xFF for x in re.findall(r"0x([0-9A-Fa-f]{1,2})\b", line)]
+        if not hx:
+            # tokens/space-separated hex
+            hx = [int(x, 16) & 0xFF for x in re.findall(r"\b([0-9A-Fa-f]{2})\b", line)]
+        if re.search(r"MOSI|SDI", line, re.I):
+            mosi.extend(hx)
+        elif re.search(r"MISO|SDO", line, re.I):
+            miso.extend(hx)
+    if mosi or miso:
+        return mosi, miso
+    # unlabeled: collect hex bytes in order
+    vals = [int(x, 16) & 0xFF for x in re.findall(r"0x([0-9A-Fa-f]{1,2})\b", text)]
+    if not vals:
+        vals = [int(x, 16) & 0xFF for x in re.findall(r"\b([0-9A-Fa-f]{2})\b", text)]
+    return vals, []
+
+
+def read_internal_decoder(scope: RigolSCPI, timeout_s: float, debug: bool = False):
+    """Read SPI-decoded bytes from Rigol DS1000Z internal protocol decoder.
+
+    Uses event table readback per DS1000Z Programming Guide:
+      :ETABle<n>:DISP/FORMat/VIEW/COLumn/SORT and :ETABle<n>:DATA? (TMC block).
+    Tries payload/MOSI views and parses decoded bytes.
+    """
+    scope.wait_stop(timeout_s=min(timeout_s, 10.0))
+    scope.stop()
+    time.sleep(0.4)
+
+    def _read_once(fmt="HEX", view="PACKage", col=None):
+        try:
+            scope.setup_event_table(decoder=1, fmt=fmt, view=view, column=col)
+        except Exception:
+            pass
+        time.sleep(0.1)
+        try:
+            scope.inst.timeout = 8000
+        except Exception:
+            pass
+        raw = b""
+        try:
+            raw = scope.read_event_table(1)
+        except Exception:
+            try:
+                scope.write(":ETABle1:DATA?")
+                raw = scope.read_raw() or b""
+            except Exception:
+                raw = b""
+        try:
+            scope.inst.timeout = scope.timeout_ms
+        except Exception:
+            pass
+        payload = _parse_tmc_block(raw)
+        interp = _etable_hex_payload(payload)
+        try:
+            text = interp.decode("ascii", errors="ignore") if isinstance(interp, (bytes, bytearray)) else str(interp)
+        except Exception:
+            text = ""
+        if debug:
+            print(f"[debug] etable fmt={fmt} view={view} col={col} raw={len(raw)} payload={len(payload)} txt={text[:160]!r}", file=sys.stderr)
+        mo, mi = _extract_from_etable_text(text)
+        # if still empty, try scanning raw bytes as text-ish
+        if not mo and not mi and payload:
+            try:
+                t2 = payload.decode("latin-1", errors="ignore")
+                mo, mi = _extract_from_etable_text(t2)
+            except Exception:
+                pass
+        return {"mosi": mo, "miso": mi, "raw_len": len(raw), "payload_len": len(payload), "text": text[:400]}
+
+    attempts = [
+        ("HEX", "PACKage", None),
+        ("HEX", "PAYLoad", "MOSI"),
+        ("HEX", "PAYLoad", "MISO"),
+        ("ASC", "PACKage", None),
+        ("HEX", "DETail", None),
+    ]
+    last = None
+    mosi_all, miso_all = [], []
+    sources = []
+    for fmt, view, col in attempts:
+        res = _read_once(fmt, view, col)
+        last = res
+        if res["mosi"]:
+            if col == "MISO":
+                miso_all = res["mosi"] or miso_all
+            else:
+                mosi_all = res["mosi"] if not mosi_all else mosi_all
+            sources.append(f"etable:{fmt}:{view}:{col or 'ALL'}")
+        if res["miso"]:
+            miso_all = res["miso"] if not miso_all else miso_all
+            sources.append(f"etable:{fmt}:{view}:{col or 'ALL'}:miso")
+        # also try to pick miso from MOSI-column read? no
+        if mosi_all and miso_all:
+            break
+    # if payload view for MOSI gave bytes in mosi field even when col set, ok
+    if not mosi_all and last and last.get("mosi"):
+        mosi_all = last["mosi"]
+    src = ",".join(sources) if sources else "internal-decoder:etable:none"
+    out = {"mosi": mosi_all, "miso": miso_all, "source": src}
+    if debug and last is not None:
+        out["debug_payload_text"] = last.get("text", "")
+    return out
 
 
 def _pre_to_volts(pre: str, data):

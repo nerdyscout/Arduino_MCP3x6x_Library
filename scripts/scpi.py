@@ -189,41 +189,48 @@ class RigolSCPI:
         endian: str = "MSB",
         edge: str = "RISE",
         ss_polarity: str = "NEG",
+        mode: str = "CS",
     ):
         d = int(decoder)
         chs = {k: self._ch(v) for k, v in {"cs": cs, "sclk": sclk, "mosi": mosi, "miso": miso}.items()}
+        # Manual: :DECoder<n>:MODE {PARallel|UART|SPI|IIC}; SPI channels via CLK/MISO/MOSI/CS/SELect/MODE/...
         cmds = [
             f":DECoder{d}:MODE SPI",
             f":DECoder{d}:DISPlay ON",
             f":DECoder{d}:FORMat HEX",
+            f":DECoder{d}:THReshold:AUTO OFF",
             f":DECoder{d}:THReshold:{chs['cs']} {threshold_v}",
             f":DECoder{d}:THReshold:{chs['sclk']} {threshold_v}",
             f":DECoder{d}:THReshold:{chs['mosi']} {threshold_v}",
             f":DECoder{d}:THReshold:{chs['miso']} {threshold_v}",
-            f":DECoder{d}:THReshold:AUTO OFF",
-            f":DECoder{d}:SPI:SS {chs['cs']}",
-            f":DECoder{d}:SPI:SEL {chs['cs']}",
-            f":DECoder{d}:SPI:NSEL {chs['cs']}",
-            f":DECoder{d}:SPI:SCLK {chs['sclk']}",
             f":DECoder{d}:SPI:CLK {chs['sclk']}",
             f":DECoder{d}:SPI:MOSI {chs['mosi']}",
-            f":DECoder{d}:SPI:SDI {chs['mosi']}",
             f":DECoder{d}:SPI:MISO {chs['miso']}",
-            f":DECoder{d}:SPI:SDO {chs['miso']}",
-            f":DECoder{d}:SPI:MODE TIM",
-            f":DECoder{d}:SPI:TIMing ON",
-            f":DECoder{d}:SPI:EDGE {edge}",
+            f":DECoder{d}:SPI:CS {chs['cs']}",
+            f":DECoder{d}:SPI:SELect NCS",
+            f":DECoder{d}:SPI:MODE {mode}",
             f":DECoder{d}:SPI:POLarity {ss_polarity}",
-            f":DECoder{d}:SPI:SS:POLarity {ss_polarity}",
-            f":DECoder{d}:SPI:SSPolarity {ss_polarity}",
+            f":DECoder{d}:SPI:EDGE {edge}",
             f":DECoder{d}:SPI:ENDian {endian}",
-            f":DECoder{d}:SPI:ORDer {endian}",
             f":DECoder{d}:SPI:WIDTh {int(width)}",
-            f":DECoder{d}:SPI:WORD {int(width)}",
-            f":DECoder{d}:SPI:BITs {int(width)}",
         ]
         for cmd in cmds:
             self.write(cmd)
+
+    def setup_event_table(self, decoder: int = 1, fmt: str = "HEX", view: str = "PACKage", column: Optional[str] = None):
+        # Manual: :ETABle<n>:DISP/FORMat/VIEW/COLumn - event table for decoded data readback (:ETABle<n>:DATA?)
+        e = int(decoder)
+        self.write(f":ETABle{e}:DISP ON")
+        self.write(f":ETABle{e}:FORMat {fmt}")
+        self.write(f":ETABle{e}:VIEW {view}")
+        if column:
+            self.write(f":ETABle{e}:COLumn {column}")
+
+    def read_event_table(self, decoder: int = 1):
+        """Read :ETABle<n>:DATA? (TMC block) -> raw bytes payload."""
+        e = int(decoder)
+        raw = self.query_raw(f":ETABle{e}:DATA?")
+        return raw or b""
 
     # ---- waveform helpers ----
     def waveform_preamble(self, source: Any):
