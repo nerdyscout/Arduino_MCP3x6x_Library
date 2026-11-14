@@ -1,8 +1,5 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 nerdyscout
-#
-# _shared.py — Shared helpers for PlatformIO HIL extra scripts.
-# Imported by test/hil.py and test/hil_spi.py.
 
 import os
 import subprocess
@@ -11,7 +8,6 @@ import time
 
 
 def _run(cmd, debug=False):
-    """Run a command, streaming output. Return returncode."""
     if debug:
         print(f"[debug] $ {' '.join(cmd)}", file=sys.stderr)
     try:
@@ -19,11 +15,12 @@ def _run(cmd, debug=False):
     except FileNotFoundError as exc:
         print(f"ERROR: command not found: {cmd[0]} ({exc})", file=sys.stderr)
         return 127
+    if result.stdout:
+        print(result.stdout, end="")
+    if result.stderr:
+        print(result.stderr, end="", file=sys.stderr)
     if debug:
-        if result.stdout:
-            print(result.stdout, end="")
-        if result.stderr:
-            print(result.stderr, end="", file=sys.stderr)
+        print(f"[debug] rc={result.returncode}", file=sys.stderr)
     return result.returncode
 
 
@@ -31,22 +28,15 @@ def _env_name(env):
     return env.get("PIOENV", "ATMEGA328P")
 
 
-def _adc_type(env):
-    """Extract TEST_ADC_TYPE from build flags, default MCP3564."""
-    bflags = env.get("BUILD_FLAGS", [])
-    if isinstance(bflags, str):
-        bflags = bflags.split()
-    for f in bflags:
-        if f.startswith("-DTEST_ADC_TYPE="):
-            return f.split("=", 1)[1]
-    return "MCP3564"
-
-
 def _reset_board_via_dtr(debug=False):
-    """Toggle DTR on the single detected serial port to reset the board."""
-    import serial.tools.list_ports
-    ports = [p.device for p in serial.tools.list_ports.comports()]
-    if len(ports) == 0:
+    env_port = os.environ.get("BOARD_PORT") or os.environ.get("OSCI_PORT")
+    if env_port:
+        ports = [env_port]
+    else:
+        import serial.tools.list_ports
+        all_ports = [p.device for p in serial.tools.list_ports.comports()]
+        ports = [p for p in all_ports if "USB" in p or "ACM" in p or "usb" in p.lower()] or all_ports
+    if not ports:
         print("ERROR: no serial ports found for board reset", file=sys.stderr)
         return False
     if len(ports) > 1:
@@ -55,13 +45,13 @@ def _reset_board_via_dtr(debug=False):
     try:
         import serial
         ser = serial.Serial(port, 115200, timeout=1)
-        ser.setDTR(False)
-        ser.close()
-        time.sleep(0.2)
-        ser = serial.Serial(port, 115200, timeout=1)
-        ser.setDTR(True)
-        ser.close()
-        time.sleep(0.5)
+        try:
+            ser.setDTR(False)
+            time.sleep(0.2)
+            ser.setDTR(True)
+            time.sleep(0.5)
+        finally:
+            ser.close()
         if debug:
             print(f"[debug] DTR reset on {port}", file=sys.stderr)
     except Exception as exc:
@@ -71,25 +61,29 @@ def _reset_board_via_dtr(debug=False):
 
 
 def _detect_scope_resource(debug=False):
-    """Auto-detect exactly one VISA resource for the oscilloscope."""
     import pyvisa
+    env_resource = os.environ.get("OSCI_RESOURCE")
+    if env_resource:
+        if debug:
+            print(f"[debug] using OSCI_RESOURCE={env_resource}", file=sys.stderr)
+        return env_resource
+    rm = None
     try:
         rm = pyvisa.ResourceManager()
         resources = rm.list_resources()
     except Exception as exc:
         print(f"ERROR: cannot enumerate VISA resources: {exc}", file=sys.stderr)
         return None
+    finally:
+        if rm is not None:
+            try:
+                rm.close()
+            except Exception:
+                pass
     if len(resources) == 0:
         print("ERROR: no VISA resources found; connect oscilloscope", file=sys.stderr)
         return None
     if len(resources) > 1:
-        print(f"ERROR: multiple VISA resources ({resources}); specify one", file=sys.stderr)
+        print(f"ERROR: multiple VISA resources ({resources}); set OSCI_RESOURCE", file=sys.stderr)
         return None
     return resources[0]
-
-
-# Scope channel mapping (Nano: CS=10→CHAN1, SCK=13→CHAN3, MISO=12→CHAN2, MOSI=11→CHAN4)
-CHAN_CS = "CHAN1"
-CHAN_SCLK = "CHAN3"
-CHAN_MISO = "CHAN2"
-CHAN_MOSI = "CHAN4"

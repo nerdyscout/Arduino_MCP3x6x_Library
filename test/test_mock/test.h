@@ -61,14 +61,6 @@ using TestADC = TEST_ADC_TYPE;
 #endif
 
 // ---------------------------------------------------------------------------
-// Singleton ADC instance helpers (reused across tests)
-// ---------------------------------------------------------------------------
-template<typename T>
-T* createADC() {
-  return new T();
-}
-
-// ---------------------------------------------------------------------------
 // Friend struct for testing private members (native only)
 // ---------------------------------------------------------------------------
 #ifdef PIO_MOCKED_TESTING
@@ -130,13 +122,6 @@ void test_instance() {
   T* p = new T();
   TEST_ASSERT_NOT_NULL(p);
   delete p;
-}
-
-template<typename T>
-void test_begin() {
-  T adc;
-  bool ok = adc.begin();
-  TEST_ASSERT_TRUE(ok);
 }
 
 // ---------------------------------------------------------------------------

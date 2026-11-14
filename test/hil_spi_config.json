@@ -1,0 +1,39 @@
+{
+  "resource": "",
+  "board_port": "/dev/ttyUSB0",
+  "channels": {
+    "cs": "CHAN1",
+    "sclk": "CHAN3",
+    "miso": "CHAN2",
+    "mosi": "CHAN4"
+  },
+  "probe": "1x",
+  "volts_per_div": 1,
+  "offset_volts": -2,
+  "trigger": {
+    "source": "CHAN1",
+    "slope": "NEGative",
+    "level_volts": 1.0,
+    "sweep": "SINGle"
+  },
+  "timebase": {
+    "scale_s": 0.002,
+    "offset_s": 0.008
+  },
+  "acquire": {
+    "type": "NORM",
+    "mdepth": "AUTO"
+  },
+  "decoder": {
+    "edge": "rise",
+    "polarity": "pos",
+    "select": "ncs",
+    "width": 8,
+    "endian": "msb"
+  },
+  "capture": {
+    "probe_wait_s": 12,
+    "attempts": 8,
+    "threshold_volts": 1.0
+  }
+}
