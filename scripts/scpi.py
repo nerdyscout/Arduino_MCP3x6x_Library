@@ -190,6 +190,7 @@ class RigolSCPI:
         edge: str = "RISE",
         ss_polarity: str = "NEG",
         mode: str = "CS",
+        spi_select: str = "NCS",
     ):
         d = int(decoder)
         chs = {k: self._ch(v) for k, v in {"cs": cs, "sclk": sclk, "mosi": mosi, "miso": miso}.items()}
@@ -207,7 +208,7 @@ class RigolSCPI:
             f":DECoder{d}:SPI:MOSI {chs['mosi']}",
             f":DECoder{d}:SPI:MISO {chs['miso']}",
             f":DECoder{d}:SPI:CS {chs['cs']}",
-            f":DECoder{d}:SPI:SELect NCS",
+            f":DECoder{d}:SPI:SELect {spi_select}",
             f":DECoder{d}:SPI:MODE {mode}",
             f":DECoder{d}:SPI:POLarity {ss_polarity}",
             f":DECoder{d}:SPI:EDGE {edge}",

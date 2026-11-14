@@ -73,6 +73,13 @@ def _extract_bytes(text):
 def configure(scope: RigolSCPI, args):
     ch_cs, ch_sclk = args.cs, args.sclk
     ch_mosi, ch_miso = args.mosi, args.miso
+    dec_threshold = float(getattr(args, "dec_threshold", args.trigger))
+    spi_select = str(getattr(args, "spi_select", "NCS")).upper()
+    spi_mode = str(getattr(args, "spi_mode", "CS")).upper()
+    endian = str(getattr(args, "endian", "MSB")).upper()
+    edge = str(getattr(args, "edge", "RISE")).upper()
+    ss_polarity = str(getattr(args, "polarity", "NEG")).upper()
+    width = int(getattr(args, "width", 8))
     scope.stop()
     for ch in [ch_cs, ch_sclk, ch_mosi, ch_miso]:
         scope.setup_channel(ch, probe="1", scale=args.vdiv, offset=args.offset, display=True)
@@ -86,16 +93,23 @@ def configure(scope: RigolSCPI, args):
         sclk=ch_sclk,
         mosi=ch_mosi,
         miso=ch_miso,
-        threshold_v=args.trigger,
-        width=8,
-        endian="MSB",
-        edge="RISE",
-        ss_polarity="NEG",
-        mode="CS",
+        threshold_v=dec_threshold,
+        width=width,
+        endian=endian,
+        edge=edge,
+        ss_polarity=ss_polarity,
+        mode=spi_mode,
+        spi_select=spi_select,
     )
+    if spi_mode == "TIM":
+        scope.write(f":DECoder1:SPI:TIMeout {getattr(args, 'spi_timeout', 0.0001)}")
     scope.setup_event_table(decoder=1, fmt="HEX", view="PACKage")
     scope.single()
-    return {"configured": True, "channels": {"cs": ch_cs, "sclk": ch_sclk, "mosi": ch_mosi, "miso": ch_miso}}
+    return {
+        "configured": True,
+        "channels": {"cs": ch_cs, "sclk": ch_sclk, "mosi": ch_mosi, "miso": ch_miso},
+        "spi": {"mode": spi_mode, "select": spi_select, "edge": edge, "endian": endian, "threshold": dec_threshold},
+    }
 
 
 def _parse_tmc_block(raw: bytes) -> bytes:
@@ -136,13 +150,53 @@ def _extract_from_etable_text(text: str):
     mosi, miso = [], []
     if not text:
         return mosi, miso
-    # explicit labels
-    for line in text.replace("\r", "\n").split("\n"):
+    lines = [ln for ln in text.replace("\r", "\n").split("\n") if ln.strip()]
+    # PACKage CSV form: "Decoder1,SPI," / "Time,MISO,Info,MOSI,Info," / rows...
+    header_idx = None
+    for i, ln in enumerate(lines):
+        if re.search(r"\bTime\b", ln) and (re.search(r"\bMOSI\b", ln) or re.search(r"\bMISO\b", ln)):
+            header_idx = i
+            break
+    if header_idx is not None:
+        hdr = [h.strip().upper() for h in lines[header_idx].split(",")]
+        mi_idx = [i for i,h in enumerate(hdr) if h == "MISO"]
+        mo_idx = [i for i,h in enumerate(hdr) if h == "MOSI"]
+        def parse_cell(cell):
+            cell = (cell or "").strip()
+            if cell in ("", ".", "-", "--"):
+                return None
+            m = re.match(r"^(?:0x)?([0-9A-Fa-f]{1,2})$", cell)
+            if m:
+                return int(m.group(1), 16) & 0xFF
+            # sometimes decimal
+            if cell.isdigit():
+                try:
+                    v = int(cell)
+                    if 0 <= v <= 255:
+                        return v
+                except Exception:
+                    pass
+            return None
+        for ln in lines[header_idx+1:]:
+            cols = [c.strip() for c in ln.split(",")]
+            for idx in mo_idx:
+                if idx < len(cols):
+                    v = parse_cell(cols[idx])
+                    if v is not None:
+                        mosi.append(v)
+            for idx in mi_idx:
+                if idx < len(cols):
+                    v = parse_cell(cols[idx])
+                    if v is not None:
+                        miso.append(v)
+        if mosi or miso:
+            return mosi, miso
+    # labeled lines fallback
+    for line in lines:
         if not line.strip():
             continue
         hx = [int(x, 16) & 0xFF for x in re.findall(r"0x([0-9A-Fa-f]{1,2})\b", line)]
         if not hx:
-            # tokens/space-separated hex
             hx = [int(x, 16) & 0xFF for x in re.findall(r"\b([0-9A-Fa-f]{2})\b", line)]
         if re.search(r"MOSI|SDI", line, re.I):
             mosi.extend(hx)
@@ -150,7 +204,7 @@ def _extract_from_etable_text(text: str):
             miso.extend(hx)
     if mosi or miso:
         return mosi, miso
-    # unlabeled: collect hex bytes in order
+    # unlabeled
     vals = [int(x, 16) & 0xFF for x in re.findall(r"0x([0-9A-Fa-f]{1,2})\b", text)]
     if not vals:
         vals = [int(x, 16) & 0xFF for x in re.findall(r"\b([0-9A-Fa-f]{2})\b", text)]
@@ -330,9 +384,23 @@ def main():
     ap.add_argument("--tscale", type=float, default=0.002)
     ap.add_argument("--toffset", type=float, default=0.008)
     ap.add_argument("--timeout", type=float, default=12.0)
+    ap.add_argument("--spi-mode", default=os.environ.get("HIL_SPI_DEC_MODE", "CS"))
+    ap.add_argument("--spi-timeout", type=float, default=float(os.environ.get("HIL_SPI_DEC_TIMEOUT", "0.0001")))
+    ap.add_argument("--edge", default=os.environ.get("HIL_SPI_EDGE", "RISE"))
+    ap.add_argument("--polarity", default=os.environ.get("HIL_SPI_POLARITY", "NEG"))
+    ap.add_argument("--endian", default=os.environ.get("HIL_SPI_ENDIAN", "MSB"))
+    ap.add_argument("--width", type=int, default=8)
+    ap.add_argument("--spi-select", default=os.environ.get("HIL_SPI_SELECT", "NCS"))
+    ap.add_argument("--dec-threshold", type=float, default=None)
+    ap.add_argument("--spi-select", default=os.environ.get("HIL_SPI_SELECT", "NCS"))
+    ap.add_argument("--dec-threshold", type=float, default=None)
     ap.add_argument("--allow-waveform", action="store_true", help="allow software decode from captured waveforms")
     ap.add_argument("--debug", action="store_true")
     args = ap.parse_args()
+    if getattr(args, "dec_threshold", None) is None:
+        args.dec_threshold = float(args.trigger)
+    if getattr(args, "dec_threshold", None) is None:
+        args.dec_threshold = float(args.trigger)
 
     resource = args.resource
     if not resource:
