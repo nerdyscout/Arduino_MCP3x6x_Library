@@ -392,13 +392,9 @@ def main():
     ap.add_argument("--width", type=int, default=8)
     ap.add_argument("--spi-select", default=os.environ.get("HIL_SPI_SELECT", "NCS"))
     ap.add_argument("--dec-threshold", type=float, default=None)
-    ap.add_argument("--spi-select", default=os.environ.get("HIL_SPI_SELECT", "NCS"))
-    ap.add_argument("--dec-threshold", type=float, default=None)
     ap.add_argument("--allow-waveform", action="store_true", help="allow software decode from captured waveforms")
     ap.add_argument("--debug", action="store_true")
     args = ap.parse_args()
-    if getattr(args, "dec_threshold", None) is None:
-        args.dec_threshold = float(args.trigger)
     if getattr(args, "dec_threshold", None) is None:
         args.dec_threshold = float(args.trigger)
 

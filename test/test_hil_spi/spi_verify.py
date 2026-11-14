@@ -299,29 +299,53 @@ def _name_to_label(name):
     return f"{name}()" if name and not name.endswith("()") else (name or "")
 
 
-def _wait_serial_for(ser, target, timeout_s=5.0):
-    t = time.time() + timeout_s
-    while time.time() < t:
+def _wait_for_label(ser, timeout_s=5.0, debug=False):
+    """Read serial until a command frame is seen; return (label, mosi_json)."""
+    t_end = time.time() + timeout_s
+    label = ""
+    mosi_json = None
+    seen_begin = False
+    while time.time() < t_end:
         try:
             line = ser.readline().decode("utf-8", "ignore").strip()
         except Exception:
             line = ""
         if not line:
             continue
-        if line == target:
-            return True, line
-        if target == "JSON" and line.startswith("{"):
-            return True, line
-    return False, ""
+        if debug:
+            print(f"  [ser] {line}")
+        if line == "SCOPE_BEGIN":
+            seen_begin = True
+            label = ""
+            mosi_json = None
+            continue
+        if line.startswith("{"):
+            try:
+                obj = json.loads(line)
+                if "name" in obj:
+                    label = _name_to_label(str(obj.get("name", "")))
+                if isinstance(obj.get("mosi"), list):
+                    mosi_json = _normalize_mosi(obj.get("mosi"))
+            except Exception:
+                pass
+            continue
+        if line == "SCOPE_END":
+            if seen_begin or label or mosi_json is not None:
+                return label, mosi_json
+            continue
+    return label, mosi_json
 
 
 def verify_internal_decoder(decoder_path, cfg, debug=False):
     """Gate: prove each MCP3x6x fast command (MOSI+MISO) is read back by the
     scope internal decoder (:ETABle1:DATA?) using a single fixed setting.
-    Synchronizes on serial SCOPE_BEGIN/name, single-captures each frame, and
-    accumulates decoded (mosi,miso) pairs until all expected pairs are seen."""
+
+    Host-paced: for each step arm scope single trigger on CS, ask firmware for
+    next command over serial, wait for capture, read decoded ETABle pair, then
+    proceed (no fixed inter-command delay)."""
     import pyvisa
     import serial
+    from _shared import _reset_board_via_dtr
 
     resource = os.environ.get("OSCI_RESOURCE") or cfg.get("resource") or ""
     if not resource:
@@ -343,6 +367,18 @@ def verify_internal_decoder(decoder_path, cfg, debug=False):
             ser.reset_input_buffer()
         except Exception:
             pass
+        # reset board so firmware starts at known command index and waits for host
+        # reset board so firmware starts at known command index and waits for host
+        try:
+            os.environ.setdefault("BOARD_PORT", board_port)
+        except Exception:
+            pass
+        _reset_board_via_dtr(debug=debug)
+        time.sleep(2.2)
+        try:
+            ser.reset_input_buffer()
+        except Exception:
+            pass
 
         class _S:
             pass
@@ -353,7 +389,7 @@ def verify_internal_decoder(decoder_path, cfg, debug=False):
         scope.query = lambda cmd: inst.query(cmd)
         scope.read_raw = lambda: inst.read_raw()
 
-        def _ws(timeout_s=2.5, poll_s=0.04):
+        def _ws(timeout_s=3.0, poll_s=0.03):
             t = time.time() + timeout_s
             while time.time() < t:
                 try:
@@ -368,58 +404,96 @@ def verify_internal_decoder(decoder_path, cfg, debug=False):
 
         _configure_scope_for_decode(scope, cfg)
 
+        def _wait_trigger_ready(timeout_s=1.5):
+            t = time.time() + timeout_s
+            while time.time() < t:
+                try:
+                    st = (inst.query(":TRIGger:STATus?") or "").strip().upper()
+                    if "WAIT" in st:
+                        return True, st
+                    if st in ("STOP", "TD", "T'D", "TDONE"):
+                        return True, st
+                except Exception:
+                    pass
+                time.sleep(0.02)
+            try:
+                return False, (inst.query(":TRIGger:STATus?") or "").strip()
+            except Exception:
+                return False, "ERR"
+
         attempts = 0
         while attempts < max_rounds and pending:
             attempts += 1
-            # align to next command announcement
-            ok, _ = _wait_serial_for(ser, "SCOPE_BEGIN", timeout_s=4.0)
-            if not ok:
-                continue
-            # arm single capture for this command
             try:
-                inst.write(":TRIGger:SWEep SINGle")
-                inst.write(":SINGle")
+                ser.reset_input_buffer()
             except Exception:
                 pass
-            # read JSON/name/end
-            cmd_name = ""
-            t_end = time.time() + 2.0
-            while time.time() < t_end:
-                try:
-                    l2 = ser.readline().decode("utf-8", "ignore").strip()
-                except Exception:
-                    l2 = ""
-                if not l2:
-                    continue
-                if debug:
-                    print(f"  [ser] {l2}")
-                if l2.startswith("{"):
-                    try:
-                        obj = json.loads(l2)
-                        cmd_name = str(obj.get("name", ""))
-                    except Exception:
-                        pass
-                if l2 == "SCOPE_END":
-                    break
-            label = _name_to_label(cmd_name)
 
-            _ws(timeout_s=1.8, poll_s=0.03)
+            # Arm single capture on CS and wait until scope is ready before stepping firmware
+            try:
+                inst.write(":STOP")
+                try:
+                    inst.write(":CLEar")
+                except Exception:
+                    pass
+                inst.write(":TRIGger:SWEep SINGle")
+                inst.write(":SINGle")
+                try:
+                    inst.query("*OPC?")
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            ready, trig_st = _wait_trigger_ready(timeout_s=2.0)
+            if debug:
+                print(f"  [arm {attempts}/{max_rounds}] ready={ready} trig={trig_st}")
+            if not ready:
+                try:
+                    inst.write(":STOP")
+                except Exception:
+                    pass
+                time.sleep(0.1)
+                continue
+
+            try:
+                ser.write(b"n")
+                ser.flush()
+            except Exception as e:
+                if debug:
+                    print(f"  [step] serial write error: {e}", file=sys.stderr)
+
+            label, mosi_json = _wait_for_label(ser, timeout_s=4.0, debug=debug)
+            stopped = _ws(timeout_s=2.5, poll_s=0.03)
             try:
                 inst.write(":STOP")
             except Exception:
                 pass
-            time.sleep(0.15)
+            time.sleep(0.3)
+            try:
+                inst.query("*OPC?")
+            except Exception:
+                pass
             got_mosi, got_miso = _read_etable_pair(scope)
             if debug:
-                print(f"  [decode {attempts}/{max_rounds}] label={label} mosi={got_mosi} miso={got_miso}")
+                print(f"  [decode {attempts}/{max_rounds}] label={label} serial_mosi={mosi_json} stopped={stopped} trig={trig_st} decoded mosi={got_mosi} miso={got_miso}")
 
-            if label in pending:
-                exp_m, exp_i = expected_by_label[label]
+            # match against any pending expected pair (serial label is advisory)
+            matched = []
+            for plabel, (exp_m, exp_i) in list(pending.items()):
                 if got_mosi == exp_m and got_miso == exp_i:
-                    del pending[label]
-                    print(f"  OK {label}: mosi={exp_m} miso={exp_i} (internal decoder)")
-                elif debug:
-                    print(f"    mismatch {label}: got mosi={got_mosi} miso={got_miso} exp mosi={exp_m} miso={exp_i}")
+                    del pending[plabel]
+                    matched.append(plabel)
+            for plabel in matched:
+                exp_m, exp_i = expected_by_label[plabel]
+                print(f"  OK {plabel}: mosi={exp_m} miso={exp_i} (internal decoder)")
+            if debug and not matched and label in expected_by_label:
+                exp_m, exp_i = expected_by_label[label]
+                if label in pending:
+                    print(f"    no-match label={label}: got mosi={got_mosi} miso={got_miso} exp mosi={exp_m} miso={exp_i}")
+            try:
+                inst.write(":CLEar")
+            except Exception:
+                pass
 
         try:
             inst.write(":TRIGger:SWEep AUTO")
@@ -458,31 +532,9 @@ def verify(build_env="hil_spi", do_reset=False, debug=False, repeat=1):
     if resource is None:
         return 1
     print(f"Scope resource: {resource}")
-    apply_scope_settings(resource, cfg)
-
-    if do_reset:
-        _reset_board_via_dtr(debug=debug)
-
-    skip_probe = build_env == "hil_spi" or os.environ.get("SKIP_PIN_PROBE") == "1"
-    probe_wait = 0.0 if skip_probe else float(cfg.get("capture", {}).get("probe_wait_s", 12))
-    if probe_wait > 0:
-        print(f"Waiting {probe_wait:.1f}s for pin-probe to complete ...")
-        time.sleep(probe_wait)
-    else:
-        time.sleep(1.0)
-
+    # Host-paced decode: verifier configures scope (SINGle on CS) and steps firmware per readback.
     board_port = os.environ.get("BOARD_PORT") or cfg.get("board_port") or "/dev/ttyUSB0"
-    print(f"Reading SPI sequence JSON from serial ({board_port}) [diagnostic] ...")
-    try:
-        found, lines = read_sequence(board_port, timeout_s=25, debug=debug)
-    except Exception as exc:
-        found, lines = None, []
-        print(f"WARNING: serial read failed (continuing to decoder gate): {exc}", file=sys.stderr)
-
-    if found is not None:
-        print(f"Firmware-reported MOSI (diagnostic): {found}")
-
-    # Primary gate: prove fast commands via scope internal decoder readback
+    print(f"Board port: {board_port}")
     decoder_path = _find_decoder_script()
     if decoder_path:
         print(f"Using internal decoder: {decoder_path}")

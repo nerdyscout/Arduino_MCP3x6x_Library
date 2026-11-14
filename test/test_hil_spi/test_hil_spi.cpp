@@ -108,8 +108,17 @@ void setup(void) {
 }
 
 void loop(void) {
+  // Wait for host trigger so scope can be armed; next step starts after host readback.
+  while (Serial.available() == 0) {
+    delay(1);
+  }
+  while (Serial.available() > 0) {
+    (void)Serial.read();
+  }
+
   const FastCmd& cmd = kFastCmds[gCmdIndex];
   Serial.println(F("SCOPE_BEGIN"));
+  Serial.flush();
   emitOneFastCommand(gCmdIndex);
   Serial.print(F("{\"name\":\""));
   Serial.print(cmd.name);
@@ -117,6 +126,6 @@ void loop(void) {
   Serial.print(cmd.mosi);
   Serial.println(F("],\"miso\":[]}"));
   Serial.println(F("SCOPE_END"));
+  Serial.flush();
   gCmdIndex = (uint8_t)((gCmdIndex + 1) % 5);
-  delay(600);
 }
