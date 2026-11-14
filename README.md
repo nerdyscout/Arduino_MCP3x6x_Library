@@ -98,45 +98,33 @@ See `examples/README.md` for full `build.sh` / `upload.sh` usage details.
 ### Run mocked unit tests (no hardware required)
 
 ```sh
-pio test -e mocked
+pio test            # default_envs = mocked
+# or
+pio test -e mocked -f test_mock
 ```
 
-The mocked environment compiles and executes the same mock test suite for all six MCP variants via `FOR_EACH_ADC` macro expansion, verifying chip-ID validation and per-variant register behavior.
+The mocked environment (`test/test_mock/`) compiles and executes the Unity+ArduinoFake suite for all six MCP variants via `FOR_EACH_ADC` macro expansion.
 
-### Hardware smoke test (real board)
-
-Build and upload the hardware smoke test to a physical board (default: `ATMEGA328P` / Arduino Nano):
+### Hardware-in-the-loop (HIL, real board)
 
 ```sh
-pio test -e ATMEGA328P
-```
-
-Select the MCP variant with `-DTEST_ADC_TYPE=<variant>`:
-
-```sh
-pio test -e ATMEGA328P --build-flags "-DTEST_ADC_TYPE=MCP3564"
-```
-
-### Hardware-in-the-loop test (real board + Unity Serial readback)
-
-```sh
-# Run on default ATMEGA328P / MCP3564
 pio run -t test_hil -e ATMEGA328P
-
-# Run with a specific MCP variant
-pio run -t test_hil -e ATMEGA328P --build-flags "-DTEST_ADC_TYPE=MCP3464"
 ```
 
-### SPI communication test (real board + oscilloscope readback)
+Builds/uploads/runs the Unity HIL suite in `test/test_hil/` on the selected hardware env (select variant with `-DTEST_ADC_TYPE=<variant>` as needed).
 
-Verify real SPI transactions end-to-end using the `test_hil_spi` custom target:
+### HIL + SPI (real board + oscilloscope)
 
 ```sh
+# Full build+upload+verify (includes pin-probe for channel mapping)
 pio run -t test_hil_spi -e ATMEGA328P
-pio run -t test_hil_spi -e ATMEGA328P --build-flags "-DTEST_ADC_TYPE=MCP3464"
+
+# Fast verify on an already-flashed/running board (skips pin-probe)
+pio test -e hil_spi
+# or: python3 test/test_hil_spi/verify_cmd.py
 ```
 
-See `test/README.md` for the full testing guide (mocked, hardware, HIL, and SPI HIL).
+Verifies SPI fast commands issued via the library instance against the testcase-emitted serial JSON sequence, using reusable scope settings from `test/hil_spi_config.json`. See `test/README.md` for the full testing guide (tiers, config, env vars).
 
 ## PCB fabrication
 

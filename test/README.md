@@ -1,69 +1,42 @@
 # Testing
 
-## Mocked unit tests (CI — no hardware)
+## Layout
 
-Run the mocked unit test suite via ArduinoFake + Unity:
+- `test/test_mock/` — mocked unit tests (ArduinoFake + Unity). Only expectations that can be fully simulated.
+- `test/test_hil/` — hardware-in-the-loop Unity tests (real board).
+- `test/test_hil_spi/` — SPI communication verification (real board + oscilloscope config).
+
+## Mocked tests (default, no hardware)
 
 ```sh
-pio test -e mocked
+pio test
+# or
+pio test -e mocked -f test_mock
 ```
 
-The mocked environment compiles and executes the same mock test suite for all
-6 MCP variants via `FOR_EACH_ADC` macro expansion, verifying chip-ID validation
-and per-variant register behavior.
+Runs from `test/test_mock/` across MCP variants via `FOR_EACH_ADC`.
 
-## Hardware test (real board)
-
-Build and upload the hardware smoke test to a physical board. The default
-environment is `ATMEGA328P` (Arduino Nano); select the MCP variant with
-`-DTEST_ADC_TYPE=<variant>`:
+## HIL (real board)
 
 ```sh
-pio test -e ATMEGA328P
-```
-
-The hardware `setup()` runs `runUnityTests()` which prints PASS/FAIL for every
-test to Serial at 115200 baud for oscilloscope correlation.
-
-## Hardware-in-the-loop test (real board + Unity Serial readback)
-
-Run the full HIL test on real hardware using Unity asserts read back via Serial:
-
-```sh
-# Run on default ATMEGA328P (uses MCP3564 variant)
 pio run -t test_hil -e ATMEGA328P
-
-# Run on any environment with a specific MCP variant
-pio run -t test_hil -e ATMEGA328P --build-flags "-DTEST_ADC_TYPE=MCP3564"
 ```
 
-This builds, uploads, and monitors the hardware test via Serial. `pio test`
-parses the Unity output and reports results.
+Builds/uploads/runs the Unity HIL suite in `test/test_hil/` on the selected hardware env.
 
-## SPI communication test (real board + decoder.py readback)
-
-Verify real SPI transactions end-to-end using the `test_hil_spi` custom target,
-which builds/uploads the hardware test, resets the board, reads back decoded SPI
-events from a Rigol oscilloscope via `decoder.py`, and compares decoded MOSI
-bytes against the expected table:
+## HIL + SPI (real board + oscilloscope)
 
 ```sh
-# Run on default ATMEGA328P / MCP3564
+# Full build+upload+verify (includes pin-probe for channel mapping)
 pio run -t test_hil_spi -e ATMEGA328P
 
-# Run with verbose decoder output
-pio run -t test_hil_spi -e ATMEGA328P --build-flags "-DTEST_ADC_TYPE=MCP3464"
-
-# Scope VISA resource and serial port are auto-detected when exactly one
-# candidate exists; otherwise use OSCI_RESOURCE / OSCI_PORT env vars.
+# Fast verify (skips pin-probe wait, for an already-flashed/running board)
+pio test -e hil_spi
+# or: python3 test/test_hil_spi/verify_cmd.py
 ```
 
-The target verifies the decoded MOSI byte sequence: `reset()`, `chip-ID read`,
-`config0()` through `config3()`, `irq()`, `mux()`, `conversion()`, and
-`readADCDATA()`.
+Behavior:
+1. Pin-probe (unless `-DSKIP_PIN_PROBE`, e.g. `env:hil_spi`): toggles SS/SCK/MOSI/MISO with serial markers for scope channel mapping/verification.
+2. Emits all MCP3x6x fast commands via the library instance (`mcp.reset()`, `mcp.conversion()`, `mcp.standby()`, `mcp.shutdown()`, `mcp.full_shutdown()`) and verifies the MOSI sequence from the board’s serial JSON (testcase-emitted, single source of truth).
 
-Options are controlled via the PlatformIO environment and build flags:
-- `-e <env>` — PlatformIO environment (default: `ATMEGA328P`)
-- `--build-flags "-DTEST_ADC_TYPE=<variant>"` — MCP variant (default: `MCP3564`)
-- `OSCI_RESOURCE` — VISA resource string for the scope (auto-detected if single candidate)
-- `OSCI_PORT` — Board serial port for DTR reset (auto-detected if single candidate)
+Reusable scope settings: `test/hil_spi_config.json` (probe, volts/div, offset, trigger level, timebase/acquire, channel mapping). Env vars: `BOARD_PORT`, `OSCI_RESOURCE`, `HIL_SPI_CONFIG`, `SKIP_PIN_PROBE`, `HIL_SPI_RESET`. VISA resources are closed after use.
