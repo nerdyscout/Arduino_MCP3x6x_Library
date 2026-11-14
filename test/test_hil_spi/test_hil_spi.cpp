@@ -48,14 +48,39 @@ static void pin_probe_exec() {
 }
 #endif
 
-// Execute all MCP3x6x fast commands using the actual library instance.
-static void emitFastCommands() {
-  mcp.reset();
-  delayMicroseconds(500);
-  mcp.conversion();
-  mcp.standby();
-  mcp.shutdown();
-  mcp.full_shutdown();
+// Emit one MCP3x6x fast command per iteration (cycles through all 5) via the
+// actual library instance at max SPI speed. One-command-per-capture keeps the
+// internal scope decoder timing reliable while proving each command on-bus.
+struct FastCmd {
+  const char* name;
+  uint8_t mosi;
+};
+
+static const FastCmd kFastCmds[] = {
+  {"reset", 120}, {"conversion", 104}, {"standby", 108}, {"shutdown", 112}, {"full_shutdown", 116},
+};
+static uint8_t gCmdIndex = 0;
+
+static void emitOneFastCommand(uint8_t idx) {
+  switch (idx) {
+    case 0:
+      mcp.reset();
+      break;
+    case 1:
+      mcp.conversion();
+      break;
+    case 2:
+      mcp.standby();
+      break;
+    case 3:
+      mcp.shutdown();
+      break;
+    case 4:
+      mcp.full_shutdown();
+      break;
+    default:
+      break;
+  }
 }
 
 void setup(void) {
@@ -83,15 +108,15 @@ void setup(void) {
 }
 
 void loop(void) {
+  const FastCmd& cmd = kFastCmds[gCmdIndex];
   Serial.println(F("SCOPE_BEGIN"));
-  emitFastCommands();
-  Serial.print(F("{\"mosi\":["));
-  Serial.print(F("120,104,108,112,116"));
+  emitOneFastCommand(gCmdIndex);
+  Serial.print(F("{\"name\":\""));
+  Serial.print(cmd.name);
+  Serial.print(F("\",\"mosi\":["));
+  Serial.print(cmd.mosi);
   Serial.println(F("],\"miso\":[]}"));
   Serial.println(F("SCOPE_END"));
-#ifdef SKIP_PIN_PROBE
-  delay(2000);
-#else
-  delay(800);
-#endif
+  gCmdIndex = (uint8_t)((gCmdIndex + 1) % 5);
+  delay(400);
 }

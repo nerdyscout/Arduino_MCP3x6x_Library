@@ -8,32 +8,36 @@
     "mosi": "CHAN4"
   },
   "probe": "1x",
-  "volts_per_div": 1,
-  "offset_volts": -2,
+  "volts_per_div": 2,
+  "offset_volts": 0,
   "trigger": {
     "source": "CHAN1",
     "slope": "NEGative",
-    "level_volts": 1.0,
+    "level_volts": 2.0,
     "sweep": "SINGle"
   },
   "timebase": {
-    "scale_s": 0.002,
-    "offset_s": 0.008
+    "scale_s": 0.000002,
+    "offset_s": 0.000008
   },
   "acquire": {
     "type": "NORM",
-    "mdepth": "AUTO"
+    "mdepth": "12000000"
   },
   "decoder": {
-    "edge": "rise",
-    "polarity": "pos",
-    "select": "ncs",
+    "mode": "CS",
+    "spi_select": "NCS",
+    "ss_polarity": "NEG",
+    "edge": "FALL",
+    "endian": "LSB",
     "width": 8,
-    "endian": "msb"
+    "spi_timeout_s": 0.00005,
+    "format": "HEX",
+    "view": "PACKage",
+    "threshold_volts": 1.6
   },
   "capture": {
-    "probe_wait_s": 12,
-    "attempts": 8,
-    "threshold_volts": 1.0
+    "probe_wait_s": 0,
+    "attempts": 40
   }
 }
