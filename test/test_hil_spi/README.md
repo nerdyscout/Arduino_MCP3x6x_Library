@@ -34,7 +34,7 @@ python3 test/test_hil_spi/verify_cmd.py
 
 ## Dependencies
 
-- `pyvisa`, `pyserial`, Rigol USBTMC/`usbtmc` access, `sigrok-cli` (libsigrokdecode). Local protocol decoders in `decoders/` are used if present via `SIGROKDECODE_DIR`.
+- `pyvisa`, `pyserial`, Rigol USBTMC/`usbtmc` access, `sigrok-cli` (libsigrokdecode). Local protocol decoders in `scripts/decoders/` are used if present via `SIGROKDECODE_DIR`.
 
 ## Notes
 

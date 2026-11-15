@@ -118,8 +118,6 @@ def _read_wave(inst: Any, ch: str) -> tuple[list[float], float]:
         raise RuntimeError(f"bad preamble for {ch}: {pre!r}")
     pts = int(float(pre[2]))
     xinc = float(pre[4])
-    xorg = float(pre[5])
-    xref = float(pre[6])
     yinc = float(pre[7])
     yorg = float(pre[8])
     yref = float(pre[9])
@@ -145,7 +143,6 @@ def _bits(vals: list[float], thr: float) -> list[int]:
 
 def _write_vcd(path: str, clk: list[int], mosi: list[int], miso: list[int], cs: list[int], xinc: float) -> None:
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    n = len(clk)
     scale = max(1, int(round(xinc / 1e-9)))
     with open(path, "w", encoding="utf-8") as f:
         f.write(f"$timescale {scale} ns $end\n$scope module logic $end\n$var wire 1 ! clk $end\n$var wire 1 \" mosi $end\n$var wire 1 # miso $end\n$var wire 1 $ cs $end\n$upscope $end\n$enddefinitions $end\n#0\n")
@@ -153,7 +150,7 @@ def _write_vcd(path: str, clk: list[int], mosi: list[int], miso: list[int], cs: 
         syms = ["!", '"', "#", "$"]
         for s, v in zip(syms, prev):
             f.write(f"{v}{s}\n")
-        for i in range(1, n):
+        for i in range(1, len(clk)):
             cur = [clk[i], mosi[i], miso[i], cs[i]]
             if cur == prev:
                 continue
@@ -166,7 +163,7 @@ def _write_vcd(path: str, clk: list[int], mosi: list[int], miso: list[int], cs: 
 
 def _sigrok_decode(vcd: str, debug: bool = False) -> tuple[list[int], list[int]]:
     env = os.environ.copy()
-    decdir = Path.cwd() / "decoders"
+    decdir = Path.cwd() / "scripts" / "decoders"
     if decdir.is_dir():
         env["SIGROKDECODE_DIR"] = str(decdir)
     base = [
