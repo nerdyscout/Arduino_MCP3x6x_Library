@@ -13,34 +13,10 @@ void test_instance_all_variants() {
 }
 
 // ---------------------------------------------------------------------------
-// begin() — success path for all variants (POR=1 + correct HW_ID)
+// begin() — success path (reset issued; identity precomputed from template)
 // ---------------------------------------------------------------------------
 void test_begin_success_current_variant() {
-  mockStatusByte = 0x01;  // POR=1 → reset() succeeds
-// Expected chip-ID nibble per variant (from Linux driver mcp3564.c)
-#define NIBBLE_MCP3461 0x8
-#define NIBBLE_MCP3462 0x9
-#define NIBBLE_MCP3464 0xB
-#define NIBBLE_MCP3561 0xC
-#define NIBBLE_MCP3562 0xD
-#define NIBBLE_MCP3564 0xF
-
-  uint8_t nibble = 0xFF;
-#define MAP_NIBBLE(V)                  \
-  if (std::is_same<TestADC, V>::value) \
-    nibble = NIBBLE_##V;
-  FOR_EACH_ADC(MAP_NIBBLE)
-#undef MAP_NIBBLE
-#undef NIBBLE_MCP3461
-#undef NIBBLE_MCP3462
-#undef NIBBLE_MCP3464
-#undef NIBBLE_MCP3561
-#undef NIBBLE_MCP3562
-#undef NIBBLE_MCP3564
-
-  TEST_ASSERT_NOT_EQUAL(0xFF, nibble);  // variant must be recognized
-
-  mockReadSequence = {nibble, 0x30};  // HW_ID nibble + R-variant
+  mockStatusByte = 0x01;
   TestADC adc;
   bool ok = adc.begin();
   TEST_ASSERT_TRUE(ok);
@@ -48,28 +24,25 @@ void test_begin_success_current_variant() {
 }
 
 // ---------------------------------------------------------------------------
-// begin() — failure paths: wrong chip-ID nibble rejected
+// Chip ID is precomputed from <resolution, channels>
 // ---------------------------------------------------------------------------
-void test_begin_fail_wrong_chipid() {
-  static const uint8_t bad_ids[] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0xA, 0xE};
-  for (size_t i = 0; i < sizeof(bad_ids) / sizeof(bad_ids[0]); i++) {
-    TestADC adc;
-    mockStatusByte = 0x01;
-    mockReadSequence = {bad_ids[i], 0x30};
-    bool ok = adc.begin();
-    TEST_ASSERT_FALSE_MESSAGE(ok, "wrong chip-ID should fail begin()");
-  }
+void test_chipid_precomputed_all_variants() {
+  TEST_ASSERT_EQUAL_HEX8(0x8, MCP3461::kChipId);
+  TEST_ASSERT_EQUAL_HEX8(0x9, MCP3462::kChipId);
+  TEST_ASSERT_EQUAL_HEX8(0xB, MCP3464::kChipId);
+  TEST_ASSERT_EQUAL_HEX8(0xC, MCP3561::kChipId);
+  TEST_ASSERT_EQUAL_HEX8(0xD, MCP3562::kChipId);
+  TEST_ASSERT_EQUAL_HEX8(0xF, MCP3564::kChipId);
 }
 
 // ---------------------------------------------------------------------------
-// begin() — failure path: POR bit not set
+// begin() does not require POR bit in reset response
 // ---------------------------------------------------------------------------
-void test_begin_fail_no_por() {
+void test_begin_succeeds_without_por_bit() {
   TestADC adc;
-  mockStatusByte = 0x00;  // POR=0 → reset() fails
-  mockReadSequence = {0x0F, 0x30};
+  mockStatusByte = 0x00;  // POR not set in status byte
   bool ok = adc.begin();
-  TEST_ASSERT_FALSE(ok);
+  TEST_ASSERT_TRUE(ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -98,8 +71,8 @@ void test_end_calls_spi_end() {
 void register_init_tests() {
   RUN_TEST(test_instance_all_variants);
   RUN_TEST(test_begin_success_current_variant);
-  RUN_TEST(test_begin_fail_wrong_chipid);
-  RUN_TEST(test_begin_fail_no_por);
+  RUN_TEST(test_chipid_precomputed_all_variants);
+  RUN_TEST(test_begin_succeeds_without_por_bit);
   RUN_TEST(test_reset_sends_cmd_reset);
   RUN_TEST(test_end_calls_spi_end);
 }

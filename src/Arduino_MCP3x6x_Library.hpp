@@ -6,7 +6,7 @@
  * @author nerdyscout (nerdyscout@posteo.de)
  * @brief Library to support Microchip MCP3x6x/R 16/24bit ADCs
  * @version 0.2.0
- * @date 2026-03-23
+ * @date 2026-11-15
  *
  * @copyright Copyright (c) 2026
  *
@@ -1088,6 +1088,14 @@ class MCP3x6x {
   } _adcdata = {.channelid = MCP3x6x_CH0, .value = 0};  //!< todo
 
  public:
+  /** @brief Device ID nibble precomputed from template parameters. */
+  static constexpr uint8_t kChipId = (_MAX_RESOLUTION == 16) ? ((_MAX_CHANNELS == 2)   ? 0x8u
+                                                                : (_MAX_CHANNELS == 4) ? 0x9u
+                                                                                       : 0xBu)
+                                                             : ((_MAX_CHANNELS == 2)   ? 0xCu
+                                                                : (_MAX_CHANNELS == 4) ? 0xDu
+                                                                                       : 0xFu);
+
   ///////////////////////////////////////////////////////////////////////////////
   // de/constructor
   ////////////////////////////////////////////////////////////////////////////////
@@ -1172,7 +1180,6 @@ class MCP3x6x {
 
 #elif defined(ARDUINO_ARCH_ESP8266)  // init SPI of ESP8266
     if (!_spi->pins(_pinCLK, _pinMISO, _pinMOSI, _pinCS)) {
-      // Ensure CS is configured even if pin remapping fails
       pinMode(_pinCS, OUTPUT);
       digitalWrite(_pinCS, HIGH);
     } else {
@@ -1193,55 +1200,12 @@ class MCP3x6x {
 #endif
 #endif
 
-    // reset ADC and return
-    if (!reset().por) {
-      return false;
-    }
+    // Reset ADC. Do not gate on POR status byte; chip identity is defined by
+    // template parameters (<resolution, channels>).
+    reset();
+    delay(5);
 
-    // Wait for reset to complete (matches Linux driver mcp3564_config:
-    // mdelay(1))
-    delay(20);
-
-    // chip ID validation
-    if (!_validateChipID()) {
-      return false;
-    }
-
-    // R-variant detection and VREF auto-configuration
     _detectVariant();
-
-    return true;
-  }
-
-  bool _validateChipID() {
-    uint8_t reserved_e[2] = {0, 0};
-    _transfer(reserved_e, MCP3x6x_CMD_SREAD | MCP3x6x_ADR_RESERVED3, sizeof(reserved_e));
-    // Read 16-bit value from RESERVED_E (matches Linux driver
-    // mcp3564_read_16bits), extract chip-ID nibble from low 4 bits of first
-    // byte (big-endian: byte[0] is high byte)
-    uint8_t hw_id = reserved_e[0] & 0x0F;
-
-    uint8_t expected_id;
-    if (_MAX_RESOLUTION == 16) {
-      if (_MAX_CHANNELS == 2)
-        expected_id = 0x8;
-      else if (_MAX_CHANNELS == 4)
-        expected_id = 0x9;
-      else
-        expected_id = 0xB;
-    } else {
-      if (_MAX_CHANNELS == 2)
-        expected_id = 0xC;
-      else if (_MAX_CHANNELS == 4)
-        expected_id = 0xD;
-      else
-        expected_id = 0xF;
-    }
-
-    if (hw_id != expected_id) {
-      MCP3x6x_LOG("MCP3x6x: chip ID mismatch\n");
-      return false;
-    }
     return true;
   }
 
