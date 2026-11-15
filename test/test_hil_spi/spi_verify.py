@@ -1,53 +1,48 @@
+#!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 nerdyscout
+"""HIL SPI verification: host-paced capture + sigrok-cli decode (datasheet gate)."""
+
+from __future__ import annotations
 
 import json
 import os
 import re
+import subprocess
 import sys
 import time
+import traceback
+from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, "test")
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+import serial  # type: ignore
+
 from _shared import _detect_scope_resource, _reset_board_via_dtr  # noqa: E402
 
 DEFAULT_CONFIG = {
     "resource": "",
-    "board_port": "",
+    "board_port": "/dev/ttyUSB0",
     "channels": {"cs": "CHAN1", "sclk": "CHAN3", "miso": "CHAN2", "mosi": "CHAN4"},
-    "probe": "1x",
-    "volts_per_div": 2,
-    "offset_volts": 0,
     "trigger": {"source": "CHAN1", "slope": "NEGative", "level_volts": 2.0},
     "timebase": {"scale_s": 0.000002, "offset_s": 0.000008},
     "acquire": {"type": "NORM", "mdepth": "12000000"},
-    "capture": {"probe_wait_s": 0, "attempts": 40},
-    "decoder": {
-        "mode": "CS",
-        "spi_select": "NCS",
-        "ss_polarity": "NEG",
-        "edge": "FALL",
-        "endian": "LSB",
-        "width": 8,
-        "spi_timeout_s": 0.00005,
-        "threshold_volts": 1.6,
-    },
+    "volts_per_div": 2.0,
+    "threshold_volts": 1.6,
 }
 
-# Scope-internal-decoder observed values (one setting: CS/NCS/NEG/FALL/LSB, thr 1.6V).
-# Library-expected MOSI per datasheet: reset 0x78, conversion 0x68, standby 0x6C,
-# shutdown 0x70, full_shutdown 0x74; on-bus decoded MOSI differs for some commands
-# (assumed library/encoding issue) while MISO 0x17 (STATUS) is observed.
 EXPECTED = [
-    ("reset()", {"mosi": [0xE1], "miso": [0x17]}),
-    ("conversion()", {"mosi": [0xE9], "miso": [0x17]}),
-    ("standby()", {"mosi": [0xC9], "miso": [0x17]}),
-    ("shutdown()", {"mosi": [0xF1], "miso": [0x17]}),
-    ("full_shutdown()", {"mosi": [0xD1], "miso": [0x17]}),
+    ("reset", 0x78, 0x17),
+    ("conversion", 0x68, 0x17),
+    ("standby", 0x6C, 0x17),
+    ("shutdown", 0x70, 0x17),
+    ("full_shutdown", 0x74, 0x17),
 ]
-EXPECTED_FLAT = [b for _, v in EXPECTED for b in v.get("mosi", [])]
 
 
-def _deep_merge(base, override):
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     out = dict(base)
     for k, v in (override or {}).items():
         if isinstance(v, dict) and isinstance(out.get(k), dict):
@@ -57,493 +52,276 @@ def _deep_merge(base, override):
     return out
 
 
-def load_config():
-    candidates = [
-        os.environ.get("HIL_SPI_CONFIG", ""),
-        os.path.join("test", "hil_spi_config.json"),
-        "hil_spi_config.json",
-        os.path.join(os.getcwd(), "test", "hil_spi_config.json"),
-    ]
-    for p in candidates:
-        if not p:
-            continue
-        try:
-            if os.path.isfile(p):
-                with open(p, "r", encoding="utf-8") as f:
-                    return _deep_merge(DEFAULT_CONFIG, json.load(f))
-        except Exception as exc:
-            print(f"WARNING: failed to read config {p}: {exc}", file=sys.stderr)
-    return dict(DEFAULT_CONFIG)
-
-
-def _probe_value(probe):
-    s = str(probe).strip().lower().replace("x", "")
-    try:
-        v = float(s)
-        return str(int(v)) if v == int(v) else str(v)
-    except Exception:
-        return "1"
-
-
-def _normalize_mosi(m):
-    out = []
-    for x in m or []:
-        if isinstance(x, int):
-            out.append(x)
-        elif isinstance(x, str):
+def load_config() -> dict[str, Any]:
+    cfg = _deep_merge({}, DEFAULT_CONFIG)
+    for p in [os.environ.get("HIL_SPI_CONFIG", ""), os.path.join("test", "hil_spi_config.json"), "hil_spi_config.json"]:
+        if p and os.path.isfile(p):
             try:
-                out.append(int(x, 16) if x.lower().startswith("0x") else int(x))
-            except Exception:
-                pass
-    return out
+                with open(p, "r", encoding="utf-8") as f:
+                    cfg = _deep_merge(cfg, json.load(f))
+                break
+            except Exception as exc:
+                print(f"WARNING: failed to read config {p}: {exc}", file=sys.stderr)
+    return cfg
 
 
-def apply_scope_settings(resource, cfg):
-    try:
-        import pyvisa
-    except Exception as exc:
-        print(f"WARNING: pyvisa unavailable, skipping scope setup ({exc})", file=sys.stderr)
-        return
+def _tmc_block(raw: bytes) -> bytes:
+    if raw[:1] == b"#" and len(raw) > 2 and raw[1:2].isdigit():
+        nd = int(raw[1:2])
+        n = int(raw[2:2 + nd] or b"0")
+        return raw[2 + nd:2 + nd + n]
+    return raw or b""
 
-    ch = cfg.get("channels", {})
-    ch_cs = str(ch.get("cs", "CHAN1"))
-    ch_sclk = str(ch.get("sclk", "CHAN3"))
-    ch_miso = str(ch.get("miso", "CHAN2"))
-    ch_mosi = str(ch.get("mosi", "CHAN4"))
-    probe = _probe_value(cfg.get("probe", "1x"))
-    vdiv = float(cfg.get("volts_per_div", 1))
-    offset = float(cfg.get("offset_volts", -2))
+
+def _wait_status(inst: Any, want: set[str], timeout_s: float) -> str:
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        st = str(inst.query(":TRIGger:STATus?")).strip()
+        if st in want or any(w in st.upper() for w in want):
+            return st
+        time.sleep(0.03)
+    return str(inst.query(":TRIGger:STATus?")).strip()
+
+
+def _configure_scope(inst: Any, cfg: dict[str, Any]) -> None:
+    ch = cfg["channels"]
     trig = cfg.get("trigger", {})
     tb = cfg.get("timebase", {})
     acq = cfg.get("acquire", {})
+    vdiv = cfg.get("volts_per_div", 2.0)
+    inst.timeout = 6000
+    inst.write(":STOP")
+    for c in [ch["cs"], ch["sclk"], ch["mosi"], ch["miso"]]:
+        inst.write(f":{c}:DISPlay ON")
+        inst.write(f":{c}:PROBe 1")
+        inst.write(f":{c}:SCALe {vdiv}")
+        inst.write(f":{c}:OFFSet 0")
+        inst.write(f":{c}:COUPling DC")
+    inst.write(f":TIMebase:MAIN:SCALe {tb.get('scale_s', 0.000002)}")
+    inst.write(f":TIMebase:MAIN:OFFSet {tb.get('offset_s', 0.000008)}")
+    inst.write(f":ACQuire:TYPE {acq.get('type', 'NORM')}")
+    inst.write(f":ACQuire:MDEPth {acq.get('mdepth', '12000000')}")
+    inst.write(":TRIGger:MODE EDGE")
+    inst.write(f":TRIGger:EDGE:SOURce {trig.get('source', ch['cs'])}")
+    inst.write(f":TRIGger:EDGE:SLOPe {trig.get('slope', 'NEGative')}")
+    inst.write(f":TRIGger:EDGE:LEVel {trig.get('level_volts', 2.0)}")
+    inst.query("*OPC?")
 
-    rm = pyvisa.ResourceManager()
+
+def _read_wave(inst: Any, ch: str) -> tuple[list[float], float]:
+    inst.timeout = 5000
+    inst.write(f":WAVeform:SOURce {ch}")
+    inst.write(":WAVeform:MODE NORM")
+    inst.write(":WAVeform:FORMat BYTE")
+    pre = str(inst.query(":WAVeform:PREamble?")).strip().split(",")
+    if len(pre) < 10:
+        raise RuntimeError(f"bad preamble for {ch}: {pre!r}")
+    pts = int(float(pre[2]))
+    xinc = float(pre[4])
+    xorg = float(pre[5])
+    xref = float(pre[6])
+    yinc = float(pre[7])
+    yorg = float(pre[8])
+    yref = float(pre[9])
+    data: list[int] = []
+    start = 1
+    while start <= pts:
+        stop = min(pts, start + 399)
+        inst.write(f":WAVeform:STARt {start}")
+        inst.write(f":WAVeform:STOP {stop}")
+        inst.write(":WAVeform:DATA?")
+        raw = inst.read_raw() or b""
+        part = list(_tmc_block(raw))
+        if len(part) != (stop - start + 1):
+            raise RuntimeError(f"{ch} chunk {start}-{stop} got {len(part)} bytes")
+        data.extend(part)
+        start = stop + 1
+    return [(d - yorg - yref) * yinc for d in data], xinc
+
+
+def _bits(vals: list[float], thr: float) -> list[int]:
+    return [1 if v >= thr else 0 for v in vals]
+
+
+def _write_vcd(path: str, clk: list[int], mosi: list[int], miso: list[int], cs: list[int], xinc: float) -> None:
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    n = len(clk)
+    scale = max(1, int(round(xinc / 1e-9)))
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(f"$timescale {scale} ns $end\n$scope module logic $end\n$var wire 1 ! clk $end\n$var wire 1 \" mosi $end\n$var wire 1 # miso $end\n$var wire 1 $ cs $end\n$upscope $end\n$enddefinitions $end\n#0\n")
+        prev = [clk[0], mosi[0], miso[0], cs[0]]
+        syms = ["!", '"', "#", "$"]
+        for s, v in zip(syms, prev):
+            f.write(f"{v}{s}\n")
+        for i in range(1, n):
+            cur = [clk[i], mosi[i], miso[i], cs[i]]
+            if cur == prev:
+                continue
+            f.write(f"#{i}\n")
+            for j, s in enumerate(syms):
+                if cur[j] != prev[j]:
+                    f.write(f"{cur[j]}{s}\n")
+            prev = cur
+
+
+def _sigrok_decode(vcd: str, debug: bool = False) -> tuple[list[int], list[int]]:
+    env = os.environ.copy()
+    decdir = Path.cwd() / "decoders"
+    if decdir.is_dir():
+        env["SIGROKDECODE_DIR"] = str(decdir)
+    base = [
+        "timeout", "8", "sigrok-cli", "-I", "vcd", "-i", vcd,
+        "-P", "spi:clk=clk:mosi=mosi:miso=miso:cs=cs:cpol=0:cpha=0:bitorder=msb-first:wordsize=8:cs_polarity=active-low",
+    ]
+
+    def get(ann: str) -> list[int]:
+        cmd = base + ["-A", f"spi={ann}"]
+        p = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        if p.returncode != 0:
+            raise RuntimeError(f"sigrok-cli {ann} failed (rc={p.returncode}): {(p.stderr or p.stdout).strip()[:300]}")
+        out: list[int] = []
+        for line in p.stdout.splitlines():
+            m = re.search(r"\b([0-9A-Fa-f]{2})\b", line.split(":", 1)[-1])
+            if m:
+                out.append(int(m.group(1), 16))
+        return out
+
+    mosi = get("mosi-data")
+    miso = get("miso-data")
+    if debug:
+        print(f"[debug] sigrok mosi={mosi} miso={miso}", file=sys.stderr)
+    return mosi, miso
+
+
+def _step_once(idx: int, ser: Any, rm: Any, resource: str, cfg: dict[str, Any], debug: bool) -> tuple[bool, str]:
+    ch = cfg["channels"]
+    thr = float(cfg.get("threshold_volts", 1.6))
     inst = rm.open_resource(resource)
+    inst.timeout = 6000
     try:
-        inst.timeout = 15000
-
-        def w(c):
-            inst.write(c)
-
-        w(":STOP")
-        for c in [ch_cs, ch_sclk, ch_miso, ch_mosi]:
-            w(f":{c}:DISPlay ON")
-            w(f":{c}:PROBe {probe}")
-            w(f":{c}:SCALe {vdiv}")
-            w(f":{c}:OFFSet {offset}")
-        w(f":TIMebase:MAIN:SCALe {float(tb.get('scale_s', 0.002))}")
-        w(f":TIMebase:MAIN:OFFSet {float(tb.get('offset_s', 0.008))}")
-        w(f":ACQuire:TYPE {acq.get('type', 'NORM')}")
-        w(f":ACQuire:MDEPth {acq.get('mdepth', 'AUTO')}")
-        w(":TRIGger:MODE EDGE")
-        w(f":TRIGger:EDGE:SOURce {trig.get('source', ch_cs)}")
-        w(f":TRIGger:EDGE:SLOPe {trig.get('slope', 'NEGative')}")
-        w(f":TRIGger:EDGE:LEVel {float(trig.get('level_volts', 1.0))}")
-        w(":TRIGger:SWEep AUTO")
-        w(":RUN")
-        print("Scope settings applied.")
+        try:
+            inst.clear()
+        except Exception:
+            pass
+        _configure_scope(inst, cfg)
+        inst.write(":STOP")
+        try:
+            inst.write(":CLEar")
+        except Exception:
+            pass
+        inst.write(":TRIGger:SWEep SINGle")
+        inst.write(":SINGle")
+        inst.query("*OPC?")
+        rdy = _wait_status(inst, {"WAIT"}, 2.5)
+        try:
+            ser.reset_input_buffer()
+        except Exception:
+            pass
+        ser.write(b"n")
+        ser.flush()
+        label = None
+        ser_mosi = None
+        t_end = time.time() + 4.0
+        while time.time() < t_end:
+            line = ser.readline().decode("utf-8", "ignore").strip()
+            if not line:
+                continue
+            if line.startswith("{"):
+                try:
+                    obj = json.loads(line)
+                    label = obj.get("name")
+                    ser_mosi = obj.get("mosi")
+                except Exception:
+                    pass
+            if line == "SCOPE_END":
+                break
+        st = _wait_status(inst, {"STOP", "TD"}, 3.0)
+        inst.write(":STOP")
+        time.sleep(0.12)
+        inst.query("*OPC?")
+        if not label:
+            raise RuntimeError(f"no step label (rdy={rdy} stop={st})")
+        waves: dict[str, list[float]] = {}
+        xinc = 0.0
+        for name, chan in [("cs", ch["cs"]), ("sclk", ch["sclk"]), ("mosi", ch["mosi"]), ("miso", ch["miso"])]:
+            waves[name], xinc = _read_wave(inst, chan)
+        logs = Path.cwd() / "logs" / "hil_spi"
+        logs.mkdir(parents=True, exist_ok=True)
+        vcd = str(logs / f"step_{idx}_{label}.vcd")
+        _write_vcd(vcd, _bits(waves["sclk"], thr), _bits(waves["mosi"], thr), _bits(waves["miso"], thr), _bits(waves["cs"], thr), xinc)
+        mosi, miso = _sigrok_decode(vcd, debug=debug)
+        exp = next(((n, em, ei) for n, em, ei in EXPECTED if n == label), None)
+        if not exp:
+            raise RuntimeError(f"unexpected label {label}")
+        ok = (mosi == [exp[1]] and miso == [exp[2]])
+        print(f"[{idx}] {'OK' if ok else 'BAD'} {label} ser={ser_mosi} mosi={[hex(x) for x in mosi]} miso={[hex(x) for x in miso]} exp={[hex(exp[1]),hex(exp[2])]}")
+        if not ok and not os.environ.get("HIL_SPI_KEEP_ARTIFACTS"):
+            try:
+                os.remove(vcd)
+            except Exception:
+                pass
+        return ok, str(label)
     finally:
         try:
             inst.close()
         except Exception:
             pass
+
+
+def verify(build_env: str = "hil_spi", do_reset: bool = True, debug: bool = False, repeat: int = 1) -> int:
+    cfg = load_config()
+    board_port = os.environ.get("BOARD_PORT") or cfg.get("board_port") or "/dev/ttyUSB0"
+    os.environ["BOARD_PORT"] = str(board_port)
+
+    try:
+        import pyvisa  # type: ignore
+    except Exception as e:
+        print(f"ERROR: PyVISA not available: {e}", file=sys.stderr)
+        return 1
+
+    if subprocess.run(["timeout", "2", "sigrok-cli", "--version"], capture_output=True, text=True).returncode != 0:
+        print("ERROR: sigrok-cli not available", file=sys.stderr)
+        return 1
+
+    resource = cfg.get("resource") or os.environ.get("OSCI_RESOURCE") or _detect_scope_resource(debug=debug)
+    if not resource:
+        return 1
+    print(f"Scope resource: {resource}")
+    print(f"Board port: {board_port}")
+
+    total = len(EXPECTED) * max(1, repeat)
+    passed = 0
+    rm = pyvisa.ResourceManager()
+    ser = serial.Serial(board_port, 115200, timeout=0.4)
+    try:
+        if do_reset:
+            _reset_board_via_dtr(debug=debug)
+            time.sleep(2.5)
         try:
-            rm.close()
+            ser.reset_input_buffer()
         except Exception:
             pass
-
-
-def read_sequence(board_port, timeout_s=20, debug=False):
-    import serial as pyserial
-
-    ser = pyserial.Serial(board_port, 115200, timeout=1)
-    try:
-        deadline = time.time() + timeout_s
-        lines = []
-        while time.time() < deadline:
-            raw = ser.readline().decode("ascii", errors="replace").strip()
-            if not raw:
-                continue
-            lines.append(raw)
-            if debug:
-                print(f"  SERIAL: {raw}")
-            if raw.startswith("{") and "\"mosi\"" in raw:
-                try:
-                    obj = json.loads(raw)
-                    if isinstance(obj.get("mosi"), list):
-                        return _normalize_mosi(obj["mosi"]), lines
-                except Exception:
-                    pass
-        return None, lines
+        for i in range(1, total + 1):
+            try:
+                ok, _ = _step_once(i, ser, rm, resource, cfg, debug)
+                if ok:
+                    passed += 1
+            except Exception as e:
+                print(f"[{i}] FAIL {e}", file=sys.stderr)
+                if debug:
+                    traceback.print_exc(limit=2)
+            time.sleep(0.2)
+        print(f"Sigrok gate: {passed}/{total} steps matched datasheet")
+        if passed == total:
+            print("=== SPI verification passed (sigrok-cli, datasheet). ===")
+            return 0
+        return 1
     finally:
         try:
             ser.close()
         except Exception:
             pass
-
-
-
-def _find_decoder_script():
-    p = os.environ.get("DECODER_PATH", "")
-    if p and os.path.isfile(p):
-        return p
-    for cand in [
-        os.path.join(os.getcwd(), "scripts", "decoder.py"),
-        os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "decoder.py"),
-        "scripts/decoder.py",
-    ]:
-        if os.path.isfile(cand):
-            return cand
-    return ""
-
-
-def _read_etable_pair(scope):
-    """Read one decoded (mosi,miso) pair from Rigol internal decoder ETABle."""
-    # Import lazily so verify can still run basic checks without scripts on path issues
-    try:
-        sys.path.insert(0, os.path.join(os.getcwd(), "scripts"))
-        from decoder import _parse_tmc_block, _etable_hex_payload, _extract_from_etable_text  # type: ignore
-    except Exception:
-        return [], []
-    try:
-        scope.inst.timeout = 8000
-        scope.write(":ETABle1:DATA?")
-        raw = scope.read_raw() or b""
-        payload = _parse_tmc_block(raw)
-        text = _etable_hex_payload(payload).decode("ascii", "ignore")
-        mo, mi = _extract_from_etable_text(text)
-        return mo, mi
-    except Exception:
-        return [], []
-
-
-def _configure_scope_for_decode(scope, cfg):
-    ch = cfg.get("channels", {})
-    trig = cfg.get("trigger", {})
-    tb = cfg.get("timebase", {})
-    acq = cfg.get("acquire", {})
-    dec = cfg.get("decoder", {})
-    ch_cs = str(ch.get("cs", "CHAN1"))
-    ch_sclk = str(ch.get("sclk", "CHAN3"))
-    ch_miso = str(ch.get("miso", "CHAN2"))
-    ch_mosi = str(ch.get("mosi", "CHAN4"))
-    probe = _probe_value(cfg.get("probe", "1x"))
-    vdiv = float(cfg.get("volts_per_div", 2.0))
-    offset = float(cfg.get("offset_volts", 0.0))
-    trig_src = str(trig.get("source", "CHAN1"))
-    trig_slope = str(trig.get("slope", "NEGative"))
-    trig_level = float(trig.get("level_volts", 2.0))
-    tscale = float(tb.get("scale_s", 0.000002))
-    toffset = float(tb.get("offset_s", 0.000008))
-    mdepth = str(acq.get("mdepth", "12000000"))
-    dec_mode = str(dec.get("mode", "CS")).upper()
-    dec_select = str(dec.get("spi_select", "NCS")).upper()
-    dec_edge = str(dec.get("edge", "FALL")).upper()
-    dec_endian = str(dec.get("endian", "LSB")).upper()
-    dec_pol = str(dec.get("ss_polarity", dec.get("polarity", "NEG"))).upper()
-    dec_width = int(dec.get("width", 8))
-    dec_thr = float(dec.get("threshold_volts", trig_level))
-
-    scope.write(":STOP")
-    for c in [ch_cs, ch_sclk, ch_miso, ch_mosi]:
-        scope.write(f":{c}:DISPlay ON")
-        scope.write(f":{c}:PROBe {probe}")
-        scope.write(f":{c}:SCALe {vdiv}")
-        scope.write(f":{c}:OFFSet {offset}")
-        scope.write(f":{c}:COUPling DC")
-    scope.write(f":TIMebase:MAIN:SCALe {tscale}")
-    scope.write(f":TIMebase:MAIN:OFFSet {toffset}")
-    scope.write(":ACQuire:TYPE NORM")
-    scope.write(f":ACQuire:MDEPth {mdepth}")
-    scope.write(":TRIGger:MODE EDGE")
-    scope.write(f":TRIGger:EDGE:SOURce {trig_src}")
-    scope.write(f":TRIGger:EDGE:SLOPe {trig_slope}")
-    scope.write(f":TRIGger:EDGE:LEVel {trig_level}")
-    # decoder
-    scope.write(":DECoder1:MODE SPI")
-    scope.write(":DECoder1:DISPlay ON")
-    scope.write(":DECoder1:FORMat HEX")
-    scope.write(":DECoder1:THReshold:AUTO OFF")
-    for c in [ch_cs, ch_sclk, ch_miso, ch_mosi]:
-        scope.write(f":DECoder1:THReshold:{c} {dec_thr}")
-    scope.write(f":DECoder1:SPI:CLK {ch_sclk}")
-    scope.write(f":DECoder1:SPI:MOSI {ch_mosi}")
-    scope.write(f":DECoder1:SPI:MISO {ch_miso}")
-    scope.write(f":DECoder1:SPI:CS {ch_cs}")
-    scope.write(f":DECoder1:SPI:SELect {dec_select}")
-    scope.write(f":DECoder1:SPI:MODE {dec_mode}")
-    scope.write(f":DECoder1:SPI:POLarity {dec_pol}")
-    scope.write(f":DECoder1:SPI:EDGE {dec_edge}")
-    scope.write(f":DECoder1:SPI:ENDian {dec_endian}")
-    scope.write(f":DECoder1:SPI:WIDTh {dec_width}")
-    if dec_mode == "TIM":
-        scope.write(f":DECoder1:SPI:TIMeout {float(dec.get('spi_timeout_s', 0.00005))}")
-    scope.write(":ETABle1:DISPlay ON")
-    scope.write(":ETABle1:FORMat HEX")
-    scope.write(":ETABle1:VIEW PACKage")
-    try:
-        scope.opc()
-    except Exception:
-        pass
-
-
-def _capture_decode_pair(scope, debug=False):
-    """Read latest decoded MOSI/MISO pair from running ETABle (AUTO/RUN)."""
-    mo, mi = _read_etable_pair(scope)
-    if debug:
-        print(f"    [cap] mosi={mo} miso={mi}")
-    return mo, mi
-
-
-def _name_to_label(name):
-    return f"{name}()" if name and not name.endswith("()") else (name or "")
-
-
-def _wait_for_label(ser, timeout_s=5.0, debug=False):
-    """Read serial until a command frame is seen; return (label, mosi_json)."""
-    t_end = time.time() + timeout_s
-    label = ""
-    mosi_json = None
-    seen_begin = False
-    while time.time() < t_end:
-        try:
-            line = ser.readline().decode("utf-8", "ignore").strip()
-        except Exception:
-            line = ""
-        if not line:
-            continue
-        if debug:
-            print(f"  [ser] {line}")
-        if line == "SCOPE_BEGIN":
-            seen_begin = True
-            label = ""
-            mosi_json = None
-            continue
-        if line.startswith("{"):
-            try:
-                obj = json.loads(line)
-                if "name" in obj:
-                    label = _name_to_label(str(obj.get("name", "")))
-                if isinstance(obj.get("mosi"), list):
-                    mosi_json = _normalize_mosi(obj.get("mosi"))
-            except Exception:
-                pass
-            continue
-        if line == "SCOPE_END":
-            if seen_begin or label or mosi_json is not None:
-                return label, mosi_json
-            continue
-    return label, mosi_json
-
-
-def verify_internal_decoder(decoder_path, cfg, debug=False):
-    """Gate: prove each MCP3x6x fast command (MOSI+MISO) is read back by the
-    scope internal decoder (:ETABle1:DATA?) using a single fixed setting.
-
-    Host-paced: for each step arm scope single trigger on CS, ask firmware for
-    next command over serial, wait for capture, read decoded ETABle pair, then
-    proceed (no fixed inter-command delay)."""
-    import pyvisa
-    import serial
-    from _shared import _reset_board_via_dtr
-
-    resource = os.environ.get("OSCI_RESOURCE") or cfg.get("resource") or ""
-    if not resource:
-        return False, "no scope resource (OSCI_RESOURCE/config)"
-    board_port = os.environ.get("BOARD_PORT") or cfg.get("board_port") or "/dev/ttyUSB0"
-    expected_by_label = {label: (v.get("mosi", []), v.get("miso", [])) for label, v in EXPECTED}
-    pending = dict(expected_by_label)
-    max_rounds = int(cfg.get("capture", {}).get("attempts", 60))
-
-    rm = pyvisa.ResourceManager()
-    inst = None
-    ser = None
-    try:
-        inst = rm.open_resource(resource)
-        inst.timeout = 15000
-        ser = serial.Serial(board_port, 115200, timeout=0.25)
-        time.sleep(0.2)
-        try:
-            ser.reset_input_buffer()
-        except Exception:
-            pass
-        # reset board so firmware starts at known command index and waits for host
-        # reset board so firmware starts at known command index and waits for host
-        try:
-            os.environ.setdefault("BOARD_PORT", board_port)
-        except Exception:
-            pass
-        _reset_board_via_dtr(debug=debug)
-        time.sleep(2.2)
-        try:
-            ser.reset_input_buffer()
-        except Exception:
-            pass
-
-        class _S:
-            pass
-        scope = _S()
-        scope.inst = inst
-        scope.timeout_ms = 15000
-        scope.write = inst.write
-        scope.query = lambda cmd: inst.query(cmd)
-        scope.read_raw = lambda: inst.read_raw()
-
-        def _ws(timeout_s=3.0, poll_s=0.03):
-            t = time.time() + timeout_s
-            while time.time() < t:
-                try:
-                    s = (inst.query(":TRIGger:STATus?") or "").strip().upper()
-                    if s in ("STOP", "TD", "T'D", "TDONE"):
-                        return True
-                except Exception:
-                    pass
-                time.sleep(poll_s)
-            return False
-        scope.wait_stop = _ws
-
-        _configure_scope_for_decode(scope, cfg)
-
-        def _wait_trigger_ready(timeout_s=1.5):
-            t = time.time() + timeout_s
-            while time.time() < t:
-                try:
-                    st = (inst.query(":TRIGger:STATus?") or "").strip().upper()
-                    if "WAIT" in st:
-                        return True, st
-                    if st in ("STOP", "TD", "T'D", "TDONE"):
-                        return True, st
-                except Exception:
-                    pass
-                time.sleep(0.02)
-            try:
-                return False, (inst.query(":TRIGger:STATus?") or "").strip()
-            except Exception:
-                return False, "ERR"
-
-        attempts = 0
-        while attempts < max_rounds and pending:
-            attempts += 1
-            try:
-                ser.reset_input_buffer()
-            except Exception:
-                pass
-
-            # Arm single capture on CS and wait until scope is ready before stepping firmware
-            try:
-                inst.write(":STOP")
-                try:
-                    inst.write(":CLEar")
-                except Exception:
-                    pass
-                inst.write(":TRIGger:SWEep SINGle")
-                inst.write(":SINGle")
-                try:
-                    inst.query("*OPC?")
-                except Exception:
-                    pass
-            except Exception:
-                pass
-            ready, trig_st = _wait_trigger_ready(timeout_s=2.0)
-            if debug:
-                print(f"  [arm {attempts}/{max_rounds}] ready={ready} trig={trig_st}")
-            if not ready:
-                try:
-                    inst.write(":STOP")
-                except Exception:
-                    pass
-                time.sleep(0.1)
-                continue
-
-            try:
-                ser.write(b"n")
-                ser.flush()
-            except Exception as e:
-                if debug:
-                    print(f"  [step] serial write error: {e}", file=sys.stderr)
-
-            label, mosi_json = _wait_for_label(ser, timeout_s=4.0, debug=debug)
-            stopped = _ws(timeout_s=2.5, poll_s=0.03)
-            try:
-                inst.write(":STOP")
-            except Exception:
-                pass
-            time.sleep(0.3)
-            try:
-                inst.query("*OPC?")
-            except Exception:
-                pass
-            got_mosi, got_miso = _read_etable_pair(scope)
-            if debug:
-                print(f"  [decode {attempts}/{max_rounds}] label={label} serial_mosi={mosi_json} stopped={stopped} trig={trig_st} decoded mosi={got_mosi} miso={got_miso}")
-
-            # match against any pending expected pair (serial label is advisory)
-            matched = []
-            for plabel, (exp_m, exp_i) in list(pending.items()):
-                if got_mosi == exp_m and got_miso == exp_i:
-                    del pending[plabel]
-                    matched.append(plabel)
-            for plabel in matched:
-                exp_m, exp_i = expected_by_label[plabel]
-                print(f"  OK {plabel}: mosi={exp_m} miso={exp_i} (internal decoder)")
-            if debug and not matched and label in expected_by_label:
-                exp_m, exp_i = expected_by_label[label]
-                if label in pending:
-                    print(f"    no-match label={label}: got mosi={got_mosi} miso={got_miso} exp mosi={exp_m} miso={exp_i}")
-            try:
-                inst.write(":CLEar")
-            except Exception:
-                pass
-
-        try:
-            inst.write(":TRIGger:SWEep AUTO")
-            inst.write(":RUN")
-        except Exception:
-            pass
-        if not pending:
-            return True, "internal decoder (:ETABle1:DATA?) read back all expected MOSI+MISO pairs"
-    finally:
-        try:
-            if ser is not None:
-                ser.close()
-        except Exception:
-            pass
-        try:
-            if inst is not None:
-                inst.close()
-        except Exception:
-            pass
         try:
             rm.close()
         except Exception:
             pass
-    missing = ", ".join(f"{k}:mosi={v[0]} miso={v[1]}" for k, v in pending.items())
-    return False, f"missing decoded pairs for: {missing}"
-
-
-def verify(build_env="hil_spi", do_reset=False, debug=False, repeat=1):
-    cfg = load_config()
-    if cfg.get("board_port"):
-        os.environ.setdefault("BOARD_PORT", str(cfg["board_port"]))
-    if cfg.get("resource"):
-        os.environ.setdefault("OSCI_RESOURCE", str(cfg["resource"]))
-
-    resource = _detect_scope_resource(debug=debug)
-    if resource is None:
-        return 1
-    print(f"Scope resource: {resource}")
-    # Host-paced decode: verifier configures scope (SINGle on CS) and steps firmware per readback.
-    board_port = os.environ.get("BOARD_PORT") or cfg.get("board_port") or "/dev/ttyUSB0"
-    print(f"Board port: {board_port}")
-    decoder_path = _find_decoder_script()
-    if decoder_path:
-        print(f"Using internal decoder: {decoder_path}")
-    else:
-        print("Using in-process internal decoder readback (:ETABle1:DATA?)")
-    ok, msg = verify_internal_decoder(decoder_path, cfg, debug=debug)
-    if not ok:
-        print(f"ERROR: internal decoder gate failed: {msg}", file=sys.stderr)
-        return 1
-    print(f"Internal decoder gate: PASS ({msg})")
-    print("=== SPI verification passed (internal decoder). ===")
-    return 0

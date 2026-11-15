@@ -1,43 +1,23 @@
 {
   "resource": "",
   "board_port": "/dev/ttyUSB0",
+  "decoder_path": "",
   "channels": {
     "cs": "CHAN1",
     "sclk": "CHAN3",
     "miso": "CHAN2",
     "mosi": "CHAN4"
   },
-  "probe": "1x",
-  "volts_per_div": 2,
-  "offset_volts": 0,
   "trigger": {
     "source": "CHAN1",
     "slope": "NEGative",
-    "level_volts": 2.0,
-    "sweep": "SINGle"
+    "level_volts": 2.0
   },
   "timebase": {
     "scale_s": 0.000002,
     "offset_s": 0.000008
   },
-  "acquire": {
-    "type": "NORM",
-    "mdepth": "12000000"
-  },
-  "decoder": {
-    "mode": "CS",
-    "spi_select": "NCS",
-    "ss_polarity": "NEG",
-    "edge": "FALL",
-    "endian": "LSB",
-    "width": 8,
-    "spi_timeout_s": 0.00005,
-    "format": "HEX",
-    "view": "PACKage",
-    "threshold_volts": 1.6
-  },
-  "capture": {
-    "probe_wait_s": 0,
-    "attempts": 40
-  }
+  "volts_per_div": 2.0,
+  "capture_seconds": 0.01,
+  "threshold_volts": 1.6
 }
