@@ -11,9 +11,7 @@ void test_set_averaging_writes_config1() {
   adc.begin();
   setUp();
   adc.setAveraging(TestADC::OSR_1024);
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG1, spiAddrs[0]);
-#endif
 }
 
 void test_set_oversampling_ratio_alias() {
@@ -21,9 +19,7 @@ void test_set_oversampling_ratio_alias() {
   adc.begin();
   setUp();
   adc.setOversamplingRatio(TestADC::OSR_4096);
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG1, spiAddrs[0]);
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -34,9 +30,7 @@ void test_set_data_format_writes_config3() {
   adc.begin();
   setUp();
   adc.setDataFormat(TestADC::SGNEXT_DATA);
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[0]);
-#endif
 }
 
 void test_set_conversion_mode_writes_config3() {
@@ -44,9 +38,7 @@ void test_set_conversion_mode_writes_config3() {
   adc.begin();
   setUp();
   adc.setConversionMode(TestADC::CONTINUOUS);
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[0]);
-#endif
 }
 
 void test_set_adc_mode_writes_config0() {
@@ -54,9 +46,7 @@ void test_set_adc_mode_writes_config0() {
   adc.begin();
   setUp();
   adc.setAdcMode(TestADC::CONVERSION);
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
-#endif
 }
 
 void test_set_clock_selection_writes_config0() {
@@ -64,9 +54,7 @@ void test_set_clock_selection_writes_config0() {
   adc.begin();
   setUp();
   adc.setClockSelection(TestADC::INTERN);
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -91,10 +79,8 @@ void test_read_temperature_returns_value() {
   TestADC adc;
   adc.begin();
   setUp();
-  mockStatusByte = 0x04;  // DR=1
-#ifdef PIO_MOCKED_TESTING
+  mockStatusByte = 0x04;                        // DR=1
   mockReadSequence = {0x00, 0x00, 0x00, 0x64};  // TEMP channel value
-#endif
   int16_t temp = adc.readTemperature();
   TEST_ASSERT_TRUE(true);  // verifies no crash; value depends on mock
 }
@@ -104,9 +90,7 @@ void test_get_temperature_restores_mux() {
   adc.begin();
   setUp();
   mockStatusByte = 0x04;
-#ifdef PIO_MOCKED_TESTING
   mockReadSequence = {0x00, 0x00, 0x00, 0x64};
-#endif
   double temp = adc.getTemperature();
   TEST_ASSERT_TRUE(true);  // verifies no crash; MUX saved/restored
 }

@@ -12,11 +12,9 @@ void test_analogRead_mux_mode() {
   adc.begin();
   setUp();
   int32_t val = adc.analogRead(MCP3x6x_CH0);
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_TRUE(spiAddrs.size() >= 3);
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[0]);
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_CONVERSION, spiAddrs[1]);
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -47,13 +45,9 @@ void test_analogRead_scan_mode_no_spi() {
   mockStatusByte = 0x04;  // DR=1
   adc.IRQ_handler();
 
-#ifdef PIO_MOCKED_TESTING
   size_t addrCount = spiAddrs.size();
   adc.analogRead(MCP3x6x_CH0);
   TEST_ASSERT_EQUAL(addrCount, spiAddrs.size());  // no new SPI
-#else
-  adc.analogRead(MCP3x6x_CH0);
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -65,12 +59,10 @@ void test_analogRead_differential_waits_for_dr() {
   adc.begin();
   setUp();
   int32_t val = adc.analogReadDifferential(TestADC::MUX_CH0, TestADC::MUX_CH1);
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_TRUE(spiAddrs.size() >= 3);
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[0]);
   TEST_ASSERT_EQUAL(0x01, spiData[0][0]);  // VIN+=CH0, VIN-=CH1 → DIFFA=0x01
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_CONVERSION, spiAddrs[1]);
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -81,9 +73,7 @@ void test_readADCDATA_sgn_data() {
   adc.begin();
   setUp();
   adc.setDataFormat(TestADC::SGN_DATA);
-#ifdef PIO_MOCKED_TESTING
   mockReadSequence = {0xFF, 0xF8};  // big-endian 16-bit value -8
-#endif
   int32_t val = adc.readADCDATA();
   TEST_ASSERT_EQUAL(-8, val);
 }
@@ -93,9 +83,7 @@ void test_readADCDATA_sgn_data_zero() {
   adc.begin();
   setUp();
   adc.setDataFormat(TestADC::SGN_DATA_ZERO);
-#ifdef PIO_MOCKED_TESTING
   mockReadSequence = {0x00, 0xFF, 0x00, 0x00};  // left-justified
-#endif
   int32_t val = adc.readADCDATA();
   TEST_ASSERT_EQUAL(0xFF, val);  // raw >> 16
 }
@@ -105,9 +93,7 @@ void test_readADCDATA_sgn_ext_data() {
   adc.begin();
   setUp();
   adc.setDataFormat(TestADC::SGNEXT_DATA);
-#ifdef PIO_MOCKED_TESTING
   mockReadSequence = {0x00, 0x00, 0x00, 0x64};  // value 100
-#endif
   int32_t val = adc.readADCDATA();
   TEST_ASSERT_EQUAL(100, val);
 }
@@ -120,9 +106,7 @@ void test_get_last_channel() {
   adc.begin();
   setUp();
   adc.config3(false, false, false, TestADC::ID_SGNEXT_DATA, TestADC::CONTINUOUS);
-#ifdef PIO_MOCKED_TESTING
   mockReadSequence = {0x20, 0x00, 0x00, 0x64};  // CH_ID=2
-#endif
   adc.readADCDATA();
   TEST_ASSERT_EQUAL(2, (int)adc.getLastChannel());
 }
@@ -150,10 +134,8 @@ void test_start_continuous_sets_mode_and_converts() {
   adc.begin();
   setUp();
   adc.startContinuous();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[0]);
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_CONVERSION, spiAddrs[1]);
-#endif
 }
 
 void test_stop_continuous_sets_standby() {
@@ -161,10 +143,8 @@ void test_stop_continuous_sets_standby() {
   adc.begin();
   setUp();
   adc.stopContinuous();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[0]);
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_STANDBY, spiAddrs[1]);
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -175,12 +155,10 @@ void test_start_scan_once_sets_oneshot_standby() {
   adc.begin();
   setUp();
   adc.startScanOnce();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG3, spiAddrs[1]);
   // conv_mode = ONESHOT_STANDBY (2) in bits[7:6]
   TEST_ASSERT_EQUAL(2, (spiData[1][0] >> 6) & 0x03);
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_CONVERSION, spiAddrs[3]);
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -191,9 +169,7 @@ void test_single_ended_mode_sets_vin_minus_agnd() {
   adc.begin();
   setUp();
   adc.singleEndedMode();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[0]);
-#endif
 }
 
 void test_differential_mode_sets_ch0_ch1() {
@@ -201,9 +177,7 @@ void test_differential_mode_sets_ch0_ch1() {
   adc.begin();
   setUp();
   adc.differentialMode();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_MUX, spiAddrs[0]);
-#endif
 }
 
 void test_is_differential_true_false() {
@@ -253,45 +227,35 @@ void test_conversion_fastcmd() {
   TestADC adc;
   setUp();
   adc.conversion();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_CONVERSION, spiAddrs[0]);
-#endif
 }
 
 void test_standby_fastcmd() {
   TestADC adc;
   setUp();
   adc.standby();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_STANDBY, spiAddrs[0]);
-#endif
 }
 
 void test_shutdown_fastcmd() {
   TestADC adc;
   setUp();
   adc.shutdown();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_SHUTDOWN, spiAddrs[0]);
-#endif
 }
 
 void test_full_shutdown_fastcmd() {
   TestADC adc;
   setUp();
   adc.full_shutdown();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_FULL_SHUTDOWN, spiAddrs[0]);
-#endif
 }
 
 void test_reset_fastcmd() {
   TestADC adc;
   setUp();
   adc.reset();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_RESET, spiAddrs[0]);
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -304,10 +268,8 @@ void test_irq_handler_reads_adcdata() {
   setUp();
   mockStatusByte = 0x04;  // DR=1
   adc.IRQ_handler();
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_SREAD | MCP3x6x_ADR_ADCDATA, spiAddrs[0]);
   TEST_ASSERT_TRUE(adc.dataAvailable());
-#endif
 }
 
 // ---------------------------------------------------------------------------

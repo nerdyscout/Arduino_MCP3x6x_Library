@@ -4,7 +4,6 @@
 #ifndef TEST_INIT_H_
 #define TEST_INIT_H_
 
-#ifdef PIO_MOCKED_TESTING
 #include <ArduinoFake.h>
 // cppcheck-suppress syntaxError
 using namespace fakeit;
@@ -29,41 +28,21 @@ extern uint8_t digitalWriteValue;
 extern bool pinModeCalled;
 extern uint8_t pinModePin;
 extern uint8_t pinModeMode;
-#else
-#include <Arduino.h>
-#include <SPI.h>
-#include <unity.h>
 
-// mockStatusByte is defined unconditionally in test_runner.cpp,
-// so declare it for hardware mode too.
-extern uint8_t mockStatusByte;
-#endif
-
-#ifdef PIO_MOCKED_TESTING
 #include <cstring>
-#endif
 
 #include "Arduino_MCP3x6x_Library.hpp"
 
 // ---------------------------------------------------------------------------
 // ADC variant selection
 // ---------------------------------------------------------------------------
-#ifdef PIO_MOCKED_TESTING
 #include <type_traits>
 #define FOR_EACH_ADC(M) M(MCP3461) M(MCP3462) M(MCP3464) M(MCP3561) M(MCP3562) M(MCP3564)
 using TestADC = MCP3461;
-#else
-#ifndef TEST_ADC_TYPE
-#error "Define TEST_ADC_TYPE for hardware testing (e.g. -DTEST_ADC_TYPE=MCP3564)"
-#endif
-#define FOR_EACH_ADC(M) M(TEST_ADC_TYPE)
-using TestADC = TEST_ADC_TYPE;
-#endif
 
 // ---------------------------------------------------------------------------
 // Friend struct for testing private members (native only)
 // ---------------------------------------------------------------------------
-#ifdef PIO_MOCKED_TESTING
 struct MCP3x6xTest {
   template<typename T>
   static int32_t getValue(T& adc, int32_t raw) {
@@ -112,7 +91,6 @@ struct MCP3x6xTest {
   template<typename T>
   using Lock = typename T::Lock;
 };
-#endif
 
 // ---------------------------------------------------------------------------
 // Template test helpers

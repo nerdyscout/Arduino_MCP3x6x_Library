@@ -1,54 +1,36 @@
 # Arduino MCP3x6x Library
 
-Arduino library for Microchip MCP346xR / MCP356xR 16/24-bit SAR analog-to-digital converters over SPI.
-
-Supports Microchip MCP3461R/MCP3462R/MCP3464R (16-bit) and MCP3561R/MCP3562R/MCP3564R (24-bit) ADC families.
+Arduino library for Microchip MCP346xR/MCP356xR 16/24-bit SAR ADCs over SPI (MCP3461R/3462R/3464R, MCP3561R/3562R/3564R).
 
 ## Features
 
-- Template-based device support — one code base for all six MCP3x6xR variants
-- SPI register interface with fast commands (CONVERSION, STANDBY, SHUTDOWN, FULL_SHUTDOWN, RESET, SREAD, IREAD, IWRITE)
-- Single-ended and differential channel selection (CH0–CH7, internal channels: OFFSET, VCM, AVDD, TEMP, DIFFx)
-- Config0–Config3 register access (gain, OSR, data rate, conversion mode, etc.)
-- Continuous conversion and scan modes
-- Data-ready (DR) status and data-available polling
-- IRQ and MCLK pin attachment
-- Offset / gain calibration and temperature conversion helpers
-- Low-power modes: standby, shutdown, full shutdown
-- PlatformIO-mocked unit tests (ArduinoFake + Unity), hardware smoke tests, and hardware-in-the-loop SPI verification
-
-## Supported devices
-
-| Device | Resolution |
-|--------|------------|
-| MCP3461R / MCP3462R / MCP3464R | 16-bit |
-| MCP3561R / MCP3562R / MCP3564R | 24-bit |
+- Template-based support for all six MCP3x6xR variants
+- Fast commands: `CONVERSION`, `STANDBY`, `SHUTDOWN`, `FULL_SHUTDOWN`, `RESET`, `SREAD`, `IREAD`, `IWRITE`
+- Single-ended/differential channels (`CH0`–`CH7`, `OFFSET`, `VCM`, `AVDD`, `TEMP`, `DIFFx`)
+- Config/register access, continuous and scan modes, data-ready polling
+- IRQ/MCLK helpers, calibration and temperature helpers, low-power modes
+- Tests: mocked (ArduinoFake/Unity), HIL on real MCP hardware, and on-bus SPI verification with scope + sigrok-cli
 
 ## Quick start
 
 ### Installation
 
-**Arduino Library Manager:** search for **MCP3x6xR**.
-
-**Manual / git:**
-
-```sh
-git clone https://github.com/nerdyscout/Arduino_MCP3x6x_Library.git \
-  ~/Arduino/libraries/MCP3x6xR
-```
-
-**PlatformIO:** add to `platformio.ini`:
-
-```ini
-lib_deps = nerdyscout/MCP3x6xR
-```
+- **Arduino Library Manager:** search for **MCP3x6xR**
+- **Manual:** clone into your Arduino libraries folder
+  ```sh
+  git clone https://github.com/nerdyscout/Arduino_MCP3x6x_Library.git ~/Arduino/libraries/MCP3x6xR
+  ```
+- **PlatformIO:**
+  ```ini
+  lib_deps = nerdyscout/MCP3x6xR
+  ```
 
 ### Basic usage
 
 ```cpp
 #include "Arduino_MCP3x6x_Library.hpp"
 
-MCP3461 mcp;  // or MCP3564, MCP3464, etc.
+MCP3564 mcp;
 
 void setup() {
   mcp.begin();
@@ -61,102 +43,50 @@ void loop() {
 }
 ```
 
-See `src/Arduino_MCP3x6x_Library.hpp` for the full class API, or build the Doxygen reference (`doxygen Doxyfile`).
+API reference: `src/Arduino_MCP3x6x_Library.hpp` or `doxygen Doxyfile` (https://nerdyscout.github.io/Arduino_MCP3x6x_Library/).
 
-## Building and testing
-
-This project uses PlatformIO.
-
-### Build examples
-
-Build all examples for all environments:
+## Build examples
 
 ```sh
-./examples/build.sh
-```
-
-Build specific environments:
-
-```sh
-./examples/build.sh ESP32 ATMEGA328P SAMD21G18A
-```
-
-Build only one example:
-
-```sh
-./examples/build.sh MCP3564_DMA
-```
-
-Upload a single example to your board:
-
-```sh
+./examples/build.sh                  # all examples, all envs
+./examples/build.sh ESP32 ATMEGA328P # selected envs
 ./examples/upload.sh MCP3564_DMA ATMEGA328P
 ```
 
-See `examples/README.md` for full `build.sh` / `upload.sh` usage details.
+See [examples/README.md](examples/README.md).
 
-### Run mocked unit tests (no hardware required)
+## Testing
 
-```sh
-pio test            # default_envs = mocked
-# or
-pio test -e mocked -f test_mock
-```
+Three tiers (details in [test/README.md](test/README.md)):
 
-The mocked environment (`test/test_mock/`) compiles and executes the Unity+ArduinoFake suite for all six MCP variants via `FOR_EACH_ADC` macro expansion.
-
-### Hardware-in-the-loop (HIL, real board)
+| Tier | Location | Requires | Purpose |
+|---|---|---|---|
+| Mocked | `test/test_mock/` | none (native) | Fully mockable unit tests (ArduinoFake + Unity), CI-gated |
+| HIL | `test/test_hil/` | real MCP3x6x hardware | Functional tests on target board |
+| HIL + SPI | `test/test_hil_spi/` | real hardware + oscilloscope | On-bus SPI fast-command verification (sigrok-cli decode vs MCP3x6x datasheet) |
 
 ```sh
-pio run -t test_hil -e ATMEGA328P
+pio test -e mocked                                # mocked (default)
+pio run -t test_hil -e ATMEGA328P                 # HIL (real MCP hardware)
+pio run -t test_hil_spi -e hil_spi                # build/upload + SPI bus verification
+python3 test/test_hil_spi/verify_cmd.py           # SPI verify only (authoritative gate)
 ```
-
-Builds/uploads/runs the Unity HIL suite in `test/test_hil/` on the selected hardware env (select variant with `-DTEST_ADC_TYPE=<variant>` as needed).
-
-### HIL + SPI (real board + oscilloscope)
-
-```sh
-# Full build+upload+verify (includes pin-probe for channel mapping)
-pio run -t test_hil_spi -e ATMEGA328P
-
-# Fast verify on an already-flashed/running board (authoritative gate)
-python3 test/test_hil_spi/verify_cmd.py
-```
-
-Host-paced verification proves fast-command MOSI+MISO by reading true on-bus bytes from the Rigol DS1000Z internal decoder (`:ETABle1:DATA?`) under one fixed scope/decoder setting (config in `test/hil_spi_config.json`); firmware serial JSON is diagnostic. `pio test -e hil_spi` may report `ERRORED`/`SIGHUP` with the custom command—treat `verify_cmd.py` / the custom target exit as authoritative. See `test/README.md` for tiers, config, and env vars.
 
 ## PCB fabrication
 
-The `pcb/` directory contains KiCad projects and KiBot configs for three reference boards:
-
-| Board | Top render | Bottom render |
-|-------|------------|---------------|
-| Adafruit Feather | [Feather_top.svg](pcb/Adafruit/Feather_top.svg) | [Feather_bottom.svg](pcb/Adafruit/Feather_bottom.svg) |
-| Arduino Uno | [Uno_top.svg](pcb/Arduino/Uno_top.svg) | [Uno_bottom.svg](pcb/Arduino/Uno_bottom.svg) |
-| Sparkfun ProMicro | [ProMicro_top.svg](pcb/Sparkfun/ProMicro_top.svg) | [ProMicro_bottom.svg](pcb/Sparkfun/ProMicro_bottom.svg) |
-
-Generate top/bottom board renders and fabrication zips:
-
-```sh
-./pcb/kibot.sh
-```
-
-- `pcb/render.kibot.yaml` — board renders
-- `pcb/fab.kibot.yaml` — fabrication outputs
-
-Outputs are written next to each `.kicad_pcb` file in `pcb/`. See `pcb/README.md` for details.
+Reference boards and KiBot configs in [`pcb/`](pcb/) (`pcb/render.kibot.yaml`, `pcb/fab.kibot.yaml`). Generate renders/fabs with `./pcb/kibot.sh`. See [pcb/README.md](pcb/README.md).
 
 ## Documentation
 
-- `pcb/README.md` — PCB fabrication (KiBot renders and fabrication zips)
-- `examples/README.md` — Examples build and upload
-- `test/README.md` — Native, hardware, and HIL testing
-- `docs/` — Doxygen API reference (`doxygen Doxyfile`), also hosted at https://nerdyscout.github.io/Arduino_MCP3x6x_Library/
+- [test/README.md](test/README.md) — test tiers, config, env vars
+- [examples/README.md](examples/README.md) — build/upload examples
+- [pcb/README.md](pcb/README.md) — PCB fabrication
+- [test/test_hil_spi/README.md](test/test_hil_spi/README.md) — scope/sigrok SPI verification details
 
 ## Contributing
 
-See `pcb/README.md`, `examples/README.md`, and `test/README.md` for domain-specific guides. Submit changes via pull request against `develop`.
+Submit changes via pull request against `develop`.
 
 ## License
 
-MIT. See `LICENSES` for details.
+MIT. See `LICENSES`.

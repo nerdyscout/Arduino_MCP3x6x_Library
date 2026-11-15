@@ -146,13 +146,11 @@ void test_samples_available_counts() {
   DmaSample buf[4];
   TEST_ASSERT_TRUE(adc.enableDMA(buf, 4));
 
-#ifdef PIO_MOCKED_TESTING
   memcpy(adc.dmaDataPtr(), "\x20\x00\x00\x00", 4);
   MCP3x6xTest::dmaComplete(adc, 10);
   memcpy(adc.dmaDataPtr(), "\x30\x00\x00\x00", 4);
   MCP3x6xTest::dmaComplete(adc, 20);
   TEST_ASSERT_EQUAL(2, adc.samplesAvailable());
-#endif
   adc.disableDMA();
 }
 
@@ -168,7 +166,6 @@ void test_dma_complete_decodes_sample() {
   DmaSample buf[4];
   adc.enableDMA(buf, 4);
 
-#ifdef PIO_MOCKED_TESTING
   memcpy(adc.dmaDataPtr(), "\x20\x00\x00\x64", 4);
   MCP3x6xTest::dmaComplete(adc, 777);
 
@@ -178,7 +175,6 @@ void test_dma_complete_decodes_sample() {
   TEST_ASSERT_EQUAL(100, out.value);
   TEST_ASSERT_EQUAL(777, out.timestamp);
   TEST_ASSERT_EQUAL(0, adc.samplesAvailable());
-#endif
   adc.disableDMA();
 }
 
@@ -198,9 +194,7 @@ void test_irq_handler_dma_no_spi() {
 
   adc.IRQ_handler();
   TEST_ASSERT_TRUE(adc.dataAvailable());
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL(0, spiAddrs.size());  // no synchronous transfer
-#endif
   adc.disableDMA();
 }
 
@@ -217,9 +211,7 @@ void test_irq_handler_no_dma_sync_read() {
 
   adc.IRQ_handler();
   TEST_ASSERT_TRUE(adc.dataAvailable());
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_TRUE(spiAddrs.size() > 0);  // synchronous transfer happened
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -235,13 +227,11 @@ void test_analog_read_dma_fifo_drain() {
   DmaSample buf[4];
   adc.enableDMA(buf, 4);
 
-#ifdef PIO_MOCKED_TESTING
   memcpy(adc.dmaDataPtr(), "\x10\x00\x00\x00", 4);
   MCP3x6xTest::dmaComplete(adc, 1);
   memcpy(adc.dmaDataPtr(), "\x20\x00\x00\x64", 4);
   MCP3x6xTest::dmaComplete(adc, 2);
   setUp();  // clear SPI tracking after DMA setup
-#endif
 
   int32_t val = adc.analogRead(MCP3x6x_CH2);
   TEST_ASSERT_EQUAL(100, val);
@@ -262,10 +252,8 @@ void test_analog_read_dma_head_match() {
   DmaSample buf[4];
   adc.enableDMA(buf, 4);
 
-#ifdef PIO_MOCKED_TESTING
   memcpy(adc.dmaDataPtr(), "\x20\x00\x00\x42", 4);
   MCP3x6xTest::dmaComplete(adc, 5);
-#endif
 
   int32_t val = adc.analogRead(MCP3x6x_CH2);
   TEST_ASSERT_EQUAL(0x42, val);
@@ -286,9 +274,7 @@ void test_analog_read_mux_still_synchronous() {
   setUp();  // clear SPI tracking after DMA setup
 
   int32_t val = adc.analogRead(MCP3x6x_CH0);
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_TRUE(spiAddrs.size() >= 2);  // MUX write + conversion
-#endif
   adc.disableDMA();
 }
 

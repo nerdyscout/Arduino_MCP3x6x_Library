@@ -6,25 +6,24 @@ Build every example for every environment:
 ./examples/build.sh
 ```
 
-Build only specific environments:
+Build for selected environments:
 
 ```sh
 ./examples/build.sh ESP32 SAMD21G18A
 ```
 
-Build only a specific example (all environments):
+Build a specific example:
 
 ```sh
 ./examples/build.sh MCP3461_Mux_SingleEnded
 ```
 
-Build and upload a single example to a board:
+Build and upload a single example:
 
 ```sh
 ./examples/upload.sh MCP3564_DMA ATMEGA328P
-
-# Or via PlatformIO custom target:
+# or
 pio run -t upload_MCP3564_DMA -e ATMEGA328P
 ```
 
-See `examples/build.sh` and `examples/upload.sh` for full usage details.
+See `examples/build.sh` and `examples/upload.sh` for details.

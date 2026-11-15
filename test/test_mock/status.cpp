@@ -122,10 +122,8 @@ void test_set_reference_internal() {
   setUp();
   adc.setReference(0.0);
   TEST_ASSERT_EQUAL(2.4f, adc.getReference());
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
   TEST_ASSERT(spiData[0][0] & 0x80);  // vref_sel = 1 → internal
-#endif
 }
 
 void test_set_reference_external() {
@@ -134,10 +132,8 @@ void test_set_reference_external() {
   setUp();
   adc.setReference(3.3);
   TEST_ASSERT_EQUAL(3.3f, adc.getReference());
-#ifdef PIO_MOCKED_TESTING
   TEST_ASSERT_EQUAL_HEX8(MCP3x6x_CMD_IWRITE | MCP3x6x_ADR_CONFIG0, spiAddrs[0]);
   TEST_ASSERT_FALSE(spiData[0][0] & 0x80);  // vref_sel = 0 → external
-#endif
 }
 
 void test_get_reference_stored() {
